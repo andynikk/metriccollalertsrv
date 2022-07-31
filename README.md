@@ -22,3 +22,6 @@ git fetch template && git checkout template/main .github
 ```
 
 Затем добавьте полученные изменения в свой репозиторий.
+
+
+Ту может быть Ваша реклама
