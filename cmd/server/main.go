@@ -79,7 +79,7 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Fprintf(w, "err %q\n", err)
-		w.WriteHeader(http.StatusServiceUnavailable)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -104,7 +104,7 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func notFound(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(http.StatusBadGateway)
+	rw.WriteHeader(http.StatusNotFound)
 
 	if r.Method != "GET" {
 		return
@@ -161,26 +161,34 @@ func main() {
 		metName := chi.URLParam(rq, "metName")
 
 		if metName == "" || metType == "" {
-			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusInternalServerError)
+			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 			return
 		}
 		rw.WriteHeader(http.StatusOK)
 	})
 
-	r.Get("/update/{metType}/{metName}", func(rw http.ResponseWriter, rq *http.Request) {
+	r.Get("/update/{metType}/{metName}/{metValue}", func(rw http.ResponseWriter, rq *http.Request) {
 
 		metType := chi.URLParam(rq, "metType")
 		metName := chi.URLParam(rq, "metName")
+		metValue := chi.URLParam(rq, "metValue")
 
-		if metName == "" || metType == "" {
-			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusInternalServerError)
+		if metName == "" || metType == "" || metValue == "" {
+			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 			return
 		}
 
-		//if metType == "gauge" {
-		//	rw.Write([]byte(metGauge[metName].String()))
-		//} else if metType == "counter" {
-		//	rw.Write([]byte(metCounter[metName].String()))
+		var realMetValue string
+		if metType == "gauge" {
+			realMetValue = metGauge[metName].String()
+		} else if metType == "counter" {
+			realMetValue = metCounter[metName].String()
+		}
+		if metValue != realMetValue {
+			http.Error(rw, "Ожидаемое значенние "+metValue+" метрики "+metName+" с типом "+metType+
+				" не найдена", http.StatusInternalServerError)
+			return
+		}
 
 		rw.WriteHeader(http.StatusOK)
 	})
