@@ -88,11 +88,11 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 
 	for _, val := range messageRaz {
 
-		//typeMetric := valStrMetrics(val, 4)
-		//nameMetric := valStrMetrics(val, 5)
+		typeMetric := valStrMetrics(val, 4)
+		nameMetric := valStrMetrics(val, 5)
 
-		typeMetric := valStrMetrics(val, 1)
-		nameMetric := valStrMetrics(val, 2)
+		//typeMetric := valStrMetrics(val, 1)
+		//nameMetric := valStrMetrics(val, 2)
 
 		if typeMetric == "gauge" {
 			valueGauge := valueGauge(val)

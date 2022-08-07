@@ -35,7 +35,7 @@ func TestFuncAgen(t *testing.T) {
 			t.Errorf("Structure creation error (%s)", argErr)
 		}
 		t.Run("Creating a submission line", func(t *testing.T) {
-			var resultStr = "http://127.0.0.1:8080/update/main.gauge/Alloc/0.1\nhttp://127.0.0.1:8080/update/main.gauge/BuckHashSys/0.002"
+			var resultStr = "http://127.0.0.1:8080/update/gauge/Alloc/0.1\nhttp://127.0.0.1:8080/update/gauge/BuckHashSys/0.002"
 
 			resultMassage := TestmakeMsg(realResult)
 
