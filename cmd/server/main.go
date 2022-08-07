@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -71,52 +73,52 @@ func valStrMetrics(strMetrix string, numElArr int64) string {
 func handleFunc(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusUnsupportedMediaType)
 
-	//if r.Method != http.MethodPost {
-	//	return
-	//}
-	//
-	//b, err := ioutil.ReadAll(r.Body)
-	//if err != nil {
-	//	//fmt.Fprintf(w, "err %q\n", err)
-	//	//StatusInternalServerError
-	//	w.WriteHeader(http.StatusMethodNotAllowed)
-	//	return
-	//}
-	//
-	//message := string(b)
-	//messageRaz := strings.Split(message, "\n")
-	//
-	//for _, val := range messageRaz {
-	//
-	//	//typeMetric := valStrMetrics(val, 4)
-	//	//nameMetric := valStrMetrics(val, 5)
-	//
-	//	typeMetric := valStrMetrics(val, 1)
-	//	nameMetric := valStrMetrics(val, 2)
-	//
-	//	if typeMetric == "gauge" {
-	//		valueGauge := valueGauge(val)
-	//		metGauge[nameMetric] = gauge(valueGauge)
-	//	} else if typeMetric == "counter" {
-	//		valueCounter := valueCounter(val)
-	//		metCounter[nameMetric] = counter(valueCounter)
-	//	}
-	//}
-	//
-	//w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodPost {
+		return
+	}
+
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		//fmt.Fprintf(w, "err %q\n", err)
+		//StatusInternalServerError
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	message := string(b)
+	messageRaz := strings.Split(message, "\n")
+
+	for _, val := range messageRaz {
+
+		//typeMetric := valStrMetrics(val, 4)
+		//nameMetric := valStrMetrics(val, 5)
+
+		typeMetric := valStrMetrics(val, 1)
+		nameMetric := valStrMetrics(val, 2)
+
+		if typeMetric == "gauge" {
+			valueGauge := valueGauge(val)
+			metGauge[nameMetric] = gauge(valueGauge)
+		} else if typeMetric == "counter" {
+			valueCounter := valueCounter(val)
+			metCounter[nameMetric] = counter(valueCounter)
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func notFound(rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(http.StatusFound)
 
-	//if r.Method != "GET" {
-	//	return
-	//}
-	//
-	//_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
-	//if err != nil {
-	//	panic(err)
-	//}
+	if r.Method != "GET" {
+		return
+	}
+
+	_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func textMetricsAndValue() string {
@@ -197,4 +199,5 @@ func main() {
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))
+	rw.WriteHeader(http.StatusPaymentRequired)
 }
