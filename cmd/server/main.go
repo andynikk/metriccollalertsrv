@@ -219,7 +219,7 @@ func main() {
 			fltGauge, err := strconv.ParseFloat(metValue, 64)
 			if err != nil {
 				http.Error(rw, "Метрику "+metName+" с типом "+metType+" нельзя привести к значению "+metValue,
-					http.StatusNotFound)
+					http.StatusBadRequest)
 				return
 			}
 			metGauge[metName] = gauge(fltGauge)
