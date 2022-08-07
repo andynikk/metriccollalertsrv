@@ -104,7 +104,7 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func notFound(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(http.StatusNotFound)
+	rw.WriteHeader(http.StatusBadGateway)
 
 	if r.Method != "GET" {
 		return
@@ -146,13 +146,13 @@ func main() {
 	metCounter["PollCount"] = 0
 
 	r.Get("/", func(rw http.ResponseWriter, rq *http.Request) {
-		rw.WriteHeader(http.StatusOK)
 		textMetricsAndValue := textMetricsAndValue()
 
 		_, err := io.WriteString(rw, textMetricsAndValue)
 		if err != nil {
 			panic(err)
 		}
+		rw.WriteHeader(http.StatusOK)
 	})
 
 	r.Get("/value/{metType}/{metName}", func(rw http.ResponseWriter, rq *http.Request) {
@@ -161,16 +161,28 @@ func main() {
 		metName := chi.URLParam(rq, "metName")
 
 		if metName == "" || metType == "" {
-			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
+			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusInternalServerError)
+			return
+		}
+		rw.WriteHeader(http.StatusOK)
+	})
+
+	r.Get("/update/{metType}/{metName}", func(rw http.ResponseWriter, rq *http.Request) {
+
+		metType := chi.URLParam(rq, "metType")
+		metName := chi.URLParam(rq, "metName")
+
+		if metName == "" || metType == "" {
+			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusInternalServerError)
 			return
 		}
 
+		//if metType == "gauge" {
+		//	rw.Write([]byte(metGauge[metName].String()))
+		//} else if metType == "counter" {
+		//	rw.Write([]byte(metCounter[metName].String()))
+
 		rw.WriteHeader(http.StatusOK)
-		if metType == "gauge" {
-			rw.Write([]byte(metGauge[metName].String()))
-		} else if metType == "counter" {
-			rw.Write([]byte(metCounter[metName].String()))
-		}
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))

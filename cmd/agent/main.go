@@ -160,15 +160,17 @@ func MakeRequest(memStats *MemStats) {
 	//msg := fmt.Sprintf(msgFormat, adresServer, memStats.Alloc.Type(), "Alloc", memStats.Alloc)
 	//r := strings.NewReader(msg)
 
-	message := makeMsg(*memStats)
-	r := strings.NewReader(message)
+	//message := makeMsg(*memStats)
+	//r := strings.NewReader(message)
 
-	_, err := http.Post("http://localhost:8080", "text/plain", r)
+	r := strings.NewReader("http://localhost:8080/update/counter/testCounter/100")
+
+	resp, err := http.Post("http://localhost:8080", "text/plain", r)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//fmt.Println(resp.Status)
+	fmt.Println(resp.Status)
 	//fmt.Println("Сообщение: \n" + message + "\nотправлено успешно")
 }
 
