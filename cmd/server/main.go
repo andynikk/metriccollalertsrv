@@ -173,28 +173,28 @@ func main() {
 
 	r.Get("/update/{metType}/{metName}/{metValue}", func(rw http.ResponseWriter, rq *http.Request) {
 
-		metType := chi.URLParam(rq, "metType")
-		metName := chi.URLParam(rq, "metName")
-		metValue := chi.URLParam(rq, "metValue")
-
-		if metName == "" || metType == "" || metValue == "" {
-			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
-			return
-		}
-
-		var realMetValue string
-		if metType == "gauge" {
-			realMetValue = metGauge[metName].String()
-		} else if metType == "counter" {
-			realMetValue = metCounter[metName].String()
-		}
-		if metValue != realMetValue {
-			http.Error(rw, "Ожидаемое значенние "+metValue+" метрики "+metName+" с типом "+metType+
-				" не найдена", http.StatusBadRequest)
-			return
-		}
-
 		rw.WriteHeader(http.StatusOK)
+
+		//metType := chi.URLParam(rq, "metType")
+		//metName := chi.URLParam(rq, "metName")
+		//metValue := chi.URLParam(rq, "metValue")
+		//
+		//if metName == "" || metType == "" || metValue == "" {
+		//	http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
+		//	return
+		//}
+		//
+		//var realMetValue string
+		//if metType == "gauge" {
+		//	realMetValue = metGauge[metName].String()
+		//} else if metType == "counter" {
+		//	realMetValue = metCounter[metName].String()
+		//}
+		//if metValue != realMetValue {
+		//	http.Error(rw, "Ожидаемое значенние "+metValue+" метрики "+metName+" с типом "+metType+
+		//		" не найдена", http.StatusBadRequest)
+		//	return
+		//}
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))
