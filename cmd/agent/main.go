@@ -148,22 +148,17 @@ func makeMsg(memStats MemStats) string {
 	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.TotalAlloc.Type(), "TotalAlloc", memStats.TotalAlloc))
 	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.RandomValue.Type(), "RandomValue", memStats.RandomValue))
 	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.PollCount.Type(), "PollCount", memStats.PollCount))
+	msg = append(msg, "http://localhost:8080/update/counter/testCounter/100")
 
 	return strings.Join(msg, "\n")
 }
 
 func MakeRequest(memStats *MemStats) {
 
-	////const adresServer = "localhost:8080"
-	////const msgFormat = "http://%s/update/%s/%s/%v"
-	//
-	//msg := fmt.Sprintf(msgFormat, adresServer, memStats.Alloc.Type(), "Alloc", memStats.Alloc)
-	//r := strings.NewReader(msg)
+	message := makeMsg(*memStats)
+	r := strings.NewReader(message)
 
-	//message := makeMsg(*memStats)
-	//r := strings.NewReader(message)
-
-	r := strings.NewReader("http://localhost:8080/update/counter/testCounter/100")
+	//r := strings.NewReader("http://localhost:8080/update/counter/testCounter/100")
 
 	_, err := http.Post("http://localhost:8080", "text/plain", r)
 
