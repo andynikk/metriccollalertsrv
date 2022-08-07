@@ -21,11 +21,13 @@ type gauge float64
 type counter int64
 
 func (g gauge) Type() string {
-	return fmt.Sprintf("%T", g)
+	//return fmt.Sprintf("%T", g)
+	return "gauge"
 }
 
 func (c counter) Type() string {
-	return fmt.Sprintf("%T", c)
+	//return fmt.Sprintf("%T", c)
+	return "counter"
 }
 
 type MemStats struct {
