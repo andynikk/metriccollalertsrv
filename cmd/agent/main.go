@@ -114,7 +114,7 @@ func metrixScan(memStats *MemStats) {
 }
 
 func makeMsg(memStats MemStats) string {
-	const adresServer = "127.0.0.1:8080"
+	const adresServer = "localhost:8080"
 	const msgFormat = "http://%s/update/%s/%s/%v"
 
 	var msg []string
@@ -163,7 +163,7 @@ func MakeRequest(memStats *MemStats) {
 	message := makeMsg(*memStats)
 	r := strings.NewReader(message)
 
-	_, err := http.Post("http://127.0.0.1:8080", "text/plain", r)
+	_, err := http.Post("http://localhost:8080", "text/plain", r)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -79,6 +79,7 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		fmt.Fprintf(w, "err %q\n", err)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 
@@ -99,6 +100,7 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.WriteHeader(http.StatusOK)
 }
 
 func notFound(rw http.ResponseWriter, r *http.Request) {

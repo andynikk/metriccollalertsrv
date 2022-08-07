@@ -20,7 +20,7 @@ func TestFuncServer(t *testing.T) {
 
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 		t.Run("Checking the type of the first line", func(t *testing.T) {
-			var typeGauge = servMetrixStats.Alloc.Type()
+			var typeGauge = metGauge["Alloc"].Type()
 
 			messageRaz := strings.Split(postStr, "\n")
 			valElArr := messageRaz[0]
