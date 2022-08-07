@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -109,16 +108,16 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 }
 
 func notFound(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(http.StatusFound)
-
-	if r.Method != "GET" {
-		return
-	}
-
-	_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
-	if err != nil {
-		panic(err)
-	}
+	//rw.WriteHeader(http.StatusFound)
+	//
+	//if r.Method != "GET" {
+	//	return
+	//}
+	//
+	//_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
+	//if err != nil {
+	//	panic(err)
+	//}
 }
 
 func textMetricsAndValue() string {
