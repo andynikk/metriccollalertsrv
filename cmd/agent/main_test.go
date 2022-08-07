@@ -56,6 +56,7 @@ func TestFuncAgen(t *testing.T) {
 				if resp.Status != "200 OK" {
 					t.Errorf("Incorrect jndtnf status (%s)", err.Error())
 				}
+				resp.Body.Close()
 			})
 		})
 	})

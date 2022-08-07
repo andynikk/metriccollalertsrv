@@ -116,6 +116,7 @@ func metrixScan(memStats *MemStats) {
 func makeMsg(memStats MemStats) string {
 	const adresServer = "localhost:8080"
 	const msgFormat = "http://%s/update/%s/%s/%v"
+	//const msgFormat = "update/%s/%s/%v"
 
 	var msg []string
 
@@ -150,21 +151,53 @@ func makeMsg(memStats MemStats) string {
 	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.PollCount.Type(), "PollCount", memStats.PollCount))
 	msg = append(msg, "http://localhost:8080/update/counter/testCounter/100")
 
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.Alloc.Type(), "Alloc", memStats.Alloc))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.BuckHashSys.Type(), "BuckHashSys", memStats.BuckHashSys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.Frees.Type(), "Frees", memStats.Frees))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.GCCPUFraction.Type(), "GCCPUFraction", memStats.GCCPUFraction))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.GCSys.Type(), "GCSys", memStats.GCSys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.HeapAlloc.Type(), "HeapAlloc", memStats.HeapAlloc))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.HeapIdle.Type(), "HeapIdle", memStats.HeapIdle))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.HeapInuse.Type(), "HeapInuse", memStats.HeapInuse))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.HeapObjects.Type(), "HeapObjects", memStats.HeapObjects))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.HeapReleased.Type(), "HeapReleased", memStats.HeapReleased))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.HeapSys.Type(), "HeapSys", memStats.HeapSys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.LastGC.Type(), "LastGC", memStats.LastGC))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.Lookups.Type(), "Lookups", memStats.Lookups))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.MCacheInuse.Type(), "MCacheInuse", memStats.MCacheInuse))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.MCacheSys.Type(), "MCacheSys", memStats.MCacheSys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.MSpanInuse.Type(), "MSpanInuse", memStats.MSpanInuse))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.MSpanSys.Type(), "MSpanSys", memStats.MSpanSys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.Mallocs.Type(), "Mallocs", memStats.Mallocs))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.NextGC.Type(), "NextGC", memStats.NextGC))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.NumForcedGC.Type(), "NumForcedGC", memStats.NumForcedGC))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.NumGC.Type(), "NumGC", memStats.NumGC))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.OtherSys.Type(), "OtherSys", memStats.OtherSys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.PauseTotalNs.Type(), "PauseTotalNs", memStats.PauseTotalNs))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.StackInuse.Type(), "StackInuse", memStats.StackInuse))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.StackSys.Type(), "StackSys", memStats.StackSys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.Sys.Type(), "Sys", memStats.Sys))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.TotalAlloc.Type(), "TotalAlloc", memStats.TotalAlloc))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.RandomValue.Type(), "RandomValue", memStats.RandomValue))
+	//msg = append(msg, fmt.Sprintf(msgFormat, memStats.PollCount.Type(), "PollCount", memStats.PollCount))
+	//msg = append(msg, "update/counter/testCounter/100")
+
 	return strings.Join(msg, "\n")
 }
 
 func MakeRequest(memStats *MemStats) {
 
-	message := makeMsg(*memStats)
-	r := strings.NewReader(message)
+	//message := makeMsg(*memStats)
+	//r := strings.NewReader(message)
 
-	//r := strings.NewReader("http://localhost:8080/update/counter/testCounter/100")
+	r := strings.NewReader("update/gauge/testGauge/100")
 
-	_, err := http.Post("http://localhost:8080", "text/plain", r)
+	resp, err := http.Post("http://localhost:8080", "text/plain", r)
 
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	//fmt.Println(resp.Status)
 	//fmt.Println("Сообщение: \n" + message + "\nотправлено успешно")
