@@ -168,7 +168,21 @@ func main() {
 			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 			return
 		}
+
 		rw.WriteHeader(http.StatusOK)
+		if metType == "gauge" {
+			rw.Write([]byte(metGauge[metName].String()))
+			_, err := io.WriteString(rw, metGauge[metName].String())
+			if err != nil {
+				panic(err)
+			}
+		} else if metType == "counter" {
+			rw.Write([]byte(metCounter[metName].String()))
+			_, err := io.WriteString(rw, metCounter[metName].String())
+			if err != nil {
+				panic(err)
+			}
+		}
 	})
 
 	r.Get("/update/{metType}/{metName}/{metValue}", func(rw http.ResponseWriter, rq *http.Request) {
