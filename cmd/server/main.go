@@ -199,5 +199,4 @@ func main() {
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))
-	rw.WriteHeader(http.StatusPaymentRequired)
 }
