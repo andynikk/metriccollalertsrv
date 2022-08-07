@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -198,7 +199,7 @@ func main() {
 	go startSender(&memStats)
 
 	exit := make(chan os.Signal)
-	signal.Notify(exit, os.Interrupt, os.Kill)
+	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
 	<-exit
 
 	//start := time.Now()
