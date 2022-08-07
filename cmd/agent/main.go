@@ -22,12 +22,10 @@ type gauge float64
 type counter int64
 
 func (g gauge) Type() string {
-	//return fmt.Sprintf("%T", g)
 	return "gauge"
 }
 
 func (c counter) Type() string {
-	//return fmt.Sprintf("%T", c)
 	return "counter"
 }
 
@@ -156,6 +154,12 @@ func makeMsg(memStats MemStats) string {
 
 func MakeRequest(memStats *MemStats) {
 
+	////const adresServer = "localhost:8080"
+	////const msgFormat = "http://%s/update/%s/%s/%v"
+	//
+	//msg := fmt.Sprintf(msgFormat, adresServer, memStats.Alloc.Type(), "Alloc", memStats.Alloc)
+	//r := strings.NewReader(msg)
+
 	message := makeMsg(*memStats)
 	r := strings.NewReader(message)
 
@@ -198,7 +202,7 @@ func main() {
 	go startMetric(&memStats)
 	go startSender(&memStats)
 
-	exit := make(chan os.Signal)
+	exit := make(chan os.Signal, 1024)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
 	<-exit
 
