@@ -78,7 +78,7 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Fprintf(w, "err %q\n", err)
+		//fmt.Fprintf(w, "err %q\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -174,7 +174,7 @@ func main() {
 		metValue := chi.URLParam(rq, "metValue")
 
 		if metName == "" || metType == "" || metValue == "" {
-			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
+			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
 			return
 		}
 
@@ -186,7 +186,7 @@ func main() {
 		}
 		if metValue != realMetValue {
 			http.Error(rw, "Ожидаемое значенние "+metValue+" метрики "+metName+" с типом "+metType+
-				" не найдена", http.StatusInternalServerError)
+				" не найдена", http.StatusBadRequest)
 			return
 		}
 

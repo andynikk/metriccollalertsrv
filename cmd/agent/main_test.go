@@ -48,7 +48,6 @@ func TestFuncAgen(t *testing.T) {
 			t.Run("Creating a submission line", func(t *testing.T) {
 
 				resp, err := http.Post("http://127.0.0.1:8080", "text/plain", strings.NewReader(resultMassage))
-				defer resp.Body.Close()
 
 				if err != nil {
 					t.Errorf("Error sending a POST message (%s)", err.Error())

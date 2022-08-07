@@ -165,14 +165,13 @@ func MakeRequest(memStats *MemStats) {
 
 	r := strings.NewReader("http://localhost:8080/update/counter/testCounter/100")
 
-	resp, err := http.Post("http://localhost:8080", "text/plain", r)
-	defer resp.Body.Close()
+	_, err := http.Post("http://localhost:8080", "text/plain", r)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(resp.Status)
+	//fmt.Println(resp.Status)
 	//fmt.Println("Сообщение: \n" + message + "\nотправлено успешно")
 
 }
@@ -183,7 +182,10 @@ func startMetric(memStats *MemStats) {
 
 	for {
 		select {
-		case <-ticker.C:
+		case _, ok := <-ticker.C:
+			if !ok {
+				break
+			}
 			metrixScan(memStats)
 		}
 	}
@@ -195,7 +197,10 @@ func startSender(memStats *MemStats) {
 
 	for {
 		select {
-		case <-ticker.C:
+		case _, ok := <-ticker.C:
+			if !ok {
+				break
+			}
 			MakeRequest(memStats)
 		}
 	}
