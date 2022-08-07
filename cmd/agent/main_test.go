@@ -67,7 +67,7 @@ func TestFuncAgen(t *testing.T) {
 	fillGauge(&resultMS, &mem)
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
-		if resultMS.Frees.Type() != "main.gauge" {
+		if resultMS.Frees.Type() != "gauge" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Gauge")
 		}
 	})
@@ -82,7 +82,7 @@ func TestFuncAgen(t *testing.T) {
 	fillCounter(&resultMS)
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
-		if resultMS.PollCount.Type() != "main.counter" {
+		if resultMS.PollCount.Type() != "counter" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Counter")
 		}
 	})
