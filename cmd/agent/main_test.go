@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"runtime"
 	"strings"
 	"testing"
@@ -45,20 +44,20 @@ func TestFuncAgen(t *testing.T) {
 				t.Errorf("Error creating a submission line (%s)", argErr)
 			}
 
-			t.Run("Creating a submission line", func(t *testing.T) {
-
-				r := strings.NewReader(resultMassage)
-				resp, err := http.Post("http://localhost:8080", "text/plain", r)
-
-				if err != nil {
-					t.Errorf("Error sending a POST message (%s)", err.Error())
-				}
-
-				if resp.Status != "200 OK" {
-					t.Errorf("Incorrect jndtnf status (%s)", err.Error())
-				}
-				resp.Body.Close()
-			})
+			//t.Run("Creating a submission line", func(t *testing.T) {
+			//
+			//	r := strings.NewReader(resultMassage)
+			//	resp, err := http.Post("http://localhost:8080", "text/plain", r)
+			//
+			//	if err != nil {
+			//		t.Errorf("Error sending a POST message (%s)", err.Error())
+			//	}
+			//
+			//	if resp.Status != "200 OK" {
+			//		t.Errorf("Incorrect jndtnf status (%s)", err.Error())
+			//	}
+			//	resp.Body.Close()
+			//})
 		})
 	})
 

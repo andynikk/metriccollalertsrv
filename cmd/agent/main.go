@@ -191,12 +191,13 @@ func startSender(memStats *MemStats) {
 	ticker := time.NewTicker(reportInterval * time.Second)
 	defer ticker.Stop()
 
+	done := make(chan bool)
+
 	for {
 		select {
-		case _, ok := <-ticker.C:
-			if !ok {
-				break
-			}
+		case <-done:
+			return
+		case <-ticker.C:
 			MakeRequest(memStats)
 		}
 	}
