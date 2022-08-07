@@ -223,6 +223,10 @@ func startSender(memStats *MemStats) {
 	ticker := time.NewTicker(reportInterval * time.Second)
 	defer ticker.Stop()
 
+	for range ch {
+		fmt.Println("here")
+	}
+
 	for {
 		select {
 		case _, ok := <-ticker.C:
