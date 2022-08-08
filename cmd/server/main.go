@@ -232,13 +232,11 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Use(
-		middleware.RequestID,
-		middleware.RealIP,
-		middleware.Logger,
-		middleware.Recoverer,
-		middleware.StripSlashes,
-	)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.StripSlashes)
 
 	r.HandleFunc("/", handleFunc)
 	r.NotFound(notFound)
