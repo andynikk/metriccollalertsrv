@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/models"
 	"log"
 	"math/rand"
 	"net/http"
@@ -18,82 +19,72 @@ const (
 	reportInterval = 10
 )
 
-type gauge float64
-type counter int64
-
-func (g gauge) Type() string {
-	return "gauge"
-}
-
-func (c counter) Type() string {
-	return "counter"
-}
-
 type MemStats struct {
-	Alloc         gauge
-	BuckHashSys   gauge
-	Frees         gauge
-	GCCPUFraction gauge
-	GCSys         gauge
-	HeapAlloc     gauge
-	HeapIdle      gauge
-	HeapInuse     gauge
-	HeapObjects   gauge
-	HeapReleased  gauge
-	HeapSys       gauge
-	LastGC        gauge
-	Lookups       gauge
-	MCacheInuse   gauge
-	MCacheSys     gauge
-	MSpanInuse    gauge
-	MSpanSys      gauge
-	Mallocs       gauge
-	NextGC        gauge
-	NumForcedGC   gauge
-	NumGC         gauge
-	OtherSys      gauge
-	PauseTotalNs  gauge
-	StackInuse    gauge
-	StackSys      gauge
-	Sys           gauge
-	TotalAlloc    gauge
-	RandomValue   gauge
-	PollCount     counter
+	Alloc         models.Gauge
+	BuckHashSys   models.Gauge
+	Frees         models.Gauge
+	GCCPUFraction models.Gauge
+	GCSys         models.Gauge
+	HeapAlloc     models.Gauge
+	HeapIdle      models.Gauge
+	HeapInuse     models.Gauge
+	HeapObjects   models.Gauge
+	HeapReleased  models.Gauge
+	HeapSys       models.Gauge
+	LastGC        models.Gauge
+	Lookups       models.Gauge
+	MCacheInuse   models.Gauge
+	MCacheSys     models.Gauge
+	MSpanInuse    models.Gauge
+	MSpanSys      models.Gauge
+	Mallocs       models.Gauge
+	NextGC        models.Gauge
+	NumForcedGC   models.Gauge
+	NumGC         models.Gauge
+	OtherSys      models.Gauge
+	PauseTotalNs  models.Gauge
+	StackInuse    models.Gauge
+	StackSys      models.Gauge
+	Sys           models.Gauge
+	TotalAlloc    models.Gauge
+	RandomValue   models.Gauge
+	PollCount     models.Counter
 }
 
 func fillGauge(memStats *MemStats, mem *runtime.MemStats) {
-	memStats.Alloc = gauge(mem.Alloc)
-	memStats.BuckHashSys = gauge(mem.BuckHashSys)
-	memStats.Frees = gauge(mem.Frees)
-	memStats.GCCPUFraction = gauge(mem.GCCPUFraction)
-	memStats.GCSys = gauge(mem.GCSys)
-	memStats.HeapAlloc = gauge(mem.HeapAlloc)
-	memStats.HeapIdle = gauge(mem.HeapIdle)
-	memStats.HeapInuse = gauge(mem.HeapInuse)
-	memStats.HeapObjects = gauge(mem.HeapObjects)
-	memStats.HeapReleased = gauge(mem.HeapReleased)
-	memStats.HeapSys = gauge(mem.HeapSys)
-	memStats.LastGC = gauge(mem.LastGC)
-	memStats.Lookups = gauge(mem.Lookups)
-	memStats.MCacheInuse = gauge(mem.MCacheInuse)
-	memStats.MCacheSys = gauge(mem.MCacheSys)
-	memStats.MSpanInuse = gauge(mem.MSpanInuse)
-	memStats.MSpanSys = gauge(mem.MSpanSys)
-	memStats.Mallocs = gauge(mem.Mallocs)
-	memStats.NextGC = gauge(mem.NextGC)
-	memStats.NumForcedGC = gauge(mem.NumForcedGC)
-	memStats.NumGC = gauge(mem.NumGC)
-	memStats.OtherSys = gauge(mem.OtherSys)
-	memStats.PauseTotalNs = gauge(mem.PauseTotalNs)
-	memStats.StackInuse = gauge(mem.StackInuse)
-	memStats.StackSys = gauge(mem.StackSys)
-	memStats.Sys = gauge(mem.Sys)
-	memStats.TotalAlloc = gauge(mem.TotalAlloc)
-	memStats.RandomValue = gauge(rand.Float64())
+	memStats.Alloc = models.Gauge(mem.Alloc)
+	memStats.BuckHashSys = models.Gauge(mem.BuckHashSys)
+	memStats.Frees = models.Gauge(mem.Frees)
+	memStats.GCCPUFraction = models.Gauge(mem.GCCPUFraction)
+	memStats.GCSys = models.Gauge(mem.GCSys)
+	memStats.HeapAlloc = models.Gauge(mem.HeapAlloc)
+	memStats.HeapIdle = models.Gauge(mem.HeapIdle)
+	memStats.HeapInuse = models.Gauge(mem.HeapInuse)
+	memStats.HeapObjects = models.Gauge(mem.HeapObjects)
+	memStats.HeapReleased = models.Gauge(mem.HeapReleased)
+	memStats.HeapSys = models.Gauge(mem.HeapSys)
+	memStats.LastGC = models.Gauge(mem.LastGC)
+	memStats.Lookups = models.Gauge(mem.Lookups)
+	memStats.MCacheInuse = models.Gauge(mem.MCacheInuse)
+	memStats.MCacheSys = models.Gauge(mem.MCacheSys)
+	memStats.MSpanInuse = models.Gauge(mem.MSpanInuse)
+	memStats.MSpanSys = models.Gauge(mem.MSpanSys)
+	memStats.Mallocs = models.Gauge(mem.Mallocs)
+	memStats.NextGC = models.Gauge(mem.NextGC)
+	memStats.NumForcedGC = models.Gauge(mem.NumForcedGC)
+	memStats.NumGC = models.Gauge(mem.NumGC)
+	memStats.OtherSys = models.Gauge(mem.OtherSys)
+	memStats.PauseTotalNs = models.Gauge(mem.PauseTotalNs)
+	memStats.StackInuse = models.Gauge(mem.StackInuse)
+	memStats.StackSys = models.Gauge(mem.StackSys)
+	memStats.Sys = models.Gauge(mem.Sys)
+	memStats.TotalAlloc = models.Gauge(mem.TotalAlloc)
+	memStats.RandomValue = models.Gauge(rand.Float64())
 }
 
 func fillCounter(memStats *MemStats) {
-	memStats.PollCount = counter(memStats.PollCount + 1)
+
+	memStats.PollCount = models.Counter(memStats.PollCount + 1)
 }
 
 func memThresholds(memStats *MemStats) {
@@ -158,7 +149,7 @@ func MakeRequest(memStats *MemStats) {
 	message := makeMsg(*memStats)
 	r := strings.NewReader(message)
 
-	//r := strings.NewReader("update/gauge/testGauge/100")
+	//r := strings.NewReader("update/models.Gauge/testmodels.Gauge/100")
 
 	resp, err := http.Post("http://localhost:8080", "text/plain", r)
 
@@ -214,34 +205,4 @@ func main() {
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
 	<-exit
 
-	//start := time.Now()
-	//
-	//ticker := time.NewTicker(pollInterval * time.Second)
-	//defer ticker.Stop()
-	//
-	//done := make(chan bool)
-	//go func() {
-	//	time.Sleep(reportInterval * time.Second)
-	//	done <- true
-	//	//fmt.Println(1)
-	//}()
-	//for {
-	//	select {
-	//	case <-done:
-	//		//fmt.Println(memStats)
-	//
-	//		MakeRequest(&memStats)
-	//
-	//		go func() {
-	//			time.Sleep(reportInterval * time.Second)
-	//			done <- true
-	//			//fmt.Println(1)
-	//		}()
-	//		//return
-	//	case t := <-ticker.C:
-	//		metrixScan(&memStats)
-	//		t.Sub(start).Seconds()
-	//		//fmt.Println(2)
-	//	}
-	//}
 }

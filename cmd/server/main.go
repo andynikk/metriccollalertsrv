@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
@@ -12,29 +14,14 @@ import (
 	"strings"
 )
 
-type gauge float64
-type counter int64
-
-func (g gauge) Type() string {
-	return fmt.Sprintf("%T", g)
+type metric interface {
+	Type() string
+	String() string
 }
 
-func (c counter) Type() string {
-	return fmt.Sprintf("%T", c)
-}
+var metGauge = map[string]metric{}
 
-func (c counter) String() string {
-	return fmt.Sprintf("%d", int64(c))
-}
-
-func (g gauge) String() string {
-	fg := float64(g)
-	return fmt.Sprintf("%g", fg)
-}
-
-var metGauge = map[string]gauge{}
-
-var metCounter = map[string]counter{}
+var metCounter = map[string]models.Counter{}
 
 func valueGauge(val string) float64 {
 	arrGauge := strings.Split(val, "/")
@@ -91,15 +78,13 @@ func handleFunc(w http.ResponseWriter, r *http.Request) {
 		typeMetric := valStrMetrics(val, 4)
 		nameMetric := valStrMetrics(val, 5)
 
-		//typeMetric := valStrMetrics(val, 1)
-		//nameMetric := valStrMetrics(val, 2)
-
-		if typeMetric == "gauge" {
+		switch typeMetric {
+		case constants.MetricGauge:
 			valueGauge := valueGauge(val)
-			metGauge[nameMetric] = gauge(valueGauge)
-		} else if typeMetric == "counter" {
+			metGauge[nameMetric] = models.Gauge(valueGauge)
+		case constants.MetricCounter:
 			valueCounter := valueCounter(val)
-			metCounter[nameMetric] = counter(valueCounter)
+			metCounter[nameMetric] = models.Counter(valueCounter)
 		}
 	}
 
@@ -144,7 +129,8 @@ func getValueMetrics(rw http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	if metType == "gauge" {
+	switch metType {
+	case constants.MetricGauge:
 		if _, ok := metGauge[metName]; !ok {
 			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 			return
@@ -156,7 +142,7 @@ func getValueMetrics(rw http.ResponseWriter, rq *http.Request) {
 		if err != nil {
 			panic(err)
 		}
-	} else if metType == "counter" {
+	case constants.MetricCounter:
 		if _, ok := metCounter[metName]; !ok {
 			http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 			return
@@ -169,6 +155,7 @@ func getValueMetrics(rw http.ResponseWriter, rq *http.Request) {
 			panic(err)
 		}
 	}
+
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -184,11 +171,13 @@ func setValueMetricsGET(rw http.ResponseWriter, rq *http.Request) {
 	}
 
 	var realMetValue string
-	if metType == "gauge" {
+	switch metType {
+	case constants.MetricGauge:
 		realMetValue = metGauge[metName].String()
-	} else if metType == "counter" {
+	case constants.MetricCounter:
 		realMetValue = metCounter[metName].String()
 	}
+
 	if metValue != realMetValue {
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Ожидаемое значенние "+metValue+" метрики "+metName+" с типом "+metType+
@@ -203,35 +192,37 @@ func setValueMetricsPOST(rw http.ResponseWriter, rq *http.Request) {
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if metName == "" || metType == "" || metValue == "" {
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
-		return
-	}
+	//if metN/ame == "" || metType == "" || metValue == "" {
+	//	http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
+	//	return
+	//}
+	//
+	//if metType != "gauge" && metType != "counter" {
+	//	http.Error(rw, "Тип "+metType+" не обрабатывается", http.StatusNotImplemented)
+	//	return
+	//}
 
-	if metType != "gauge" && metType != "counter" {
-		http.Error(rw, "Тип "+metType+" не обрабатывается", http.StatusNotImplemented)
-		return
-	}
-
-	if metType == "gauge" {
-
+	switch metType {
+	case constants.MetricGauge:
 		fltGauge, err := strconv.ParseFloat(metValue, 64)
 		if err != nil {
 			http.Error(rw, "Метрику "+metName+" с типом "+metType+" нельзя привести к значению "+metValue,
 				http.StatusBadRequest)
 			return
 		}
-		metGauge[metName] = gauge(fltGauge)
-
-	} else if metType == "counter" {
-
+		metGauge[metName] = models.Gauge(fltGauge)
+	case constants.MetricCounter:
 		intCounter, err := strconv.ParseInt(metValue, 10, 64)
 		if err != nil {
 			http.Error(rw, "Метрику "+metName+" с типом "+metType+" нельзя привести к значению "+metValue,
 				http.StatusBadRequest)
 			return
 		}
-		metCounter[metName] = metCounter[metName] + counter(intCounter)
+		predVal := metCounter[metName]
+		metCounter[metName] = predVal.Add(intCounter) // metCounter[metName] + models.Counter(intCounter)
+	default:
+		http.Error(rw, "Тип "+metType+" не обрабатывается", http.StatusNotImplemented)
+		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
@@ -261,28 +252,14 @@ func main() {
 		rw.WriteHeader(http.StatusOK)
 	})
 
-	r.Get("/value/{metType}/{metName}/", func(rw http.ResponseWriter, rq *http.Request) {
+	r.Get("/value/{metType}/{metName}/", getValueMetrics)
+	r.Get("/value/{metType}/{metName}", getValueMetrics)
 
-		getValueMetrics(rw, rq)
-	})
-	r.Get("/value/{metType}/{metName}", func(rw http.ResponseWriter, rq *http.Request) {
+	r.Get("/update/{metType}/{metName}/{metValue}", setValueMetricsGET)
+	r.Get("/update/{metType}/{metName}/{metValue}/", setValueMetricsGET)
 
-		getValueMetrics(rw, rq)
-	})
-
-	r.Get("/update/{metType}/{metName}/{metValue}", func(rw http.ResponseWriter, rq *http.Request) {
-		setValueMetricsGET(rw, rq)
-	})
-	r.Get("/update/{metType}/{metName}/{metValue}/", func(rw http.ResponseWriter, rq *http.Request) {
-		setValueMetricsGET(rw, rq)
-	})
-
-	r.Post("/update/{metType}/{metName}/{metValue}", func(rw http.ResponseWriter, rq *http.Request) {
-		setValueMetricsPOST(rw, rq)
-	})
-	r.Post("/update/{metType}/{metName}/{metValue}/", func(rw http.ResponseWriter, rq *http.Request) {
-		setValueMetricsPOST(rw, rq)
-	})
+	r.Post("/update/{metType}/{metName}/{metValue}", setValueMetricsPOST)
+	r.Post("/update/{metType}/{metName}/{metValue}/", setValueMetricsPOST)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
