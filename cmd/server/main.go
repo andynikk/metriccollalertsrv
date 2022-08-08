@@ -252,8 +252,6 @@ func main() {
 		rw.WriteHeader(http.StatusOK)
 	})
 
-	r.Use(middleware.StripSlashes)
-
 	r.Get("/value/{metType}/{metName}", getValueMetrics)
 	r.Get("/value/{metType}/{metName}/", getValueMetrics)
 
