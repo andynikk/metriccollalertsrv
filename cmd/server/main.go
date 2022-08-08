@@ -258,12 +258,12 @@ func main() {
 	r.Use(middleware.StripSlashes)
 
 	r.Get("/value/{metType}/{metName}", getValueMetrics)
-	//r.Get("/value/{metType}/{metName}/", getValueMetrics)
+	r.Get("/value/{metType}/{metName}/", getValueMetrics)
 
 	r.Get("/update/{metType}/{metName}/{metValue}", setValueMetricsGET)
-	//r.Get("/update/{metType}/{metName}/{metValue}/", setValueMetricsGET)
+	r.Get("/update/{metType}/{metName}/{metValue}/", setValueMetricsGET)
 
-	//r.Post("/update/{metType}/{metName}/{metValue}", setValueMetricsPOST)
+	r.Post("/update/{metType}/{metName}/{metValue}", setValueMetricsPOST)
 	r.Post("/update/{metType}/{metName}/{metValue}/", setValueMetricsPOST)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
