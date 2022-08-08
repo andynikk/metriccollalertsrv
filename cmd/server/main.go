@@ -232,10 +232,13 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(
+		middleware.RequestID,
+		middleware.RealIP,
+		middleware.Logger,
+		middleware.Recoverer,
+		middleware.StripSlashes,
+	)
 
 	r.HandleFunc("/", handleFunc)
 	r.NotFound(notFound)
@@ -252,13 +255,15 @@ func main() {
 		rw.WriteHeader(http.StatusOK)
 	})
 
-	r.Get("/value/{metType}/{metName}/", getValueMetrics)
+	r.Use(middleware.StripSlashes)
+
 	r.Get("/value/{metType}/{metName}", getValueMetrics)
+	//r.Get("/value/{metType}/{metName}/", getValueMetrics)
 
 	r.Get("/update/{metType}/{metName}/{metValue}", setValueMetricsGET)
-	r.Get("/update/{metType}/{metName}/{metValue}/", setValueMetricsGET)
+	//r.Get("/update/{metType}/{metName}/{metValue}/", setValueMetricsGET)
 
-	r.Post("/update/{metType}/{metName}/{metValue}", setValueMetricsPOST)
+	//r.Post("/update/{metType}/{metName}/{metValue}", setValueMetricsPOST)
 	r.Post("/update/{metType}/{metName}/{metValue}/", setValueMetricsPOST)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
