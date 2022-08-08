@@ -236,7 +236,6 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.StripSlashes)
 
 	r.HandleFunc("/", handleFunc)
 	r.NotFound(notFound)
