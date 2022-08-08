@@ -231,7 +231,7 @@ func setValueMetricsPOST(rw http.ResponseWriter, rq *http.Request) {
 				http.StatusBadRequest)
 			return
 		}
-		metCounter[metName] = counter(intCounter)
+		metCounter[metName] = metCounter[metName] + counter(intCounter)
 	}
 
 	rw.WriteHeader(http.StatusOK)
