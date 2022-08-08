@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/models"
 	"runtime"
 	"strings"
 	"testing"
@@ -95,9 +96,9 @@ func TestFuncAgen(t *testing.T) {
 	})
 
 	t.Run("Increasing the metric PollCount", func(t *testing.T) {
-		var res counter = 1
+		var res = 1
 
-		if resultMS.PollCount != res {
+		if resultMS.PollCount != models.Counter(res) {
 			t.Errorf("The metric %s has not increased by %v", "PollCount", res)
 		}
 
