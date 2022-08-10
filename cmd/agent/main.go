@@ -6,17 +6,15 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"os"
-	"os/signal"
 	"runtime"
 	"strings"
-	"syscall"
 	"time"
 )
 
 const (
 	pollInterval   = 2
 	reportInterval = 10
+	adresServer    = "localhost:8080"
 )
 
 type MemStats struct {
@@ -105,7 +103,6 @@ func metrixScan(memStats *MemStats) {
 }
 
 func makeMsg(memStats MemStats) string {
-	const adresServer = "localhost:8080"
 	const msgFormat = "http://%s/update/%s/%s/%v"
 	//const msgFormat = "update/%s/%s/%v"
 
@@ -144,65 +141,37 @@ func makeMsg(memStats MemStats) string {
 	return strings.Join(msg, "\n")
 }
 
-func MakeRequest(memStats *MemStats) {
+func MakeRequest(memStats MemStats) {
 
-	message := makeMsg(*memStats)
+	message := makeMsg(memStats)
 	r := strings.NewReader(message)
 
 	//r := strings.NewReader("update/models.Gauge/testmodels.Gauge/100")
 
-	resp, err := http.Post("http://localhost:8080", "text/plain", r)
+	_, err := http.Post(adresServer, "text/plain", r)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
+	//defer resp.Body.Close()
 
 	//fmt.Println(resp.Status)
 	//fmt.Println("Сообщение: \n" + message + "\nотправлено успешно")
 
 }
 
-func startMetric(memStats *MemStats) {
-	ticker := time.NewTicker(pollInterval * time.Second)
-	defer ticker.Stop()
-
-	done := make(chan bool)
-
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			metrixScan(memStats)
-		}
-	}
-}
-
-func startSender(memStats *MemStats) {
-	ticker := time.NewTicker(reportInterval * time.Second)
-	defer ticker.Stop()
-
-	done := make(chan bool)
-
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			MakeRequest(memStats)
-		}
-	}
-}
-
 func main() {
 
 	memStats := MemStats{}
-	go startMetric(&memStats)
-	go startSender(&memStats)
 
-	exit := make(chan os.Signal, 1024)
-	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)
-	<-exit
+	updateTicker := time.NewTicker(pollInterval * time.Second)
+	reportTicker := time.NewTicker(reportInterval * time.Second)
+
+	select {
+	case <-updateTicker.C:
+		metrixScan(&memStats)
+	case <-reportTicker.C:
+		MakeRequest(memStats)
+	}
 
 }

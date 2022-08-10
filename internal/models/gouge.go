@@ -2,13 +2,12 @@ package models
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
 )
 
 type Gauge float64
 
 func (g Gauge) Type() string {
-	return constants.MetricGauge
+	return "gauge"
 }
 
 func (g Gauge) String() string {

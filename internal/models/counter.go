@@ -2,17 +2,20 @@ package models
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
 )
 
 type Counter int64
 
 func (c Counter) Add(x int64) Counter {
-	return Counter(int64(c) + x)
+	return Counter(int64(c) + x) //sync.Mutex{} //
 }
 
 func (c Counter) Type() string {
-	return constants.MetricCounter
+	return "counter"
+}
+
+func (c Counter) TypeFromString() string {
+	return "counter"
 }
 
 func (c Counter) String() string {
