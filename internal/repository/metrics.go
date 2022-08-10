@@ -74,19 +74,36 @@ func (c Counter) GetVal(nameMetric string) string {
 	return nameMetric //Metrics[nameMetric].(Counter)
 }
 
-func SetValue(typeMetric string, nameMetric string, valMetric string) error {
+func returnMetric(typeMetric string) (Metric, error) {
 	var mtc Metric
 
-	if _, findKey := typeMetGauge[typeMetric]; findKey {
+	_, findKey := typeMetGauge[typeMetric]
+	switch findKey {
+	case true:
 		mtc = typeMetGauge[typeMetric]
-	} else {
-		mtc = typeMetCounter[typeMetric]
+	case false:
+		_, findKey := typeMetGauge[typeMetric]
+		switch findKey {
+		case true:
+			mtc = typeMetCounter[typeMetric]
+		case false:
+			return nil, errors.New("501")
+		}
+	}
+	return mtc, nil
+}
+
+func SetValue(typeMetric string, nameMetric string, valMetric string) error {
+	mtc, err := returnMetric(typeMetric)
+	if err != nil {
+		return err
 	}
 
-	err := mtc.SetVal(nameMetric, valMetric)
+	err = mtc.SetVal(nameMetric, valMetric)
 	if err != nil {
-		return errors.New("error set value")
+		return errors.New("400")
 	}
+
 	return nil
 }
 

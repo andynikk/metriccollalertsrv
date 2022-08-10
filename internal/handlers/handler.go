@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func NotFound(rw http.ResponseWriter, r *http.Request) {
@@ -77,8 +78,12 @@ func SetValuePOSTHandler(rw http.ResponseWriter, rq *http.Request) {
 
 	err := repository.SetValue(metType, metName, metValue)
 	if err != nil {
-		http.Error(rw, "Ошибка установки значения  "+metValue+" метрики "+metName+" с типом "+metType,
-			http.StatusBadRequest)
+		var val, errConvert = strconv.ParseInt(err.Error(), 10, 64)
+		if errConvert != nil {
+			http.Error(rw, "Ошибка получения значения ответа http", 501)
+		}
+		http.Error(rw, "Ошибка установки значения "+metValue+" метрики "+metName+" с типом "+metType,
+			int(val))
 	}
 
 	rw.WriteHeader(http.StatusOK)
