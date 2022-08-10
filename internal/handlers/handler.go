@@ -75,7 +75,11 @@ func SetValuePOSTHandler(rw http.ResponseWriter, rq *http.Request) {
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	repository.SetValue(metType, metName, metValue)
+	err := repository.SetValue(metType, metName, metValue)
+	if err != nil {
+		http.Error(rw, "Ошибка установки значения  "+metValue+" метрики "+metName+" с типом "+metType,
+			http.StatusBadRequest)
+	}
 
 	rw.WriteHeader(http.StatusOK)
 }

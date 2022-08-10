@@ -41,10 +41,12 @@ func TestFuncServer(t *testing.T) {
 			nameMetric := valStrMetrics(valElArr, 5)
 			valueMetric := valStrMetrics(valElArr, 6)
 
-			repository.SetValue(typeMetric, nameMetric, valueMetric)
-			valueGauge := repository.GetValue(typeMetric, nameMetric)
+			err := repository.SetValue(typeMetric, nameMetric, valueMetric)
+			if err != nil {
+				t.Errorf("Error setting the value %s metric %s", valueMetric, nameMetric)
+			}
 
-			if valueGauge != repository.Gauge(0.1) {
+			if repository.Metrics[nameMetric].(repository.Gauge) != repository.Gauge(0.1) {
 				t.Errorf("Incorrect definition of the metric %s value %v", "Alloc", valElArr)
 			}
 		})
@@ -70,10 +72,13 @@ func TestFuncServer(t *testing.T) {
 			nameMetric := valStrMetrics(valElArr, 5)
 			valueMetric := valStrMetrics(valElArr, 6)
 
-			repository.SetValue(typeMetric, nameMetric, valueMetric)
-			valueCounter := repository.GetValue(typeMetric, nameMetric)
+			err := repository.SetValue(typeMetric, nameMetric, valueMetric)
+			if err != nil {
+				t.Errorf("Error setting the value %s metric %s", valueMetric, nameMetric)
+			}
+			//valueCounter := repository.GetValue(typeMetric, nameMetric)
 
-			if valueCounter != repository.Counter(5) {
+			if repository.Metrics[nameMetric].(repository.Counter) != repository.Counter(5) {
 				t.Errorf("Incorrect definition of the metric %s value %v", "PollCount", valElArr)
 			}
 		})
