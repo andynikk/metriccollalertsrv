@@ -54,7 +54,10 @@ func HandleFunc(w http.ResponseWriter, r *http.Request) {
 		nameMetric := valStrMetrics(val, 5)
 		valMetric := valStrMetrics(val, 6)
 
-		repository.SetValue(typeMetric, nameMetric, valMetric)
+		err = repository.SetValue(typeMetric, nameMetric, valMetric)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -74,14 +77,13 @@ func main() {
 	nr.NotFound(handlers.NotFound)
 
 	repository.RefTypeMepStruc()
-	repository.Metrics["PollCount"] = 0
 
 	nr.Get("/", func(rw http.ResponseWriter, rq *http.Request) {
 		textMetricsAndValue := textMetricsAndValue()
 
 		_, err := io.WriteString(rw, textMetricsAndValue)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err.Error())
 			return
 		}
 		rw.WriteHeader(http.StatusOK)

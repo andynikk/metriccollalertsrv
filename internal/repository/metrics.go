@@ -3,7 +3,6 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 )
 
@@ -16,18 +15,16 @@ type Counter int64
 var Metrics = map[string]interface{}{}
 
 type Metric interface {
-	SetVal(string, string, string) error
+	SetVal(string, string) error
 	String() string
-	//GetVal(string) (Gauge, Counter)
+	Type() string
+	GetVal(string) string
 }
 
-func (g Gauge) SetVal(typeMetric string, nameMetric string, valMetric string) error {
-	if typeMetric != "gauge" {
-		return errors.New("this not guage")
-	}
+func (g Gauge) SetVal(nameMetric string, valMetric string) error {
+
 	val, err := strconv.ParseFloat(valMetric, 64)
 	if err != nil {
-		fmt.Println(err)
 		return errors.New("error convert type")
 	}
 
@@ -35,10 +32,7 @@ func (g Gauge) SetVal(typeMetric string, nameMetric string, valMetric string) er
 	return nil
 }
 
-func (c Counter) SetVal(typeMetric string, nameMetric string, valMetric string) error {
-	if typeMetric != "counter" {
-		return errors.New("this not counter")
-	}
+func (c Counter) SetVal(nameMetric string, valMetric string) error {
 
 	var val, err = strconv.ParseInt(valMetric, 10, 64)
 	if err != nil {
@@ -46,10 +40,7 @@ func (c Counter) SetVal(typeMetric string, nameMetric string, valMetric string) 
 	}
 
 	if _, findKey := Metrics[nameMetric]; findKey {
-		predVal, findKey := Metrics[nameMetric].(Counter)
-		if !findKey {
-			log.Fatal("could not assert value to int")
-		}
+		predVal := Metrics[nameMetric].(Counter)
 		Metrics[nameMetric] = Counter(val + int64(predVal))
 	} else {
 		Metrics[nameMetric] = Counter(val)
@@ -67,15 +58,23 @@ func (c Counter) String() string {
 	return fmt.Sprintf("%d", int64(c))
 }
 
-func (g Gauge) GetVal(nameMetric string) Gauge {
-	return Metrics[nameMetric].(Gauge)
+func (g Gauge) Type() string {
+	return "gauge"
 }
 
-func (c Counter) GetVal(nameMetric string) Counter {
-	return Metrics[nameMetric].(Counter)
+func (c Counter) Type() string {
+	return "counter"
 }
 
-func SetValue(typeMetric string, nameMetric string, valMetric string) {
+func (g Gauge) GetVal(nameMetric string) string {
+	return nameMetric //Metrics[nameMetric].(Gauge)
+}
+
+func (c Counter) GetVal(nameMetric string) string {
+	return nameMetric //Metrics[nameMetric].(Counter)
+}
+
+func SetValue(typeMetric string, nameMetric string, valMetric string) error {
 	var mtc Metric
 
 	if _, findKey := typeMetGauge[typeMetric]; findKey {
@@ -84,10 +83,11 @@ func SetValue(typeMetric string, nameMetric string, valMetric string) {
 		mtc = typeMetCounter[typeMetric]
 	}
 
-	err := mtc.SetVal(typeMetric, nameMetric, valMetric)
+	err := mtc.SetVal(nameMetric, valMetric)
 	if err != nil {
-		log.Fatal("The value is not set")
+		return errors.New("error set value")
 	}
+	return nil
 }
 
 func StringValue(typeMetric string, nameMetric string) string {
@@ -104,7 +104,8 @@ func StringValue(typeMetric string, nameMetric string) string {
 
 }
 
-func GetValue(typeMetric string, nameMetric string) Metric {
+func GetValue(typeMetric string, nameMetric string) string {
+
 	var mtc Metric
 
 	if _, findKey := typeMetGauge[typeMetric]; findKey {
@@ -113,7 +114,7 @@ func GetValue(typeMetric string, nameMetric string) Metric {
 		mtc = Metrics[nameMetric].(Counter)
 	}
 
-	return mtc
+	return mtc.GetVal(nameMetric)
 
 }
 

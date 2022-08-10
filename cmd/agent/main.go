@@ -2,8 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/models"
-	"log"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -14,83 +13,82 @@ import (
 const (
 	pollInterval   = 2
 	reportInterval = 10
-	adresServer    = "localhost:8080"
+	addressServer  = "http://localhost:8080"
+	msgFormat      = "%s/update/%s/%s/%v"
 )
 
 type MemStats struct {
-	Alloc         models.Gauge
-	BuckHashSys   models.Gauge
-	Frees         models.Gauge
-	GCCPUFraction models.Gauge
-	GCSys         models.Gauge
-	HeapAlloc     models.Gauge
-	HeapIdle      models.Gauge
-	HeapInuse     models.Gauge
-	HeapObjects   models.Gauge
-	HeapReleased  models.Gauge
-	HeapSys       models.Gauge
-	LastGC        models.Gauge
-	Lookups       models.Gauge
-	MCacheInuse   models.Gauge
-	MCacheSys     models.Gauge
-	MSpanInuse    models.Gauge
-	MSpanSys      models.Gauge
-	Mallocs       models.Gauge
-	NextGC        models.Gauge
-	NumForcedGC   models.Gauge
-	NumGC         models.Gauge
-	OtherSys      models.Gauge
-	PauseTotalNs  models.Gauge
-	StackInuse    models.Gauge
-	StackSys      models.Gauge
-	Sys           models.Gauge
-	TotalAlloc    models.Gauge
-	RandomValue   models.Gauge
-	PollCount     models.Counter
+	Alloc         repository.Gauge
+	BuckHashSys   repository.Gauge
+	Frees         repository.Gauge
+	GCCPUFraction repository.Gauge
+	GCSys         repository.Gauge
+	HeapAlloc     repository.Gauge
+	HeapIdle      repository.Gauge
+	HeapInuse     repository.Gauge
+	HeapObjects   repository.Gauge
+	HeapReleased  repository.Gauge
+	HeapSys       repository.Gauge
+	LastGC        repository.Gauge
+	Lookups       repository.Gauge
+	MCacheInuse   repository.Gauge
+	MCacheSys     repository.Gauge
+	MSpanInuse    repository.Gauge
+	MSpanSys      repository.Gauge
+	Mallocs       repository.Gauge
+	NextGC        repository.Gauge
+	NumForcedGC   repository.Gauge
+	NumGC         repository.Gauge
+	OtherSys      repository.Gauge
+	PauseTotalNs  repository.Gauge
+	StackInuse    repository.Gauge
+	StackSys      repository.Gauge
+	Sys           repository.Gauge
+	TotalAlloc    repository.Gauge
+	RandomValue   repository.Gauge
+	PollCount     repository.Counter
 }
 
 func fillGauge(memStats *MemStats, mem *runtime.MemStats) {
-	memStats.Alloc = models.Gauge(mem.Alloc)
-	memStats.BuckHashSys = models.Gauge(mem.BuckHashSys)
-	memStats.Frees = models.Gauge(mem.Frees)
-	memStats.GCCPUFraction = models.Gauge(mem.GCCPUFraction)
-	memStats.GCSys = models.Gauge(mem.GCSys)
-	memStats.HeapAlloc = models.Gauge(mem.HeapAlloc)
-	memStats.HeapIdle = models.Gauge(mem.HeapIdle)
-	memStats.HeapInuse = models.Gauge(mem.HeapInuse)
-	memStats.HeapObjects = models.Gauge(mem.HeapObjects)
-	memStats.HeapReleased = models.Gauge(mem.HeapReleased)
-	memStats.HeapSys = models.Gauge(mem.HeapSys)
-	memStats.LastGC = models.Gauge(mem.LastGC)
-	memStats.Lookups = models.Gauge(mem.Lookups)
-	memStats.MCacheInuse = models.Gauge(mem.MCacheInuse)
-	memStats.MCacheSys = models.Gauge(mem.MCacheSys)
-	memStats.MSpanInuse = models.Gauge(mem.MSpanInuse)
-	memStats.MSpanSys = models.Gauge(mem.MSpanSys)
-	memStats.Mallocs = models.Gauge(mem.Mallocs)
-	memStats.NextGC = models.Gauge(mem.NextGC)
-	memStats.NumForcedGC = models.Gauge(mem.NumForcedGC)
-	memStats.NumGC = models.Gauge(mem.NumGC)
-	memStats.OtherSys = models.Gauge(mem.OtherSys)
-	memStats.PauseTotalNs = models.Gauge(mem.PauseTotalNs)
-	memStats.StackInuse = models.Gauge(mem.StackInuse)
-	memStats.StackSys = models.Gauge(mem.StackSys)
-	memStats.Sys = models.Gauge(mem.Sys)
-	memStats.TotalAlloc = models.Gauge(mem.TotalAlloc)
-	memStats.RandomValue = models.Gauge(rand.Float64())
+	memStats.Alloc = repository.Gauge(mem.Alloc)
+	memStats.BuckHashSys = repository.Gauge(mem.BuckHashSys)
+	memStats.Frees = repository.Gauge(mem.Frees)
+	memStats.GCCPUFraction = repository.Gauge(mem.GCCPUFraction)
+	memStats.GCSys = repository.Gauge(mem.GCSys)
+	memStats.HeapAlloc = repository.Gauge(mem.HeapAlloc)
+	memStats.HeapIdle = repository.Gauge(mem.HeapIdle)
+	memStats.HeapInuse = repository.Gauge(mem.HeapInuse)
+	memStats.HeapObjects = repository.Gauge(mem.HeapObjects)
+	memStats.HeapReleased = repository.Gauge(mem.HeapReleased)
+	memStats.HeapSys = repository.Gauge(mem.HeapSys)
+	memStats.LastGC = repository.Gauge(mem.LastGC)
+	memStats.Lookups = repository.Gauge(mem.Lookups)
+	memStats.MCacheInuse = repository.Gauge(mem.MCacheInuse)
+	memStats.MCacheSys = repository.Gauge(mem.MCacheSys)
+	memStats.MSpanInuse = repository.Gauge(mem.MSpanInuse)
+	memStats.MSpanSys = repository.Gauge(mem.MSpanSys)
+	memStats.Mallocs = repository.Gauge(mem.Mallocs)
+	memStats.NextGC = repository.Gauge(mem.NextGC)
+	memStats.NumForcedGC = repository.Gauge(mem.NumForcedGC)
+	memStats.NumGC = repository.Gauge(mem.NumGC)
+	memStats.OtherSys = repository.Gauge(mem.OtherSys)
+	memStats.PauseTotalNs = repository.Gauge(mem.PauseTotalNs)
+	memStats.StackInuse = repository.Gauge(mem.StackInuse)
+	memStats.StackSys = repository.Gauge(mem.StackSys)
+	memStats.Sys = repository.Gauge(mem.Sys)
+	memStats.TotalAlloc = repository.Gauge(mem.TotalAlloc)
+	memStats.RandomValue = repository.Gauge(rand.Float64())
 }
 
 func fillCounter(memStats *MemStats) {
 
-	memStats.PollCount = models.Counter(memStats.PollCount + 1)
+	memStats.PollCount = repository.Counter(memStats.PollCount + 1)
 }
 
 func memThresholds(memStats *MemStats) {
 
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
-
-	//fmt.Println(memStats)
 
 	fillGauge(memStats, &mem)
 	fillCounter(memStats)
@@ -102,56 +100,53 @@ func metrixScan(memStats *MemStats) {
 	memThresholds(memStats)
 }
 
-func makeMsg(memStats MemStats) string {
-	const msgFormat = "http://%s/update/%s/%s/%v"
-	//const msgFormat = "update/%s/%s/%v"
+func makeMsg(memStats *MemStats) string {
 
 	var msg []string
 
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.Alloc.Type(), "Alloc", memStats.Alloc))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.BuckHashSys.Type(), "BuckHashSys", memStats.BuckHashSys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.Frees.Type(), "Frees", memStats.Frees))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.GCCPUFraction.Type(), "GCCPUFraction", memStats.GCCPUFraction))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.GCSys.Type(), "GCSys", memStats.GCSys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.HeapAlloc.Type(), "HeapAlloc", memStats.HeapAlloc))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.HeapIdle.Type(), "HeapIdle", memStats.HeapIdle))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.HeapInuse.Type(), "HeapInuse", memStats.HeapInuse))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.HeapObjects.Type(), "HeapObjects", memStats.HeapObjects))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.HeapReleased.Type(), "HeapReleased", memStats.HeapReleased))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.HeapSys.Type(), "HeapSys", memStats.HeapSys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.LastGC.Type(), "LastGC", memStats.LastGC))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.Lookups.Type(), "Lookups", memStats.Lookups))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.MCacheInuse.Type(), "MCacheInuse", memStats.MCacheInuse))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.MCacheSys.Type(), "MCacheSys", memStats.MCacheSys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.MSpanInuse.Type(), "MSpanInuse", memStats.MSpanInuse))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.MSpanSys.Type(), "MSpanSys", memStats.MSpanSys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.Mallocs.Type(), "Mallocs", memStats.Mallocs))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.NextGC.Type(), "NextGC", memStats.NextGC))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.NumForcedGC.Type(), "NumForcedGC", memStats.NumForcedGC))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.NumGC.Type(), "NumGC", memStats.NumGC))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.OtherSys.Type(), "OtherSys", memStats.OtherSys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.PauseTotalNs.Type(), "PauseTotalNs", memStats.PauseTotalNs))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.StackInuse.Type(), "StackInuse", memStats.StackInuse))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.StackSys.Type(), "StackSys", memStats.StackSys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.Sys.Type(), "Sys", memStats.Sys))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.TotalAlloc.Type(), "TotalAlloc", memStats.TotalAlloc))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.RandomValue.Type(), "RandomValue", memStats.RandomValue))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats.PollCount.Type(), "PollCount", memStats.PollCount))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.Alloc.Type(), "Alloc", memStats.Alloc))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.BuckHashSys.Type(), "BuckHashSys", memStats.BuckHashSys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.Frees.Type(), "Frees", memStats.Frees))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.GCCPUFraction.Type(), "GCCPUFraction", memStats.GCCPUFraction))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.GCSys.Type(), "GCSys", memStats.GCSys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.HeapAlloc.Type(), "HeapAlloc", memStats.HeapAlloc))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.HeapIdle.Type(), "HeapIdle", memStats.HeapIdle))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.HeapInuse.Type(), "HeapInuse", memStats.HeapInuse))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.HeapObjects.Type(), "HeapObjects", memStats.HeapObjects))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.HeapReleased.Type(), "HeapReleased", memStats.HeapReleased))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.HeapSys.Type(), "HeapSys", memStats.HeapSys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.LastGC.Type(), "LastGC", memStats.LastGC))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.Lookups.Type(), "Lookups", memStats.Lookups))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.MCacheInuse.Type(), "MCacheInuse", memStats.MCacheInuse))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.MCacheSys.Type(), "MCacheSys", memStats.MCacheSys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.MSpanInuse.Type(), "MSpanInuse", memStats.MSpanInuse))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.MSpanSys.Type(), "MSpanSys", memStats.MSpanSys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.Mallocs.Type(), "Mallocs", memStats.Mallocs))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.NextGC.Type(), "NextGC", memStats.NextGC))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.NumForcedGC.Type(), "NumForcedGC", memStats.NumForcedGC))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.NumGC.Type(), "NumGC", memStats.NumGC))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.OtherSys.Type(), "OtherSys", memStats.OtherSys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.PauseTotalNs.Type(), "PauseTotalNs", memStats.PauseTotalNs))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.StackInuse.Type(), "StackInuse", memStats.StackInuse))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.StackSys.Type(), "StackSys", memStats.StackSys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.Sys.Type(), "Sys", memStats.Sys))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.TotalAlloc.Type(), "TotalAlloc", memStats.TotalAlloc))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.RandomValue.Type(), "RandomValue", memStats.RandomValue))
+	msg = append(msg, fmt.Sprintf(msgFormat, addressServer, memStats.PollCount.Type(), "PollCount", memStats.PollCount))
 
 	return strings.Join(msg, "\n")
 }
 
-func MakeRequest(memStats MemStats) {
+func MakeRequest(memStats *MemStats) {
 
 	message := makeMsg(memStats)
-	r := strings.NewReader(message)
+	rn := strings.NewReader(message)
 
-	//r := strings.NewReader("update/models.Gauge/testmodels.Gauge/100")
+	//r := strings.NewReader("update/gauge/Alloc/100")
 
-	resp, err := http.Post(adresServer, "text/plain", r)
-
+	resp, err := http.Post(addressServer, "text/plain", rn)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 	defer resp.Body.Close()
 
@@ -167,11 +162,20 @@ func main() {
 	updateTicker := time.NewTicker(pollInterval * time.Second)
 	reportTicker := time.NewTicker(reportInterval * time.Second)
 
-	select {
-	case <-updateTicker.C:
-		metrixScan(&memStats)
-	case <-reportTicker.C:
-		MakeRequest(memStats)
+	for {
+		select {
+		case <-updateTicker.C:
+			metrixScan(&memStats)
+		case <-reportTicker.C:
+			MakeRequest(&memStats)
+		}
 	}
+
+	//go startMetric(&memStats)
+	//go startSender(&memStats)
+	//
+	//exit := make(chan os.Signal)
+	//signal.Notify(exit, os.Interrupt, os.Kill)
+	//<-exit
 
 }
