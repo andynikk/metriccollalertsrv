@@ -79,7 +79,7 @@ func SetValuePOSTHandler(rw http.ResponseWriter, rq *http.Request) {
 	err := repository.SetValue(metType, metName, metValue)
 	if err != nil {
 		var val, errConvert = strconv.ParseInt(err.Error(), 10, 64)
-		var codeErr int = 501
+		var codeErr = 501
 
 		if errConvert != nil {
 			http.Error(rw, "Ошибка получения значения ответа http", codeErr)
