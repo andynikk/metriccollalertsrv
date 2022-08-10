@@ -18,6 +18,7 @@ var Metrics = map[string]interface{}{}
 type Metric interface {
 	SetVal(string, string, string) error
 	String() string
+	//GetVal(string) (Gauge, Counter)
 }
 
 func (g Gauge) SetVal(typeMetric string, nameMetric string, valMetric string) error {
@@ -27,7 +28,7 @@ func (g Gauge) SetVal(typeMetric string, nameMetric string, valMetric string) er
 	val, err := strconv.ParseFloat(valMetric, 64)
 	if err != nil {
 		fmt.Println(err)
-		return errors.New("Error convert type")
+		return errors.New("error convert type")
 	}
 
 	Metrics[nameMetric] = Gauge(val)
@@ -36,12 +37,12 @@ func (g Gauge) SetVal(typeMetric string, nameMetric string, valMetric string) er
 
 func (c Counter) SetVal(typeMetric string, nameMetric string, valMetric string) error {
 	if typeMetric != "counter" {
-		return errors.New("This not counter")
+		return errors.New("this not counter")
 	}
 
 	var val, err = strconv.ParseInt(valMetric, 10, 64)
 	if err != nil {
-		return errors.New("Error convert type counter")
+		return errors.New("error convert type counter")
 	}
 
 	if _, findKey := Metrics[nameMetric]; findKey {
@@ -66,6 +67,14 @@ func (c Counter) String() string {
 	return fmt.Sprintf("%d", int64(c))
 }
 
+func (g Gauge) GetVal(nameMetric string) Gauge {
+	return Metrics[nameMetric].(Gauge)
+}
+
+func (c Counter) GetVal(nameMetric string) Counter {
+	return Metrics[nameMetric].(Counter)
+}
+
 func SetValue(typeMetric string, nameMetric string, valMetric string) {
 	var mtc Metric
 
@@ -81,17 +90,30 @@ func SetValue(typeMetric string, nameMetric string, valMetric string) {
 	}
 }
 
-func StringValue(metType string, metName string) string {
+func StringValue(typeMetric string, nameMetric string) string {
 
 	var mtc Metric
 
-	if _, findKey := typeMetGauge[metType]; findKey {
-		mtc = Metrics[metName].(Gauge)
+	if _, findKey := typeMetGauge[typeMetric]; findKey {
+		mtc = Metrics[nameMetric].(Gauge)
 	} else {
-		mtc = Metrics[metName].(Counter)
+		mtc = Metrics[nameMetric].(Counter)
 	}
 
 	return mtc.String()
+
+}
+
+func GetValue(typeMetric string, nameMetric string) Metric {
+	var mtc Metric
+
+	if _, findKey := typeMetGauge[typeMetric]; findKey {
+		mtc = Metrics[nameMetric].(Gauge)
+	} else {
+		mtc = Metrics[nameMetric].(Counter)
+	}
+
+	return mtc
 
 }
 

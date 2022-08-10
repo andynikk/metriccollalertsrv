@@ -148,12 +148,12 @@ func MakeRequest(memStats MemStats) {
 
 	//r := strings.NewReader("update/models.Gauge/testmodels.Gauge/100")
 
-	_, err := http.Post(adresServer, "text/plain", r)
+	resp, err := http.Post(adresServer, "text/plain", r)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	//defer resp.Body.Close()
+	defer resp.Body.Close()
 
 	//fmt.Println(resp.Status)
 	//fmt.Println("Сообщение: \n" + message + "\nотправлено успешно")

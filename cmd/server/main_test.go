@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"strings"
 	"testing"
 )
@@ -34,8 +35,13 @@ func TestFuncServer(t *testing.T) {
 
 			messageRaz := strings.Split(postStr, "\n")
 			valElArr := messageRaz[0]
-			valueGauge := valueGauge(valElArr)
-			if valueGauge != 0.1 {
+
+			typeMetric := valStrMetrics(valElArr, 4)
+			nameMetric := valStrMetrics(valElArr, 5)
+
+			valueGauge := repository.GetValue(typeMetric, nameMetric)
+
+			if valueGauge != repository.Gauge(0.1) {
 				t.Errorf("Incorrect definition of the metric %s value %v", "Alloc", valElArr)
 			}
 		})
@@ -56,8 +62,14 @@ func TestFuncServer(t *testing.T) {
 		t.Run("Checking the filling of metrics Counter", func(t *testing.T) {
 			messageRaz := strings.Split(postStr, "\n")
 			valElArr := messageRaz[2]
-			valueCounter := valueGauge(valElArr)
-			if valueCounter != 5 {
+
+			typeMetric := valStrMetrics(valElArr, 4)
+			nameMetric := valStrMetrics(valElArr, 5)
+
+			valueCounter := repository.GetValue(typeMetric, nameMetric)
+			//valueCounter := valueGauge(valElArr)
+
+			if valueCounter != repository.Counter(5) {
 				t.Errorf("Incorrect definition of the metric %s value %v", "PollCount", valElArr)
 			}
 		})
