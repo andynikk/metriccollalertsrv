@@ -23,7 +23,7 @@ type Metric interface {
 
 func (g Gauge) SetVal(typeMetric string, nameMetric string, valMetric string) error {
 	if typeMetric != "gauge" {
-		return errors.New("This not guage")
+		return errors.New("this not guage")
 	}
 	val, err := strconv.ParseFloat(valMetric, 64)
 	if err != nil {

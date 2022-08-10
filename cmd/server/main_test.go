@@ -8,9 +8,10 @@ import (
 
 func TestFuncServer(t *testing.T) {
 
-	var postStr = "http://127.0.0.1:8080/update/main.gauge/Alloc/0.1\nhttp://127.0.0.1:8080/update/main.gauge/" +
-		"BuckHashSys/0.002\nhttp://127.0.0.1:8080/update/main.counter/PollCount/5"
+	var postStr = "http://127.0.0.1:8080/update/gauge/Alloc/0.1\nhttp://127.0.0.1:8080/update/gauge/" +
+		"BuckHashSys/0.002\nhttp://127.0.0.1:8080/update/counter/PollCount/5"
 
+	repository.RefTypeMepStruc()
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
 		messageRaz := strings.Split(postStr, "\n")
@@ -38,7 +39,9 @@ func TestFuncServer(t *testing.T) {
 
 			typeMetric := valStrMetrics(valElArr, 4)
 			nameMetric := valStrMetrics(valElArr, 5)
+			valueMetric := valStrMetrics(valElArr, 6)
 
+			repository.SetValue(typeMetric, nameMetric, valueMetric)
 			valueGauge := repository.GetValue(typeMetric, nameMetric)
 
 			if valueGauge != repository.Gauge(0.1) {
@@ -65,9 +68,10 @@ func TestFuncServer(t *testing.T) {
 
 			typeMetric := valStrMetrics(valElArr, 4)
 			nameMetric := valStrMetrics(valElArr, 5)
+			valueMetric := valStrMetrics(valElArr, 6)
 
+			repository.SetValue(typeMetric, nameMetric, valueMetric)
 			valueCounter := repository.GetValue(typeMetric, nameMetric)
-			//valueCounter := valueGauge(valElArr)
 
 			if valueCounter != repository.Counter(5) {
 				t.Errorf("Incorrect definition of the metric %s value %v", "PollCount", valElArr)
