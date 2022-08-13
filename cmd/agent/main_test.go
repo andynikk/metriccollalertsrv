@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"runtime"
 	"strings"
 	"testing"
@@ -21,7 +22,7 @@ func TestmakeMsg(memStats Metrics) string {
 }
 
 func TestFuncAgen(t *testing.T) {
-	var resultMS Metrics
+	var resultMS = make(Metrics)
 	var argErr = "err"
 
 	t.Run("Checking the structure creation", func(t *testing.T) {
@@ -82,20 +83,20 @@ func TestFuncAgen(t *testing.T) {
 	fillMetric(resultMS, &mem)
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
-		if resultMS["PollCount"].Type() != "counter" {
+		if repository.Counter(PollCount).Type() != "counter" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Counter")
 		}
 	})
 
 	t.Run("Checking the metrics value Gauge", func(t *testing.T) {
-		if resultMS["PollCount"] == 0 {
+		if PollCount == 0 {
 			t.Errorf("The metric %s a value of %v", "PollCount", 0)
 		}
 
 	})
 
 	t.Run("Increasing the metric PollCount", func(t *testing.T) {
-		var res = int64(1)
+		var res = int64(2)
 
 		if PollCount != res {
 			t.Errorf("The metric %s has not increased by %v", "PollCount", res)

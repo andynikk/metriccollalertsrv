@@ -13,6 +13,30 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
+func setValueInMapa(mapa repository.MetricsType, metType string, metName string, metValue string) int {
+	if metType == repository.Gauge(0).Type() {
+		predVal, err := strconv.ParseFloat(metValue, 64)
+		if err != nil {
+			fmt.Println("error convert type")
+			return 400
+		}
+		val := repository.Gauge(predVal)
+		val.SetVal(mapa, metName)
+	} else if metType == repository.Counter(0).Type() {
+		predVal, err := strconv.ParseInt(metValue, 10, 64)
+		if err != nil {
+			fmt.Println("error convert type")
+			return 400
+		}
+		val := repository.Counter(predVal)
+		val.SetVal(mapa, metName)
+	} else {
+		return 501
+	}
+
+	return 200
+}
+
 func handlerNotFound(rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(http.StatusNotFound)
 
@@ -59,30 +83,6 @@ func handlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 		}
 	}
 	rw.WriteHeader(http.StatusOK)
-}
-
-func setValueInMapa(mapa repository.MetricsType, metType string, metName string, metValue string) int {
-	if metType == repository.Gauge(0).Type() {
-		predVal, err := strconv.ParseFloat(metValue, 64)
-		if err != nil {
-			fmt.Println("error convert type")
-			return 400
-		}
-		val := repository.Gauge(predVal)
-		val.SetVal(mapa, metName)
-	} else if metType == repository.Counter(0).Type() {
-		predVal, err := strconv.ParseInt(metValue, 10, 64)
-		if err != nil {
-			fmt.Println("error convert type")
-			return 400
-		}
-		val := repository.Counter(predVal)
-		val.SetVal(mapa, metName)
-	} else {
-		return 501
-	}
-
-	return 200
 }
 
 func handlerSetMetrica(rw http.ResponseWriter, rq *http.Request) {
