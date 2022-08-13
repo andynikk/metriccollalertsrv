@@ -79,22 +79,22 @@ func MakeRequest(metric Metrics) {
 		msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
 		rn := strings.NewReader(msg)
 
-		_, err := http.Post(msg, "text/plain", rn)
+		resp, err := http.Post(msg, "text/plain", rn)
 		if err != nil {
 			fmt.Println(err.Error())
-			continue
 		}
+		defer resp.Body.Close()
 	}
 
 	cPollCount := repository.Counter(PollCount)
 	msg := fmt.Sprintf(msgFormat, consts.AddressServer, cPollCount.Type(), "PollCount", cPollCount)
 	rn := strings.NewReader(msg)
 
-	_, err := http.Post(msg, "text/plain", rn)
+	resp, err := http.Post(msg, "text/plain", rn)
 	if err != nil {
 		fmt.Println(err.Error())
-		return
 	}
+	defer resp.Body.Close()
 
 }
 

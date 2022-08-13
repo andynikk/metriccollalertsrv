@@ -95,8 +95,7 @@ func TestFuncAgen(t *testing.T) {
 	})
 
 	t.Run("Increasing the metric PollCount", func(t *testing.T) {
-		var res int64
-		res = 1
+		var res = int64(1)
 
 		if PollCount != res {
 			t.Errorf("The metric %s has not increased by %v", "PollCount", res)

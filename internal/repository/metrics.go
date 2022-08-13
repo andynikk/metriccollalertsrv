@@ -27,7 +27,7 @@ func (g Gauge) SetVal(mapa MetricsType, nameMetric string) {
 func (c Counter) SetVal(mapa MetricsType, nameMetric string) {
 
 	if _, findKey := mapa[nameMetric]; !findKey {
-		mapa[nameMetric] = Counter(0)
+		mapa[nameMetric] = c
 	} else {
 		predVal := mapa[nameMetric].(Counter)
 		val := int64(predVal) + int64(c)
