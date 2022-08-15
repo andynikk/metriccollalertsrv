@@ -2,16 +2,19 @@ package repository
 
 import (
 	"fmt"
-	"strings"
+	"sync"
 )
 
 type Gauge float64
 type Counter int64
 
+type MutexCounters struct {
+	mx sync.Mutex
+	m  MetricsType
+}
+
 type MetricsType = map[string]interface{}
 type MapMetrics = map[string]MetricsType
-
-var Metrics = make(MapMetrics)
 
 type Metric interface {
 	SetVal(string, string) error
@@ -21,18 +24,25 @@ type Metric interface {
 }
 
 func (g Gauge) SetVal(mapa MetricsType, nameMetric string) {
+	var lock sync.Mutex
+	defer lock.Unlock()
+
+	lock.Lock()
 	mapa[nameMetric] = g
 }
 
 func (c Counter) SetVal(mapa MetricsType, nameMetric string) {
+	var lock sync.Mutex
+	defer lock.Unlock()
+
+	lock.Lock()
 
 	if _, findKey := mapa[nameMetric]; !findKey {
 		mapa[nameMetric] = c
-	} else {
-		predVal := mapa[nameMetric].(Counter)
-		val := int64(predVal) + int64(c)
 
-		mapa[nameMetric] = Counter(val)
+	} else {
+
+		mapa[nameMetric] = mapa[nameMetric].(Counter) + c
 	}
 
 }
@@ -52,17 +62,4 @@ func (g Gauge) Type() string {
 
 func (c Counter) Type() string {
 	return "counter"
-}
-
-func TextMetricsAndValue() string {
-	const msgFormat = "%s = %s"
-
-	var msg []string
-	for _, mapa := range Metrics {
-		for key, val := range mapa {
-			msg = append(msg, fmt.Sprintf(msgFormat, key, val))
-		}
-	}
-
-	return strings.Join(msg, "\n")
 }
