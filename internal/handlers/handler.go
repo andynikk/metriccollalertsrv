@@ -2,14 +2,12 @@ package handlers
 
 import (
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"html/template"
 	"io"
 	"net/http"
 	"strconv"
-	"sync"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
@@ -17,15 +15,13 @@ import (
 type RepStore struct {
 	MutexRepo repository.MapMetrics
 	Router    chi.Router
-	mx        sync.Mutex
 }
 
 type MetricType int
 type MetricError int
 
 const (
-	NotFoundMetric MetricType = iota
-	GaugeMetric
+	GaugeMetric MetricType = iota
 	CounterMetric
 
 	NotError MetricError = iota
@@ -34,14 +30,14 @@ const (
 )
 
 func (mt MetricType) String() string {
-	return [...]string{"NotFound", "gauge", "counter"}[mt]
+	return [...]string{"gauge", "counter"}[mt]
 }
 
 func (et MetricError) String() string {
 	return [...]string{"Not error", "Error convert", "Error get type"}[et]
 }
 
-func setValueInMapa(mapa repository.MutexTypeMetrics, metType string, metName string, metValue string) MetricError {
+func setValueInMapa(mapa *repository.MutexTypeMetrics, metType string, metName string, metValue string) MetricError {
 	var gm = GaugeMetric
 	var cm = CounterMetric
 
@@ -143,7 +139,7 @@ func (rp *RepStore) handlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	var egt = ErrorGetType
 
 	mapa := rp.MutexRepo[metType]
-	errStatus := setValueInMapa(mapa, metType, metName, metValue)
+	errStatus := setValueInMapa(&mapa, metType, metName, metValue)
 	switch errStatus {
 	case egt:
 		rw.WriteHeader(http.StatusNotImplemented)
@@ -172,7 +168,7 @@ func (rp *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	var egt = ErrorGetType
 
 	mMapa := rp.MutexRepo[metType]
-	errStatus := setValueInMapa(mMapa, metType, metName, metValue)
+	errStatus := setValueInMapa(&mMapa, metType, metName, metValue)
 	switch errStatus {
 	case egt:
 		rw.WriteHeader(http.StatusNotImplemented)
@@ -185,6 +181,7 @@ func (rp *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rp *RepStore) handleFunc(rw http.ResponseWriter, rq *http.Request) {
 
+	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -202,16 +199,18 @@ func TextMetricsAndValue(rp *RepStore) []string {
 	return msg //strings.Join(msg, "<br />")
 }
 
-type HtmlParsm struct {
+type HTMLParam struct {
 	Title       string
 	TextMetrics []string
 }
 
 func (rp *RepStore) handlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
+	defer rq.Body.Close()
+
 	arrMetricsAndValue := TextMetricsAndValue(rp)
 
-	data := HtmlParsm{
+	data := HTMLParam{
 		Title:       "МЕТРИКИ",
 		TextMetrics: arrMetricsAndValue,
 	}
