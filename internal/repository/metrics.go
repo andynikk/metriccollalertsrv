@@ -8,13 +8,13 @@ import (
 type Gauge float64
 type Counter int64
 
-type MutexCounters struct {
-	mx sync.Mutex
-	m  MetricsType
-}
-
 type MetricsType = map[string]interface{}
-type MapMetrics = map[string]MetricsType
+type MapMetrics = map[string]MutexTypeMetrics
+
+type MutexTypeMetrics struct {
+	M  MetricsType
+	mx sync.Mutex
+}
 
 type Metric interface {
 	SetVal(string, string) error
@@ -23,26 +23,56 @@ type Metric interface {
 	GetVal(string) string
 }
 
-func (g Gauge) SetVal(mapa MetricsType, nameMetric string) {
-	var lock sync.Mutex
-	defer lock.Unlock()
+func (c *MutexTypeMetrics) SetCounter(key string, value Counter) {
+	c.mx.Lock()
 
-	lock.Lock()
-	mapa[nameMetric] = g
+	if _, findKey := c.M[key]; !findKey {
+		c.M[key] = value
+
+	} else {
+		c.M[key] = c.M[key].(Counter) + value
+	}
+
+	c.mx.Unlock()
 }
 
-func (c Counter) SetVal(mapa MetricsType, nameMetric string) {
+func (c *MutexTypeMetrics) SetGauge(key string, value Gauge) {
+	c.mx.Lock()
+
+	c.M[key] = value
+
+	c.mx.Unlock()
+}
+
+func (c *MutexTypeMetrics) ValueCounter(key string, val Counter) Counter {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	return c.M[key].(Counter)
+}
+
+func (c *MutexTypeMetrics) ValueGauge(key string, val Gauge) Gauge {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	return c.M[key].(Gauge)
+}
+
+func (g Gauge) SetVal(mapa MutexTypeMetrics, nameMetric string) {
+
+	mapa.M[nameMetric] = g
+}
+
+func (c Counter) SetVal(mapa MutexTypeMetrics, nameMetric string) {
 	var lock sync.Mutex
 	defer lock.Unlock()
 
 	lock.Lock()
 
-	if _, findKey := mapa[nameMetric]; !findKey {
-		mapa[nameMetric] = c
+	if _, findKey := mapa.M[nameMetric]; !findKey {
+		mapa.M[nameMetric] = c
 
 	} else {
 
-		mapa[nameMetric] = mapa[nameMetric].(Counter) + c
+		mapa.M[nameMetric] = mapa.M[nameMetric].(Counter) + c
 	}
 
 }

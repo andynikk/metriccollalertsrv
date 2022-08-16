@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"fmt"
+	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
-	"strings"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,67 +15,64 @@ import (
 )
 
 type RepStore struct {
-	Repo   repository.MapMetrics
-	Router chi.Router
+	MutexRepo repository.MapMetrics
+	Router    chi.Router
+	mx        sync.Mutex
 }
 
 type MetricType int
+type MetricError int
 
 const (
 	NotFoundMetric MetricType = iota
 	GaugeMetric
 	CounterMetric
+
+	NotError MetricError = iota
+	ErrorConvert
+	ErrorGetType
 )
 
 func (mt MetricType) String() string {
 	return [...]string{"NotFound", "gauge", "counter"}[mt]
 }
 
-func setValueInMapa(mapa repository.MetricsType, metType string, metName string, metValue string) int {
+func (et MetricError) String() string {
+	return [...]string{"Not error", "Error convert", "Error get type"}[et]
+}
+
+func setValueInMapa(mapa repository.MutexTypeMetrics, metType string, metName string, metValue string) MetricError {
 	var gm = GaugeMetric
 	var cm = CounterMetric
+
+	var ne = NotError
+	var ec = ErrorConvert
+	var egt = ErrorGetType
 
 	switch metType {
 	case gm.String():
 		predVal, err := strconv.ParseFloat(metValue, 64)
 		if err != nil {
 			fmt.Println("error convert type")
-			return 400
+			//400
+			return ec
 		}
 		val := repository.Gauge(predVal)
-		val.SetVal(mapa, metName)
+		mapa.SetGauge(metName, val)
+
 	case cm.String():
 		predVal, err := strconv.ParseInt(metValue, 10, 64)
 		if err != nil {
-			fmt.Println("error convert type")
-			return 400
+			return ec
 		}
 		val := repository.Counter(predVal)
-		val.SetVal(mapa, metName)
+		mapa.SetCounter(metName, val)
+		//val.SetVal(mapa, metName)
 	default:
-		return 501
+		return egt
 	}
-	//if metType == repository.Gauge(0).Type() {
-	//	predVal, err := strconv.ParseFloat(metValue, 64)
-	//	if err != nil {
-	//		fmt.Println("error convert type")
-	//		return 400
-	//	}
-	//	val := repository.Gauge(predVal)
-	//	val.SetVal(mapa, metName)
-	//} else if metType == repository.Counter(0).Type() {
-	//	predVal, err := strconv.ParseInt(metValue, 10, 64)
-	//	if err != nil {
-	//		fmt.Println("error convert type")
-	//		return 400
-	//	}
-	//	val := repository.Counter(predVal)
-	//	val.SetVal(mapa, metName)
-	//} else {
-	//	return 501
-	//}
 
-	return 200
+	return ne
 }
 
 func handlerNotFound(rw http.ResponseWriter, r *http.Request) {
@@ -83,7 +80,7 @@ func handlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
 	if err != nil {
-		log.Fatal(err)
+		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
 }
@@ -93,16 +90,16 @@ func (rp *RepStore) handlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 
-	if _, findKey := rp.Repo[metType]; !findKey {
-		rw.WriteHeader(404)
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", 404)
+	if _, findKey := rp.MutexRepo[metType]; !findKey {
+		rw.WriteHeader(http.StatusNotFound)
+		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
 
-	mapa := rp.Repo[metType]
-	if _, findKey := mapa[metName]; !findKey {
-		rw.WriteHeader(404) //Вопрос!!!
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", 404)
+	mapa := rp.MutexRepo[metType]
+	if _, findKey := mapa.M[metName]; !findKey {
+		rw.WriteHeader(http.StatusNotFound) //Вопрос!!!
+		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
 
@@ -111,7 +108,7 @@ func (rp *RepStore) handlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 	switch metType {
 	case gm.String():
-		val := mapa[metName].(repository.Gauge)
+		val := mapa.M[metName].(repository.Gauge)
 		strVal := val.String()
 		_, err := io.WriteString(rw, strVal)
 		if err != nil {
@@ -119,7 +116,7 @@ func (rp *RepStore) handlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 			return
 		}
 	case cm.String():
-		val := mapa[metName].(repository.Counter)
+		val := mapa.M[metName].(repository.Counter)
 		strVal := val.String()
 		_, err := io.WriteString(rw, strVal)
 		if err != nil {
@@ -136,33 +133,54 @@ func (rp *RepStore) handlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if _, findKey := rp.Repo[metType]; !findKey {
+	if _, findKey := rp.MutexRepo[metType]; !findKey {
 		rw.WriteHeader(http.StatusBadRequest)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
 		return
 	}
 
-	mapa := rp.Repo[metType]
-	httpStatus := setValueInMapa(mapa, metType, metName, metValue)
+	var ec = ErrorConvert
+	var egt = ErrorGetType
 
-	rw.WriteHeader(httpStatus)
+	mapa := rp.MutexRepo[metType]
+	errStatus := setValueInMapa(mapa, metType, metName, metValue)
+	switch errStatus {
+	case egt:
+		rw.WriteHeader(http.StatusNotImplemented)
+	case ec:
+		rw.WriteHeader(http.StatusBadRequest)
+	default:
+		rw.WriteHeader(http.StatusOK)
+	}
+
 }
 
-func (rp *RepStore) handlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
+func (rp *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if _, findKey := rp.Repo[metType]; !findKey {
-		mapa := make(repository.MetricsType)
-		rp.Repo[metType] = mapa
+	if _, findKey := rp.MutexRepo[metType]; !findKey {
+		mt := make(repository.MetricsType)
+		mMapa := repository.MutexTypeMetrics{M: mt}
+
+		rp.MutexRepo[metType] = mMapa
 	}
 
-	mapa := rp.Repo[metType]
-	httpStatus := setValueInMapa(mapa, metType, metName, metValue)
+	var ec = ErrorConvert
+	var egt = ErrorGetType
 
-	rw.WriteHeader(httpStatus)
+	mMapa := rp.MutexRepo[metType]
+	errStatus := setValueInMapa(mMapa, metType, metName, metValue)
+	switch errStatus {
+	case egt:
+		rw.WriteHeader(http.StatusNotImplemented)
+	case ec:
+		rw.WriteHeader(http.StatusBadRequest)
+	default:
+		rw.WriteHeader(http.StatusOK)
+	}
 }
 
 func (rp *RepStore) handleFunc(rw http.ResponseWriter, rq *http.Request) {
@@ -170,27 +188,41 @@ func (rp *RepStore) handleFunc(rw http.ResponseWriter, rq *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
-func TextMetricsAndValue(rp *RepStore) string {
+func TextMetricsAndValue(rp *RepStore) []string {
 	const msgFormat = "%s = %s"
 
 	var msg []string
-	for _, mapa := range rp.Repo {
-		for key, val := range mapa {
+
+	for _, mapa := range rp.MutexRepo {
+		for key, val := range mapa.M {
 			msg = append(msg, fmt.Sprintf(msgFormat, key, val))
 		}
 	}
 
-	return strings.Join(msg, "\n")
+	return msg //strings.Join(msg, "<br />")
+}
+
+type HtmlParsm struct {
+	Title       string
+	TextMetrics []string
 }
 
 func (rp *RepStore) handlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
-	textMetricsAndValue := TextMetricsAndValue(rp)
-	_, err := io.WriteString(rw, textMetricsAndValue)
-	if err != nil {
-		fmt.Println(err.Error())
+	arrMetricsAndValue := TextMetricsAndValue(rp)
+
+	data := HtmlParsm{
+		Title:       "МЕТРИКИ",
+		TextMetrics: arrMetricsAndValue,
+	}
+
+	tmpl, errTpl := template.ParseFiles("internal/templates/home_pages.html")
+	if errTpl != nil {
+		http.Error(rw, errTpl.Error(), http.StatusServiceUnavailable)
 		return
 	}
+	tmpl.Execute(rw, data)
+
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -203,8 +235,11 @@ func CreateServerChi() chi.Router {
 	nr.Use(middleware.Recoverer)
 	nr.Use(middleware.StripSlashes)
 
-	metrics := make(repository.MapMetrics)
-	rp := &RepStore{metrics, nr}
+	//mt := make(repository.MetricsType)
+	//mtm := repository.MutexTypeMetrics{M: mt}
+
+	mm := make(repository.MapMetrics)
+	rp := &RepStore{MutexRepo: mm, Router: nr}
 
 	nr.HandleFunc("/", rp.handleFunc)
 	nr.NotFound(handlerNotFound)
@@ -212,7 +247,7 @@ func CreateServerChi() chi.Router {
 	nr.Get("/", rp.handlerGetAllMetrics)
 	nr.Get("/value/{metType}/{metName}", rp.handlerGetValue)
 	nr.Get("/update/{metType}/{metName}/{metValue}", rp.handlerSetMetrica)
-	nr.Post("/update/{metType}/{metName}/{metValue}", rp.handlerSetMetricaPOST)
+	nr.Post("/update/{metType}/{metName}/{metValue}", rp.HandlerSetMetricaPOST)
 
 	return nr
 }

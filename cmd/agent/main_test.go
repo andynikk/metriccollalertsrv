@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 func TestmakeMsg(memStats Metrics) string {
