@@ -2,14 +2,16 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"net/http"
 	"strconv"
 	"sync"
 	"text/template"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricType int
@@ -130,25 +132,14 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	defer rs.mx.Unlock()
 
 	if _, findKey := rs.MutexRepo[metType]; !findKey {
-
 		mapa := make(repository.MetricsType)
 		rs.MutexRepo[metType] = mapa
 	}
 
 	mapa := rs.MutexRepo[metType]
-	//i := 0
-	//for _, k := range mapa {
-	//	fmt.Println(k)
-	//	i++
-	//}
-	//if i == 0 {
-	//	rw.WriteHeader(http.StatusNotImplemented)
-	//	http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotImplemented)
-	//	return
-	//}
 	if _, findKey := mapa[metName]; !findKey {
-		rw.WriteHeader(http.StatusBadRequest)
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
+		rw.WriteHeader(http.StatusNotFound)
+		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
 
