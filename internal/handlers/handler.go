@@ -47,7 +47,7 @@ func (c *RepStore) SetCounter(tm string, key string, value repository.Counter) {
 func (c *RepStore) SetGauge(tm string, key string, value repository.Gauge) {
 	c.mx.Lock()
 
-	c.MutexRepo[tm][key] = c.MutexRepo[tm][key].(repository.Gauge) + value
+	c.MutexRepo[tm][key] = value
 
 	c.mx.Unlock()
 }
@@ -147,12 +147,12 @@ func (c *RepStore) handlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) handlerSetMetrica(rw http.ResponseWriter, rq *http.Request) {
+func (c *RepStore) handlerSetMetrica(rw http.ResponseWriter, rq *http.Request) {
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if _, findKey := rs.MutexRepo[metType]; !findKey {
+	if _, findKey := c.MutexRepo[metType]; !findKey {
 		rw.WriteHeader(http.StatusBadRequest)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
 		return
@@ -161,7 +161,7 @@ func (rs *RepStore) handlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	var ec = ErrorConvert
 	var egt = ErrorGetType
 
-	errStatus := setValueInMapa(rs, metType, metName, metValue)
+	errStatus := setValueInMapa(c, metType, metName, metValue)
 	switch errStatus {
 	case egt:
 		rw.WriteHeader(http.StatusNotImplemented)
@@ -173,22 +173,22 @@ func (rs *RepStore) handlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 
 }
 
-func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
+func (c *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if _, findKey := rs.MutexRepo[metType]; !findKey {
+	if _, findKey := c.MutexRepo[metType]; !findKey {
 
 		mapa := make(repository.MetricsType)
-		rs.MutexRepo[metType] = mapa
+		c.MutexRepo[metType] = mapa
 	}
 
 	var ec = ErrorConvert
 	var egt = ErrorGetType
 
-	errStatus := setValueInMapa(rs, metType, metName, metValue)
+	errStatus := setValueInMapa(c, metType, metName, metValue)
 	switch errStatus {
 	case egt:
 		rw.WriteHeader(http.StatusNotImplemented)
