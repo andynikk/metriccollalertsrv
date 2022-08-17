@@ -10,6 +10,6 @@ import (
 
 func main() {
 
-	log.Fatal(http.ListenAndServe(consts.PortServer, handlers.CreateServerChi()))
+	log.Fatal(http.ListenAndServe(consts.PortServer, handlers.NewRepStore()))
 
 }

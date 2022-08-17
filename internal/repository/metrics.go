@@ -10,12 +10,6 @@ type Counter int64
 type MetricsType = map[string]interface{}
 type MapMetrics = map[string]MetricsType
 
-//type RepStore struct {
-//	MutexRepo MapMetrics
-//	Router    chi.Router
-//	mx        sync.Mutex
-//}
-
 type Metric interface {
 	String() string
 	Type() string
