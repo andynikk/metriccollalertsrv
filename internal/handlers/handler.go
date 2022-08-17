@@ -111,8 +111,12 @@ func (c *RepStore) handlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 	if _, findKey := c.MutexRepo[metType]; !findKey {
 
+		c.mx.Lock()
+
 		mapa := make(repository.MetricsType)
 		c.MutexRepo[metType] = mapa
+
+		c.mx.Unlock()
 	}
 
 	mapa := c.MutexRepo[metType]
@@ -181,8 +185,13 @@ func (c *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reques
 
 	if _, findKey := c.MutexRepo[metType]; !findKey {
 
+		c.mx.Lock()
+
 		mapa := make(repository.MetricsType)
 		c.MutexRepo[metType] = mapa
+
+		c.mx.Unlock()
+
 	}
 
 	var ec = ErrorConvert
