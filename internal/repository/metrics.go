@@ -29,6 +29,14 @@ func (g Gauge) Type() string {
 	return "gauge"
 }
 
+func (g Gauge) Float64() float64 {
+	return float64(g)
+}
+
 func (c Counter) Type() string {
 	return "counter"
+}
+
+func (c Counter) Int64() int64 {
+	return int64(c)
 }

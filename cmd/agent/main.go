@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -18,11 +20,11 @@ const (
 	msgFormat      = "%s/update/%s/%s/%v"
 )
 
-type Metrics = map[string]repository.Gauge
+//type Metrics = map[string]repository.Gauge
 
 var PollCount int64
 
-func fillMetric(metric Metrics, mem *runtime.MemStats) {
+func fillMetric(metric encoding.MetricsGauge, mem *runtime.MemStats) {
 
 	metric["Alloc"] = repository.Gauge(mem.Alloc)
 	metric["BuckHashSys"] = repository.Gauge(mem.BuckHashSys)
@@ -56,7 +58,7 @@ func fillMetric(metric Metrics, mem *runtime.MemStats) {
 
 }
 
-func memThresholds(metric Metrics) {
+func memThresholds(metric encoding.MetricsGauge) {
 
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
@@ -65,32 +67,49 @@ func memThresholds(metric Metrics) {
 
 }
 
-func metrixScan(metric Metrics) {
+func metrixScan(metric encoding.MetricsGauge) {
 
 	memThresholds(metric)
 }
 
-func MakeRequest(metric Metrics) {
+func MakeRequest(metric encoding.MetricsGauge) {
 
 	//message := makeMsg(metric)
 	//rn := strings.NewReader(message)
 
+	msg := consts.AddressServer + "/update"
 	for key, val := range metric {
-		msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
-		rn := strings.NewReader(msg)
+		//msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
+		valFloat64 := val.Float64()
+		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64}
 
-		resp, err := http.Post(msg, "text/plain", rn)
+		arrMterica, err := metrica.MarshalMetrica()
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		req.Header.Set("Content-Type", "application/json")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer req.Body.Close()
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 		defer resp.Body.Close()
+
 	}
 
 	cPollCount := repository.Counter(PollCount)
-	msg := fmt.Sprintf(msgFormat, consts.AddressServer, cPollCount.Type(), "PollCount", cPollCount)
-	rn := strings.NewReader(msg)
+	msg1 := fmt.Sprintf(msgFormat, consts.AddressServer, cPollCount.Type(), "PollCount", cPollCount)
+	rn := strings.NewReader(msg1)
 
-	resp, err := http.Post(msg, "text/plain", rn)
+	resp, err := http.Post(msg1, "text/plain", rn)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -100,7 +119,7 @@ func MakeRequest(metric Metrics) {
 
 func main() {
 
-	metric := make(Metrics)
+	metric := make(encoding.MetricsGauge)
 
 	updateTicker := time.NewTicker(pollInterval * time.Second)
 	reportTicker := time.NewTicker(reportInterval * time.Second)
