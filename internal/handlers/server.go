@@ -310,13 +310,13 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 		val := mapa[metName].(repository.Gauge).Float64()
 		var delta int64
-		mt := encoding.Metrics{ID: metType, MType: metName, Delta: &delta, Value: &val}
-		strJson, err := mt.MarshalMetrica()
+		mt := encoding.Metrics{ID: metName, MType: metType, Delta: &delta, Value: &val}
+		var arrJson, err = mt.MarshalMetrica()
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		_, err = io.WriteString(rw, bytes.NewBuffer(strJson).String())
+		_, err = io.WriteString(rw, bytes.NewBuffer(arrJson).String())
 		if err != nil {
 			fmt.Println(err.Error())
 			return
@@ -326,12 +326,12 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		val := mapa[metName].(repository.Counter).Int64()
 		var value float64
 		mt := encoding.Metrics{ID: metType, MType: metName, Delta: &val, Value: &value}
-		strJson, err := mt.MarshalMetrica()
+		var arrJson, err = mt.MarshalMetrica()
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
-		_, err = io.WriteString(rw, bytes.NewBuffer(strJson).String())
+		_, err = io.WriteString(rw, bytes.NewBuffer(arrJson).String())
 		if err != nil {
 			fmt.Println(err.Error())
 			return

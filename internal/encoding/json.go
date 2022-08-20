@@ -15,13 +15,13 @@ type Metrics struct {
 }
 
 func (m Metrics) MarshalMetrica() (val []byte, err error) {
-	strJson, errMarshal := json.Marshal(m)
+	var arrJson, errMarshal = json.Marshal(m)
 	if errMarshal != nil {
 		var bt []byte
 		return bt, errMarshal
 	}
 
-	return strJson, nil
+	return arrJson, nil
 }
 
 func (m Metrics) Gauge() repository.Gauge {
