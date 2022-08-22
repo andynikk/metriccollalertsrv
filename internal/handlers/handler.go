@@ -1,12 +1,8 @@
 package handlers
 
-import (
-	"github.com/go-chi/chi/v5"
-)
-
-func NewRepStore() chi.Router {
+func NewRepStore() *RepStore {
 	rp := new(RepStore)
 	rp.New()
 
-	return rp.Router
+	return rp
 }

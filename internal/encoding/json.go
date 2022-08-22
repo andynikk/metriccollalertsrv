@@ -2,10 +2,9 @@ package encoding
 
 import (
 	"encoding/json"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
-type MetricsGauge = map[string]repository.Gauge
+//type MetricsGauge = map[string]repository.Gauge
 
 type Metrics struct {
 	ID    string   `json:"id"`              // имя метрики
@@ -24,10 +23,10 @@ func (m Metrics) MarshalMetrica() (val []byte, err error) {
 	return arrJSON, nil
 }
 
-func (m Metrics) Gauge() repository.Gauge {
-	return repository.Gauge(*m.Value)
-}
-
-func (m Metrics) Counter() repository.Counter {
-	return repository.Counter(*m.Delta)
-}
+//func (m Metrics) Gauge() repository.Gauge {
+//	return repository.Gauge(*m.Value)
+//}
+//
+//func (m Metrics) Counter() repository.Counter {
+//	return repository.Counter(*m.Delta)
+//}

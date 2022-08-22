@@ -1,18 +1,15 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"io"
-	"net/http"
-	"strconv"
-	"sync"
-	"text/template"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"io"
+	"net/http"
+	"sync"
+	"text/template"
 
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
@@ -48,6 +45,12 @@ type RepStore struct {
 	mx        sync.Mutex
 }
 
+type Config struct {
+	STORE_INTERVAL int64  `env:"STORE_INTERVAL" envDefault:"300"`
+	STORE_FILE     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	RESTORE        bool   `env:"RESTORE" envDefault:"true"`
+}
+
 func (rs *RepStore) New() {
 
 	rs.MutexRepo = make(repository.MapMetrics)
@@ -66,66 +69,59 @@ func (rs *RepStore) New() {
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
 	rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetrica)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
-	rs.Router.Post("/update", rs.HandlerUpdateMetricaJSON)
+	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 
 }
 
-func (rs *RepStore) GetCounter(tm string, key string) repository.Counter {
+func (rs *RepStore) addNilMetric(metType string, metName string) MetricError {
+	var GaugeMetric = GaugeMetric
+	var CounterMetric = CounterMetric
 
-	return rs.MutexRepo[tm][key].(repository.Counter)
+	switch metType {
+	case GaugeMetric.String():
+		var nilGauge *repository.Gauge
+		rs.MutexRepo[metName] = nilGauge
 
-}
+		fl := repository.Gauge(0)
+		valGauge := &fl
 
-func (rs *RepStore) SetCounter(tm string, key string, value repository.Counter) {
-	rs.mx.Lock()
-	defer rs.mx.Unlock()
+		rs.MutexRepo[metName] = valGauge
+	case CounterMetric.String():
+		var nilCounter *repository.Counter
+		rs.MutexRepo[metName] = nilCounter
 
-	if _, findKey := rs.MutexRepo[tm][key]; !findKey {
-		rs.MutexRepo[tm][key] = value
-	} else {
-		rs.MutexRepo[tm][key] = rs.MutexRepo[tm][key].(repository.Counter) + value
+		in := repository.Counter(0)
+		valCounter := &in
+
+		rs.MutexRepo[metName] = valCounter
+	default:
+		return ErrorGetType
 	}
-}
 
-func (rs *RepStore) SetGauge(tm string, key string, value repository.Gauge) {
-	rs.mx.Lock()
-	defer rs.mx.Unlock()
-
-	rs.MutexRepo[tm][key] = value
-
+	return NotError
 }
 
 func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) MetricError {
-	var gm = GaugeMetric
-	var cm = CounterMetric
 
-	var ne = NotError
-	var ec = ErrorConvert
-	var egt = ErrorGetType
-
-	switch metType {
-	case gm.String():
-		predVal, err := strconv.ParseFloat(metValue, 64)
-		if err != nil {
-			fmt.Println("error convert type")
-			return ec
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
+		status := rs.addNilMetric(metType, metName)
+		if status != NotError {
+			return status
 		}
-		val := repository.Gauge(predVal)
-		rs.SetGauge(metType, metName, val)
-
-	case cm.String():
-		predVal, err := strconv.ParseInt(metValue, 10, 64)
-		if err != nil {
-			return ec
-		}
-		val := repository.Counter(predVal)
-		rs.SetCounter(metType, metName, val)
-	default:
-		return egt
 	}
 
-	return ne
+	status := rs.MutexRepo[metName].SetFromText(metValue)
+
+	switch status {
+	case 1:
+		return ErrorConvert
+	case 0:
+		return NotError
+	}
+
+	return NotError
+
 }
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
@@ -136,38 +132,17 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	rs.mx.Lock()
 	defer rs.mx.Unlock()
 
-	if _, findKey := rs.MutexRepo[metType]; !findKey {
-		mapa := make(repository.MetricsType)
-		rs.MutexRepo[metType] = mapa
-	}
-
-	mapa := rs.MutexRepo[metType]
-	if _, findKey := mapa[metName]; !findKey {
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
 
-	var gm = GaugeMetric
-	var cm = CounterMetric
-
-	switch metType {
-	case gm.String():
-		val := mapa[metName].(repository.Gauge)
-		strVal := val.String()
-		_, err := io.WriteString(rw, strVal)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-	case cm.String():
-		val := mapa[metName].(repository.Counter)
-		strVal := val.String()
-		_, err := io.WriteString(rw, strVal)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
+	strMetric := rs.MutexRepo[metName].String()
+	_, err := io.WriteString(rw, strMetric)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
@@ -178,20 +153,28 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if _, findKey := rs.MutexRepo[metType]; !findKey {
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		rw.WriteHeader(http.StatusBadRequest)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
 		return
 	}
 
-	var ec = ErrorConvert
-	var egt = ErrorGetType
+	errStatus := NotError
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
+		errStatus = rs.addNilMetric(metType, metName)
+	}
 
-	errStatus := rs.setValueInMapa(metType, metName, metValue)
+	if errStatus == NotError {
+		errStatusInt := rs.MutexRepo[metName].SetFromText(metValue)
+		if errStatusInt == 1 {
+			errStatus = ErrorConvert
+		}
+	}
+
 	switch errStatus {
-	case egt:
+	case ErrorGetType:
 		rw.WriteHeader(http.StatusNotImplemented)
-	case ec:
+	case 1:
 		rw.WriteHeader(http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
@@ -205,16 +188,6 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if _, findKey := rs.MutexRepo[metType]; !findKey {
-
-		rs.mx.Lock()
-
-		mapa := make(repository.MetricsType)
-		rs.MutexRepo[metType] = mapa
-
-		rs.mx.Unlock()
-	}
-
 	var ec = ErrorConvert
 	var egt = ErrorGetType
 
@@ -229,10 +202,11 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	}
 }
 
-func (rs *RepStore) HandlerUpdateMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(rq.Body).Decode(&v)
+
 	if err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
@@ -240,40 +214,12 @@ func (rs *RepStore) HandlerUpdateMetricaJSON(rw http.ResponseWriter, rq *http.Re
 	metType := v.MType
 	metName := v.ID
 
-	if _, findKey := rs.MutexRepo[metType]; !findKey {
-		rs.mx.Lock()
-
-		mapa := make(repository.MetricsType)
-		rs.MutexRepo[metType] = mapa
-
-		rs.mx.Unlock()
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
+		rs.addNilMetric(metType, metName)
 	}
 
-	var gm = GaugeMetric
-	var cm = CounterMetric
-
-	switch metType {
-	case gm.String():
-		rs.SetGauge(metType, metName, v.Gauge())
-	case cm.String():
-		rs.SetCounter(metType, metName, v.Counter())
-	default:
-		rw.WriteHeader(http.StatusNotImplemented)
-		return
-	}
-
-	//var ec = ErrorConvert
-	//var egt = ErrorGetType
-	//
-	//errStatus := rs.setValueInMapa(metType, metName, metValue)
-	//switch errStatus {
-	//case egt:
-	//	rw.WriteHeader(http.StatusNotImplemented)
-	//case ec:
-	//	rw.WriteHeader(http.StatusBadRequest)
-	//default:
-	//	rw.WriteHeader(http.StatusOK)
-	//}
+	//mt := rs.MutexRepo[metName].GetMetrics(metName, metType)
+	rs.MutexRepo[metName].Set(v)
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -290,74 +236,20 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	rs.mx.Lock()
 	defer rs.mx.Unlock()
 
-	if _, findKey := rs.MutexRepo[metType]; !findKey {
-		mapa := make(repository.MetricsType)
-		rs.MutexRepo[metType] = mapa
-	}
-
-	mapa := rs.MutexRepo[metType]
-	if _, findKey := mapa[metName]; !findKey {
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
 
-	var gm = GaugeMetric
-	var cm = CounterMetric
+	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
+	metricsJSON, err := mt.MarshalMetrica()
 
-	switch metType {
-	case gm.String():
-
-		val := mapa[metName].(repository.Gauge).Float64()
-
-		mt := encoding.Metrics{ID: metName, MType: metType, Value: &val}
-		arrJSON, err := mt.MarshalMetrica()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-
-		bt := bytes.NewBuffer(arrJSON).String()
-		_, err = io.WriteString(rw, bt)
-		rw.Write(arrJSON)
-
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-
-		rw.Header().Set("Content-Type", "application/json")
-		rw.Header().Set("result", bt)
-
-		rq.Header.Set("Content-Type", "application/json")
-		rq.Header.Set("result", bt)
-
-	case cm.String():
-		val := mapa[metName].(repository.Counter).Int64()
-
-		mt := encoding.Metrics{ID: metType, MType: metName, Delta: &val}
-		arrJSON, err := mt.MarshalMetrica()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-
-		bt := bytes.NewBuffer(arrJSON).String()
-		_, err = io.WriteString(rw, bt)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		rq.Header.Set("Content-Type", "application/json")
-		rq.Header.Set("result", bt)
-
-	default:
-		rw.WriteHeader(http.StatusNotFound)
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
+	rw.Header().Add("Content-Type", "application/json")
+	if _, err := rw.Write(metricsJSON); err != nil {
+		fmt.Println(err.Error())
 		return
 	}
-
-	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
@@ -402,11 +294,21 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 
 	var msg []string
 
-	for _, mapa := range mm {
-		for key, val := range mapa {
-			msg = append(msg, fmt.Sprintf(msgFormat, key, val))
-		}
+	for key, val := range mm {
+		msg = append(msg, fmt.Sprintf(msgFormat, key, val.String()))
 	}
 
-	return msg //strings.Join(msg, "<br />")
+	return msg
+}
+
+func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
+
+	var arr []encoding.Metrics
+
+	for key, val := range mm {
+		jMetric := val.GetMetrics(val.Type(), key)
+		arr = append(arr, jMetric)
+	}
+
+	return arr
 }

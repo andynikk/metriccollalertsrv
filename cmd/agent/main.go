@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/caarlos0/env/v6"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -15,16 +16,26 @@ import (
 )
 
 const (
-	pollInterval   = 2
-	reportInterval = 10
-	msgFormat      = "%s/update/%s/%s/%v"
+	//pollInterval   = 2
+	//reportInterval = 10
+	msgFormat = "%s/update/%s/%s/%v"
 )
+
+type Config struct {
+	ADDRESS         string `env:"ADDRESS" envDefault:"localhost:8080"`
+	REPORT_INTERVAL int64  `env:"REPORT_INTERVAL" envDefault:"10"`
+	POLL_INTERVAL   int64  `env:"POLL_INTERVAL" envDefault:"2"`
+}
+
+var Cfg = Config{}
+
+type MetricsGauge = map[string]repository.Gauge
 
 //type Metrics = map[string]repository.Gauge
 
 var PollCount int64
 
-func fillMetric(metric encoding.MetricsGauge, mem *runtime.MemStats) {
+func fillMetric(metric MetricsGauge, mem *runtime.MemStats) {
 
 	metric["Alloc"] = repository.Gauge(mem.Alloc)
 	metric["BuckHashSys"] = repository.Gauge(mem.BuckHashSys)
@@ -58,7 +69,7 @@ func fillMetric(metric encoding.MetricsGauge, mem *runtime.MemStats) {
 
 }
 
-func memThresholds(metric encoding.MetricsGauge) {
+func memThresholds(metric MetricsGauge) {
 
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
@@ -67,17 +78,18 @@ func memThresholds(metric encoding.MetricsGauge) {
 
 }
 
-func metrixScan(metric encoding.MetricsGauge) {
+func metrixScan(metric MetricsGauge) {
 
 	memThresholds(metric)
 }
 
-func MakeRequest(metric encoding.MetricsGauge) {
+func MakeRequest(metric MetricsGauge) {
 
 	//message := makeMsg(metric)
 	//rn := strings.NewReader(message)
 
-	msg := consts.AddressServer + "/update"
+	//msg := Cfg.ADDRESS + "/update"
+	msg := "http://localhost:8080/update"
 	for key, val := range metric {
 		//msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
 		valFloat64 := val.Float64()
@@ -119,10 +131,16 @@ func MakeRequest(metric encoding.MetricsGauge) {
 
 func main() {
 
-	metric := make(encoding.MetricsGauge)
+	err := env.Parse(&Cfg)
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
 
-	updateTicker := time.NewTicker(pollInterval * time.Second)
-	reportTicker := time.NewTicker(reportInterval * time.Second)
+	metric := make(MetricsGauge)
+
+	updateTicker := time.NewTicker(time.Duration(Cfg.POLL_INTERVAL) * time.Second)
+	reportTicker := time.NewTicker(time.Duration(Cfg.REPORT_INTERVAL) * time.Second)
 
 	for {
 		select {
