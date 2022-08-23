@@ -174,7 +174,7 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	switch errStatus {
 	case ErrorGetType:
 		rw.WriteHeader(http.StatusNotImplemented)
-	case 1:
+	case ErrorConvert:
 		rw.WriteHeader(http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
