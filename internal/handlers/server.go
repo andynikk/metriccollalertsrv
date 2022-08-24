@@ -90,6 +90,8 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
 	var GaugeMetric = GaugeMetric
 	var CounterMetric = CounterMetric
 
+	fmt.Println(metType, metName)
+
 	switch metType {
 	case GaugeMetric.String():
 		var nilGauge *repository.Gauge
@@ -131,16 +133,7 @@ func (rs *RepStore) setValueInMapa(metType string, metName string, metValue stri
 
 	fmt.Println("metType 5", metType)
 	status := rs.MutexRepo[metName].SetFromText(metValue)
-
-	switch status {
-	case 1:
-		return ErrorConvert
-	case 0:
-		return NotError
-	}
-
-	return NotError
-
+	return status
 }
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
