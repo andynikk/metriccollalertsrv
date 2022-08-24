@@ -6,7 +6,6 @@ import (
 	"github.com/caarlos0/env/v6"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sync"
 	"text/template"
@@ -87,13 +86,12 @@ func (rs *RepStore) New() {
 
 }
 
-func (rs *RepStore) AddNilMetric(metType string, metName string) int {
-	//var GaugeMetric = GaugeMetric
-	//var CounterMetric = CounterMetric
+func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
+	var GaugeMetric = GaugeMetric
+	var CounterMetric = CounterMetric
 
-	fmt.Println("setValueInMapa ", metType)
 	switch metType {
-	case "gauge":
+	case GaugeMetric.String():
 		var nilGauge *repository.Gauge
 		rs.MutexRepo[metName] = nilGauge
 
@@ -101,7 +99,7 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) int {
 		valGauge := &fl
 
 		rs.MutexRepo[metName] = valGauge
-	case "counter":
+	case CounterMetric.String():
 		var nilCounter *repository.Counter
 		rs.MutexRepo[metName] = nilCounter
 
@@ -110,30 +108,38 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) int {
 
 		rs.MutexRepo[metName] = valCounter
 	default:
-		fmt.Println("setValueInMapa 3")
-		return 2
+		return ErrorGetType
 	}
 
-	fmt.Println("setValueInMapa 4")
-	return 0
+	return NotError
 }
 
-func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) int {
+func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) MetricError {
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	fmt.Println("setValueInMapa 1")
+	fmt.Println("metType 2", metType)
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		fmt.Println("setValueInMapa 2")
+		fmt.Println("metType 3", metType)
 		status := rs.AddNilMetric(metType, metName)
-		if status != 0 {
+		if status != NotError {
+			fmt.Println("metType 4", metType)
 			return status
 		}
 	}
 
+	fmt.Println("metType 5", metType)
 	status := rs.MutexRepo[metName].SetFromText(metValue)
-	return status
+
+	switch status {
+	case 1:
+		return ErrorConvert
+	case 0:
+		return NotError
+	}
+
+	return NotError
 
 }
 
@@ -175,23 +181,23 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 		return
 	}
 
-	errStatus := 0
+	errStatus := NotError
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		errStatus = rs.AddNilMetric(metType, metName)
 	}
 
-	if errStatus == 0 {
+	if errStatus == NotError {
 		errStatusInt := rs.MutexRepo[metName].SetFromText(metValue)
 		if errStatusInt == 1 {
-			errStatus = 0
+			errStatus = ErrorConvert
 		}
 	}
 
 	switch errStatus {
-	case 1:
-		rw.WriteHeader(http.StatusBadRequest)
-	case 2:
+	case ErrorGetType:
 		rw.WriteHeader(http.StatusNotImplemented)
+	case ErrorConvert:
+		rw.WriteHeader(http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}
@@ -207,15 +213,15 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	//	return
 	//}
 
+	fmt.Println("metType 1")
 	errStatus := rs.setValueInMapa(metType, metName, metValue)
-	log.Print(metType, metName, metValue, errStatus)
 	fmt.Println(metType, metName, metValue, errStatus)
 
 	switch errStatus {
-	case 1:
-		rw.WriteHeader(http.StatusBadRequest)
-	case 2:
+	case ErrorGetType:
 		rw.WriteHeader(http.StatusNotImplemented)
+	case ErrorConvert:
+		rw.WriteHeader(http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}
