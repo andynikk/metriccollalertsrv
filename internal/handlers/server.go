@@ -88,11 +88,11 @@ func (rs *RepStore) New() {
 }
 
 func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
-	var GaugeMetric = GaugeMetric
-	var CounterMetric = CounterMetric
+	//var GaugeMetric = GaugeMetric
+	//var CounterMetric = CounterMetric
 
 	switch metType {
-	case GaugeMetric.String():
+	case "gauge":
 		var nilGauge *repository.Gauge
 		rs.MutexRepo[metName] = nilGauge
 
@@ -100,7 +100,7 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
 		valGauge := &fl
 
 		rs.MutexRepo[metName] = valGauge
-	case CounterMetric.String():
+	case "counter":
 		var nilCounter *repository.Counter
 		rs.MutexRepo[metName] = nilCounter
 
