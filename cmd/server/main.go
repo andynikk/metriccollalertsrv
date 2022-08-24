@@ -4,71 +4,109 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/consts"
-	"github.com/andynikk/metriccollalertsrv/internal/handlers"
-	"github.com/caarlos0/env/v6"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
+
+	"github.com/caarlos0/env/v6"
+
+	"github.com/andynikk/metriccollalertsrv/internal/consts"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
+
+func loadStoreMetrics(rs *handlers.RepStore, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+
+	cfg := &handlers.Config{}
+	err := env.Parse(cfg)
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+
+	patch := cfg.STORE_FILE
+	if patch != "" {
+		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
+	}
+
+	res, err := ioutil.ReadFile(patch)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	var arrMatric []encoding.Metrics
+	if err := json.Unmarshal(res, &arrMatric); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
+	for _, val := range arrMatric {
+		rs.AddNilMetric(val.MType, val.ID)
+		rs.MutexRepo[val.ID].Set(val)
+	}
+	fmt.Println(rs.MutexRepo)
+
+}
+
+func SaveMetric2File(rs *handlers.RepStore, cfg *handlers.Config, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+
+	patch := cfg.STORE_FILE
+	if patch != "" {
+		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
+	}
+
+	for {
+		rs.SaveMetric2File(patch)
+		time.Sleep(time.Duration(cfg.STORE_INTERVAL) * time.Second)
+	}
+}
 
 func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go handleSignals(cancel)
 
-	rp := handlers.NewRepStore()
-	go http.ListenAndServe(consts.PortServer, rp.Router)
+	rs := handlers.NewRepStore()
+	go http.ListenAndServe(consts.PortServer, rs.Router)
 
 	cfg := &handlers.Config{}
 	err := env.Parse(cfg)
-
 	if err != nil {
 		fmt.Printf("%+v\n", err)
 		return
 	}
 
-	res := cfg.RESTORE
 	patch := cfg.STORE_FILE
-
-	if res {
-		file, err := os.OpenFile(patch, os.O_RDONLY, 0777)
-		if err != nil {
-			fmt.Println("file not found")
-		} else {
-			ra, err := ioutil.ReadAll(file)
-			if err != nil {
-				fmt.Println("error read file")
-			}
-			fmt.Println(ra)
-		}
+	if patch != "" {
+		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
+
+	wg := new(sync.WaitGroup)
+	if cfg.RESTORE {
+		go loadStoreMetrics(rs, wg)
+	}
+	go SaveMetric2File(rs, cfg, wg)
+
+	wg.Wait()
 
 	for {
 		select {
 		case <-ctx.Done():
-			arr := handlers.JSONMetricsAndValue(rp.MutexRepo)
-			json_arr, err := json.Marshal(arr)
-			if err != nil {
-				panic(err)
-			}
 
-			fmt.Println(arr)
-
-			//file, err := os.OpenFile(patch, os.O_CREATE|os.O_RDWR, 0777)
-			file, err := os.Open(patch)
-			if err != nil {
-				panic(err)
-			}
-			io.WriteString(file, string(json_arr))
-			file.Close()
-
+			rs.SaveMetric2File(patch)
 			log.Panicln("server stopped")
-			return
+
 		default:
 
 			timer := time.NewTimer(2 * time.Second)

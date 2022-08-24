@@ -90,7 +90,7 @@ func (c *Counter) SetFromText(metValue string) int64 {
 
 func (c Counter) String() string {
 
-	return fmt.Sprintf("%g", c)
+	return fmt.Sprintf("%d", c)
 }
 
 func (c Counter) GetMetrics(id string, mType string) encoding.Metrics {

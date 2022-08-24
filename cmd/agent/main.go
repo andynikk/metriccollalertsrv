@@ -8,10 +8,8 @@ import (
 	"math/rand"
 	"net/http"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/andynikk/metriccollalertsrv/internal/consts"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -88,13 +86,12 @@ func MakeRequest(metric MetricsGauge) {
 	//message := makeMsg(metric)
 	//rn := strings.NewReader(message)
 
-	//msg := Cfg.ADDRESS + "/update"
-	msg := "http://localhost:8080/update"
+	msg := "http://" + Cfg.ADDRESS + "/update"
+	//msg := "http://localhost:8080/update"
 	for key, val := range metric {
 		//msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
 		valFloat64 := val.Float64()
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64}
-
 		arrMterica, err := metrica.MarshalMetrica()
 		if err != nil {
 			fmt.Println(err.Error())
@@ -109,23 +106,33 @@ func MakeRequest(metric MetricsGauge) {
 		defer req.Body.Close()
 
 		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
+		if _, err := client.Do(req); err != nil {
 			fmt.Println(err.Error())
 		}
-		defer resp.Body.Close()
+		//defer resp.Body.Close()
 
 	}
 
 	cPollCount := repository.Counter(PollCount)
-	msg1 := fmt.Sprintf(msgFormat, consts.AddressServer, cPollCount.Type(), "PollCount", cPollCount)
-	rn := strings.NewReader(msg1)
+	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &PollCount}
+	arrMterica, err := metrica.MarshalMetrica()
 
-	resp, err := http.Post(msg1, "text/plain", rn)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	defer resp.Body.Close()
+	defer req.Body.Close()
+
+	client := &http.Client{}
+	if _, err := client.Do(req); err != nil {
+		fmt.Println(err.Error())
+	}
+	//defer resp.Body.Close()
 
 }
 

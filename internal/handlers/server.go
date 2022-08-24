@@ -3,14 +3,17 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/caarlos0/env/v6"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"text/template"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -40,9 +43,9 @@ const (
 )
 
 type RepStore struct {
-	MutexRepo repository.MapMetrics
 	Router    chi.Router
-	mx        sync.Mutex
+	MX        sync.Mutex
+	MutexRepo repository.MapMetrics
 }
 
 type Config struct {
@@ -74,7 +77,7 @@ func (rs *RepStore) New() {
 
 }
 
-func (rs *RepStore) addNilMetric(metType string, metName string) MetricError {
+func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
 	var GaugeMetric = GaugeMetric
 	var CounterMetric = CounterMetric
 
@@ -104,8 +107,11 @@ func (rs *RepStore) addNilMetric(metType string, metName string) MetricError {
 
 func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) MetricError {
 
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		status := rs.addNilMetric(metType, metName)
+		status := rs.AddNilMetric(metType, metName)
 		if status != NotError {
 			return status
 		}
@@ -129,8 +135,8 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 
-	rs.mx.Lock()
-	defer rs.mx.Unlock()
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		rw.WriteHeader(http.StatusNotFound)
@@ -149,6 +155,9 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 }
 
 func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) {
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
@@ -161,7 +170,7 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 
 	errStatus := NotError
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		errStatus = rs.addNilMetric(metType, metName)
+		errStatus = rs.AddNilMetric(metType, metName)
 	}
 
 	if errStatus == NotError {
@@ -184,6 +193,9 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
@@ -204,6 +216,9 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
 	v := encoding.Metrics{}
 	err := json.NewDecoder(rq.Body).Decode(&v)
 
@@ -215,10 +230,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	metName := v.ID
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		rs.addNilMetric(metType, metName)
+		rs.AddNilMetric(metType, metName)
 	}
-
-	//mt := rs.MutexRepo[metName].GetMetrics(metName, metType)
 	rs.MutexRepo[metName].Set(v)
 }
 
@@ -233,8 +246,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	metType := v.MType
 	metName := v.ID
 
-	rs.mx.Lock()
-	defer rs.mx.Unlock()
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		rw.WriteHeader(http.StatusNotFound)
@@ -249,6 +262,20 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
+	}
+
+	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+
+	if cfg.STORE_INTERVAL == 0 {
+		patch := cfg.STORE_FILE
+		if patch != "" {
+			patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
+		}
+		rs.SaveMetric2File(patch)
 	}
 }
 
@@ -279,6 +306,23 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 }
 
+func (rs *RepStore) SaveMetric2File(patch string) {
+
+	arr := JSONMetricsAndValue(rs.MutexRepo)
+	arrJSON, err := json.Marshal(arr)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if patch == "" {
+		return
+	}
+
+	if err := ioutil.WriteFile(patch, arrJSON, 0777); err != nil {
+		fmt.Println(err.Error())
+	}
+
+}
+
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(http.StatusNotFound)
 
@@ -306,7 +350,7 @@ func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
 	var arr []encoding.Metrics
 
 	for key, val := range mm {
-		jMetric := val.GetMetrics(val.Type(), key)
+		jMetric := val.GetMetrics(key, val.Type())
 		arr = append(arr, jMetric)
 	}
 
