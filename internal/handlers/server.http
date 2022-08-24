@@ -9,5 +9,5 @@ Content-Type: application/json
 
 ### Send POST request with json body
 POST http://localhost:8080/update/unknown/testCounter/100
-Content-Type: application/text
+Content-Type: text/plain
 
