@@ -120,14 +120,15 @@ func main() {
 func handleSignals(cancel context.CancelFunc) {
 	sigCh := make(chan os.Signal)
 	signal.Notify(sigCh, os.Interrupt, os.Kill)
+	<-sigCh
 
-	for {
-		sig := <-sigCh
-		switch sig {
-		case os.Interrupt:
-			fmt.Println("canceled")
-			cancel()
-			return
-		}
-	}
+	//for {
+	//	sig := <-sigCh
+	//	switch sig {
+	//	case os.Interrupt:
+	//		fmt.Println("canceled")
+	//		cancel()
+	//		return
+	//	}
+	//}
 }
