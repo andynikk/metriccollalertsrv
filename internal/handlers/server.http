@@ -6,3 +6,8 @@ Content-Type: application/json
   "id": "PollCount",
   "type": "counter"
 }
+
+### Send POST request with json body
+POST http://localhost:8080/update/unknown/testCounter/100
+Content-Type: application/text
+

@@ -22,11 +22,3 @@ func (m Metrics) MarshalMetrica() (val []byte, err error) {
 
 	return arrJSON, nil
 }
-
-//func (m Metrics) Gauge() repository.Gauge {
-//	return repository.Gauge(*m.Value)
-//}
-//
-//func (m Metrics) Counter() repository.Counter {
-//	return repository.Counter(*m.Delta)
-//}
