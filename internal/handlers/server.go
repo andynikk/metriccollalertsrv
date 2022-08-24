@@ -199,7 +199,9 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
-
+	if metValue == "" {
+		metValue = "0"
+	}
 	var ec = ErrorConvert
 	var egt = ErrorGetType
 
