@@ -99,7 +99,6 @@ func MakeRequest(metric MetricsGauge) {
 		}
 
 		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		//defer req.Body.Close()
 
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
@@ -111,7 +110,7 @@ func MakeRequest(metric MetricsGauge) {
 			fmt.Println(err.Error())
 		}
 
-		req.Body.Close()
+		defer req.Body.Close()
 	}
 
 	cPollCount := repository.Counter(PollCount)
@@ -123,7 +122,6 @@ func MakeRequest(metric MetricsGauge) {
 		return
 	}
 	req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-	//defer req.Body.Close()
 	req.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		fmt.Println(err.Error())
@@ -134,7 +132,7 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 	}
 
-	req.Body.Close()
+	defer req.Body.Close()
 }
 
 func main() {
