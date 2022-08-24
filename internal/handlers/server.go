@@ -49,9 +49,9 @@ type RepStore struct {
 }
 
 type Config struct {
-	STORE_INTERVAL int64  `env:"STORE_INTERVAL" envDefault:"300"`
-	STORE_FILE     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	RESTORE        bool   `env:"RESTORE" envDefault:"true"`
+	Store_Interval int64  `env:"STORE_INTERVAL" envDefault:"300"`
+	Store_File     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore        bool   `env:"RESTORE" envDefault:"true"`
 }
 
 func (rs *RepStore) New() {
@@ -257,6 +257,10 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
 	metricsJSON, err := mt.MarshalMetrica()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
 	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
@@ -270,8 +274,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if cfg.STORE_INTERVAL == 0 {
-		patch := cfg.STORE_FILE
+	if cfg.Store_Interval == 0 {
+		patch := cfg.Store_File
 		if patch != "" {
 			patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 		}

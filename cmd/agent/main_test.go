@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"runtime"
 	"strings"
 	"testing"
@@ -10,7 +9,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
-func TestmakeMsg(memStats encoding.MetricsGauge) string {
+func TestmakeMsg(memStats MetricsGauge) string {
 
 	const adresServer = "127.0.0.1:8080"
 	const msgFormat = "http://%s/update/%s/%s/%v"
@@ -24,12 +23,12 @@ func TestmakeMsg(memStats encoding.MetricsGauge) string {
 }
 
 func TestFuncAgen(t *testing.T) {
-	var resultMS = make(encoding.MetricsGauge)
+	var resultMS = make(MetricsGauge)
 	var argErr = "err"
 
 	t.Run("Checking the structure creation", func(t *testing.T) {
 
-		var realResult encoding.MetricsGauge
+		var realResult MetricsGauge
 
 		if resultMS["Alloc"] != realResult["Alloc"] && resultMS["RandomValue"] != realResult["RandomValue"] {
 

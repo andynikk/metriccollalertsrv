@@ -30,7 +30,7 @@ func loadStoreMetrics(rs *handlers.RepStore, wg *sync.WaitGroup) {
 		return
 	}
 
-	patch := cfg.STORE_FILE
+	patch := cfg.Store_File
 	if patch != "" {
 		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
@@ -61,14 +61,14 @@ func SaveMetric2File(rs *handlers.RepStore, cfg *handlers.Config, wg *sync.WaitG
 	wg.Add(1)
 	defer wg.Done()
 
-	patch := cfg.STORE_FILE
+	patch := cfg.Store_File
 	if patch != "" {
 		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
 
 	for {
 		rs.SaveMetric2File(patch)
-		time.Sleep(time.Duration(cfg.STORE_INTERVAL) * time.Second)
+		time.Sleep(time.Duration(cfg.Store_Interval) * time.Second)
 	}
 }
 
@@ -87,13 +87,13 @@ func main() {
 		return
 	}
 
-	patch := cfg.STORE_FILE
+	patch := cfg.Store_File
 	if patch != "" {
 		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
 
 	wg := new(sync.WaitGroup)
-	if cfg.RESTORE {
+	if cfg.Restore {
 		go loadStoreMetrics(rs, wg)
 	}
 	go SaveMetric2File(rs, cfg, wg)
@@ -118,12 +118,12 @@ func main() {
 
 func handleSignals(cancel context.CancelFunc) {
 	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Interrupt)
+	signal.Notify(sigCh, os.Kill)
 
 	for {
 		sig := <-sigCh
 		switch sig {
-		case os.Interrupt:
+		case os.Kill:
 			fmt.Println("canceled")
 			cancel()
 			return
