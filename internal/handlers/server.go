@@ -88,11 +88,12 @@ func (rs *RepStore) New() {
 }
 
 func (rs *RepStore) AddNilMetric(metType string, metName string) int {
-	var GaugeMetric = GaugeMetric
-	var CounterMetric = CounterMetric
+	//var GaugeMetric = GaugeMetric
+	//var CounterMetric = CounterMetric
 
+	fmt.Println("setValueInMapa ", metType)
 	switch metType {
-	case GaugeMetric.String():
+	case "gauge":
 		var nilGauge *repository.Gauge
 		rs.MutexRepo[metName] = nilGauge
 
@@ -100,7 +101,7 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) int {
 		valGauge := &fl
 
 		rs.MutexRepo[metName] = valGauge
-	case CounterMetric.String():
+	case "counter":
 		var nilCounter *repository.Counter
 		rs.MutexRepo[metName] = nilCounter
 
@@ -109,9 +110,11 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) int {
 
 		rs.MutexRepo[metName] = valCounter
 	default:
+		fmt.Println("setValueInMapa 3")
 		return 2
 	}
 
+	fmt.Println("setValueInMapa 4")
 	return 0
 }
 
@@ -120,7 +123,9 @@ func (rs *RepStore) setValueInMapa(metType string, metName string, metValue stri
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
+	fmt.Println("setValueInMapa 1")
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
+		fmt.Println("setValueInMapa 2")
 		status := rs.AddNilMetric(metType, metName)
 		if status != 0 {
 			return status
