@@ -160,7 +160,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	rw.WriteHeader(205)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) {
@@ -195,7 +195,7 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	case ErrorConvert:
 		rw.WriteHeader(http.StatusBadRequest)
 	default:
-		rw.WriteHeader(201)
+		rw.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -208,17 +208,18 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	var ec = ErrorConvert
-	var egt = ErrorGetType
+	//var ec = ErrorConvert
+	//var egt = ErrorGetType
 
 	errStatus := rs.setValueInMapa(metType, metName, metValue)
+	fmt.Println(errStatus)
 	switch errStatus {
-	case egt:
+	case ErrorGetType:
 		rw.WriteHeader(http.StatusNotImplemented)
-	case ec:
+	case ErrorConvert:
 		rw.WriteHeader(http.StatusBadRequest)
 	default:
-		rw.WriteHeader(202)
+		rw.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -291,7 +292,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
 	defer rq.Body.Close()
-	rw.WriteHeader(203)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
@@ -312,7 +313,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	}
 	tmpl.Execute(rw, data)
 
-	rw.WriteHeader(204)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) SaveMetric2File(patch string) {
