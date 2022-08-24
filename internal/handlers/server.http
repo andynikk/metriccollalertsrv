@@ -3,6 +3,6 @@ POST http://localhost:8080/value
 Content-Type: application/json
 
 {
-  "id": "Alloc",
-  "type": "gauge"
+  "ID": "Alloc",
+  "MType": "gauge"
 }

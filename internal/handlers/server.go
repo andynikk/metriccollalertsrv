@@ -215,8 +215,10 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	errStatus := rs.setValueInMapa(metType, metName, metValue)
 	switch errStatus {
 	case egt:
+		rw.WriteHeader(http.StatusNotImplemented)
 		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusNotImplemented)
 	case ec:
+		rw.WriteHeader(http.StatusNotImplemented)
 		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
@@ -251,9 +253,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	if cfg.STORE_INTERVAL == 0 {
 		patch := cfg.STORE_FILE
-		if patch != "" {
-			patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
-		}
 		rs.SaveMetric2File(patch)
 	}
 }

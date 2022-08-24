@@ -88,19 +88,25 @@ func MakeRequest(metric MetricsGauge) {
 			continue
 		}
 
-		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		req.Header.Set("Content-Type", "application/json")
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		defer req.Body.Close()
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
+		resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 		defer resp.Body.Close()
+
+		//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		//req.Header.Set("Content-Type", "application/json")
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//defer req.Body.Close()
+		//
+		//client := &http.Client{}
+		//resp, err := client.Do(req)
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//defer resp.Body.Close()
 	}
 
 	cPollCount := repository.Counter(PollCount)
@@ -111,15 +117,21 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 		return
 	}
-	req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-	req.Header.Set("Content-Type", "application/json")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	defer req.Body.Close()
+	//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+	//req.Header.Set("Content-Type", "application/json")
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//defer req.Body.Close()
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	//client := &http.Client{}
+	//resp, err := client.Do(req)
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//defer resp.Body.Close()
+
+	resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
 	}
