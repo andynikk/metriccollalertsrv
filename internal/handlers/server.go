@@ -86,7 +86,7 @@ func (rs *RepStore) New() {
 
 }
 
-func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
+func (rs *RepStore) AddNilMetric(metType string, metName string) int {
 	var GaugeMetric = GaugeMetric
 	var CounterMetric = CounterMetric
 
@@ -110,10 +110,10 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
 
 		rs.MutexRepo[metName] = valCounter
 	default:
-		return ErrorGetType
+		return 501
 	}
 
-	return NotError
+	return 200
 }
 
 func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) MetricError {
@@ -121,19 +121,22 @@ func (rs *RepStore) setValueInMapa(metType string, metName string, metValue stri
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	fmt.Println("metType 2", metType)
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		fmt.Println("metType 3", metType)
 		status := rs.AddNilMetric(metType, metName)
-		if status != NotError {
-			fmt.Println("metType 4", metType)
-			return status
+		if status != 0 {
+			return http.StatusNotImplemented
 		}
 	}
 
-	fmt.Println("metType 5", metType)
 	status := rs.MutexRepo[metName].SetFromText(metValue)
-	return status
+	switch status {
+	case 400:
+		return http.StatusBadRequest
+	case 501:
+		return http.StatusNotImplemented
+	default:
+		return http.StatusOK
+	}
 }
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
@@ -174,22 +177,22 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 		return
 	}
 
-	errStatus := NotError
+	errStatus := 200
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		errStatus = rs.AddNilMetric(metType, metName)
 	}
 
-	if errStatus == NotError {
+	if errStatus == 200 {
 		errStatusInt := rs.MutexRepo[metName].SetFromText(metValue)
 		if errStatusInt == 1 {
-			errStatus = ErrorConvert
+			errStatus = 400
 		}
 	}
 
 	switch errStatus {
-	case ErrorGetType:
+	case 400:
 		rw.WriteHeader(http.StatusNotImplemented)
-	case ErrorConvert:
+	case 500:
 		rw.WriteHeader(http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)

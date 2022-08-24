@@ -3,7 +3,6 @@ package repository
 import (
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"strconv"
 )
 
@@ -19,7 +18,7 @@ type Metric interface {
 	Set(v encoding.Metrics)
 	Float64() float64
 	Int64() int64
-	SetFromText(metValue string) handlers.MetricError
+	SetFromText(metValue string) int
 }
 
 func (g Gauge) String() string {
@@ -45,16 +44,16 @@ func (g *Gauge) Set(v encoding.Metrics) {
 
 }
 
-func (g *Gauge) SetFromText(metValue string) handlers.MetricError {
+func (g *Gauge) SetFromText(metValue string) int {
 
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
 		fmt.Println("error convert type")
-		return handlers.ErrorConvert
+		return 501
 	}
 	*g = Gauge(predVal)
 
-	return handlers.NotError
+	return 200
 
 }
 
@@ -76,16 +75,16 @@ func (c *Counter) Set(v encoding.Metrics) {
 	*c = *c + Counter(*v.Delta)
 }
 
-func (c *Counter) SetFromText(metValue string) handlers.MetricError {
+func (c *Counter) SetFromText(metValue string) int {
 
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
 		fmt.Println("error convert type")
-		return handlers.ErrorConvert
+		return 400
 	}
 	*c = *c + Counter(predVal)
 
-	return handlers.NotError
+	return 200
 
 }
 
