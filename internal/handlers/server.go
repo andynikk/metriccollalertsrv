@@ -49,9 +49,9 @@ type RepStore struct {
 }
 
 type Config struct {
-	StoreInterval int64  `env:"STORE_INTERVAL" envDefault:"300"`
-	StoreFile     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore       bool   `env:"RESTORE" envDefault:"true"`
+	STORE_INTERVAL int64  `env:"STORE_INTERVAL" envDefault:"300"`
+	STORE_FILE     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	RESTORE        bool   `env:"RESTORE" envDefault:"true"`
 }
 
 func (rs *RepStore) New() {
@@ -193,8 +193,8 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	//rs.MX.Lock()
+	//defer rs.MX.Unlock()
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
@@ -274,8 +274,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if cfg.StoreInterval == 0 {
-		patch := cfg.StoreFile
+	if cfg.STORE_INTERVAL == 0 {
+		patch := cfg.STORE_FILE
 		if patch != "" {
 			patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 		}
@@ -328,13 +328,13 @@ func (rs *RepStore) SaveMetric2File(patch string) {
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(http.StatusNotFound)
 
 	_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
+	rw.WriteHeader(http.StatusNotFound)
 }
 
 func textMetricsAndValue(mm repository.MapMetrics) []string {

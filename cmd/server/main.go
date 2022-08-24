@@ -27,7 +27,7 @@ func loadStoreMetrics(rs *handlers.RepStore, wg *sync.WaitGroup) {
 		return
 	}
 
-	patch := cfg.StoreFile
+	patch := cfg.STORE_FILE
 	if patch != "" {
 		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
@@ -58,14 +58,14 @@ func SaveMetric2File(rs *handlers.RepStore, cfg *handlers.Config, wg *sync.WaitG
 	wg.Add(1)
 	defer wg.Done()
 
-	patch := cfg.StoreFile
+	patch := cfg.STORE_FILE
 	if patch != "" {
 		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
 
 	for {
 		rs.SaveMetric2File(patch)
-		time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
+		time.Sleep(time.Duration(cfg.STORE_INTERVAL) * time.Second)
 	}
 }
 
