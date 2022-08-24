@@ -205,13 +205,14 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
-	if metType == "unknown" {
-		rw.WriteHeader(http.StatusNotImplemented)
-		return
-	}
+	//if metType == "unknown" {
+	//	rw.WriteHeader(http.StatusNotImplemented)
+	//	return
+	//}
 
 	errStatus := rs.setValueInMapa(metType, metName, metValue)
 	log.Print(metType, metName, metValue, errStatus)
+	fmt.Println(metType, metName, metValue, errStatus)
 
 	switch errStatus {
 	case ErrorGetType:

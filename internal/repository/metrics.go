@@ -46,9 +46,10 @@ func (g *Gauge) Set(v encoding.Metrics) {
 
 func (g *Gauge) SetFromText(metValue string) int64 {
 
+	fmt.Println("value", metValue)
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
-		fmt.Println("error convert type")
+		fmt.Println("error convert type ", metValue)
 		return 1 //handlers.ErrorConvert
 	}
 	*g = Gauge(predVal)
