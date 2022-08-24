@@ -52,6 +52,15 @@ type Config struct {
 	STORE_INTERVAL int64  `env:"STORE_INTERVAL" envDefault:"300"`
 	STORE_FILE     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	RESTORE        bool   `env:"RESTORE" envDefault:"true"`
+	ADDRESS        string `env:"ADDRESS" envDefault:"localhost:8080"`
+}
+
+func NewRepStore() *RepStore {
+
+	rp := new(RepStore)
+	rp.New()
+
+	return rp
 }
 
 func (rs *RepStore) New() {
@@ -233,6 +242,20 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		rs.AddNilMetric(metType, metName)
 	}
 	rs.MutexRepo[metName].Set(v)
+
+	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+
+	if cfg.STORE_INTERVAL == 0 {
+		patch := cfg.STORE_FILE
+		if patch != "" {
+			patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
+		}
+		rs.SaveMetric2File(patch)
+	}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -266,20 +289,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
-	}
-
-	cfg := &Config{}
-	if err := env.Parse(cfg); err != nil {
-		fmt.Printf("%+v\n", err)
-		return
-	}
-
-	if cfg.STORE_INTERVAL == 0 {
-		patch := cfg.STORE_FILE
-		if patch != "" {
-			patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
-		}
-		rs.SaveMetric2File(patch)
 	}
 }
 

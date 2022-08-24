@@ -11,7 +11,6 @@ import (
 
 	"github.com/caarlos0/env/v6"
 
-	"github.com/andynikk/metriccollalertsrv/internal/consts"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
@@ -28,9 +27,6 @@ func loadStoreMetrics(rs *handlers.RepStore, wg *sync.WaitGroup) {
 	}
 
 	patch := cfg.STORE_FILE
-	if patch != "" {
-		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
-	}
 
 	res, err := ioutil.ReadFile(patch)
 	if err != nil {
@@ -59,9 +55,6 @@ func SaveMetric2File(rs *handlers.RepStore, cfg *handlers.Config, wg *sync.WaitG
 	defer wg.Done()
 
 	patch := cfg.STORE_FILE
-	if patch != "" {
-		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
-	}
 
 	for {
 		rs.SaveMetric2File(patch)
@@ -75,9 +68,21 @@ func main() {
 	//go handleSignals(cancel)
 	//
 	rs := handlers.NewRepStore()
-	//go http.ListenAndServe(consts.PortServer, rs.Router)
 
-	http.ListenAndServe(consts.PortServer, rs.Router)
+	cfg := &handlers.Config{}
+	err := env.Parse(cfg)
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	s := &http.Server{
+		Addr:    cfg.ADDRESS,
+		Handler: rs.Router,
+	}
+	if s.ListenAndServe(); err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
 
 	//cfg := &handlers.Config{}
 	//err := env.Parse(cfg)

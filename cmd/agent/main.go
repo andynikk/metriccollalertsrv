@@ -13,12 +13,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
-const (
-//pollInterval   = 2
-//reportInterval = 10
-//msgFormat = "%s/update/%s/%s/%v"
-)
-
 type Config struct {
 	ADDRESS         string `env:"ADDRESS" envDefault:"localhost:8080"`
 	REPORT_INTERVAL int64  `env:"reportInterval" envDefault:"10"`
@@ -83,13 +77,9 @@ func metrixScan(metric MetricsGauge) {
 
 func MakeRequest(metric MetricsGauge) {
 
-	//message := makeMsg(metric)
-	//rn := strings.NewReader(message)
-
 	msg := "http://" + Cfg.ADDRESS + "/update"
-	//msg := "http://localhost:8080/update"
+
 	for key, val := range metric {
-		//msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
 		valFloat64 := val.Float64()
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64}
 		arrMterica, err := metrica.MarshalMetrica()
