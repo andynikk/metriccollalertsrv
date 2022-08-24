@@ -6,6 +6,7 @@ import (
 	"github.com/caarlos0/env/v6"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sync"
 	"text/template"
@@ -201,21 +202,17 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	//rs.MX.Lock()
-	//defer rs.MX.Unlock()
-
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 	if metType == "unknown" {
-		rw.WriteHeader(http.StatusBadRequest)
+		rw.WriteHeader(http.StatusNotImplemented)
 		return
 	}
-	//var ec = ErrorConvert
-	//var egt = ErrorGetType
 
 	errStatus := rs.setValueInMapa(metType, metName, metValue)
-	fmt.Println(errStatus)
+	log.Print(metType, metName, metValue, errStatus)
+
 	switch errStatus {
 	case ErrorGetType:
 		rw.WriteHeader(http.StatusNotImplemented)
