@@ -87,12 +87,12 @@ func (rs *RepStore) New() {
 
 }
 
-func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
-	//var GaugeMetric = GaugeMetric
-	//var CounterMetric = CounterMetric
+func (rs *RepStore) AddNilMetric(metType string, metName string) int {
+	var GaugeMetric = GaugeMetric
+	var CounterMetric = CounterMetric
 
 	switch metType {
-	case "gauge":
+	case GaugeMetric.String():
 		var nilGauge *repository.Gauge
 		rs.MutexRepo[metName] = nilGauge
 
@@ -100,7 +100,7 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
 		valGauge := &fl
 
 		rs.MutexRepo[metName] = valGauge
-	case "counter":
+	case CounterMetric.String():
 		var nilCounter *repository.Counter
 		rs.MutexRepo[metName] = nilCounter
 
@@ -109,34 +109,26 @@ func (rs *RepStore) AddNilMetric(metType string, metName string) MetricError {
 
 		rs.MutexRepo[metName] = valCounter
 	default:
-		return ErrorGetType
+		return 2
 	}
 
-	return NotError
+	return 0
 }
 
-func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) MetricError {
+func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) int {
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		status := rs.AddNilMetric(metType, metName)
-		if status != NotError {
+		if status != 0 {
 			return status
 		}
 	}
 
 	status := rs.MutexRepo[metName].SetFromText(metValue)
-
-	switch status {
-	case 1:
-		return ErrorConvert
-	case 0:
-		return NotError
-	}
-
-	return NotError
+	return status
 
 }
 
@@ -178,23 +170,23 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 		return
 	}
 
-	errStatus := NotError
+	errStatus := 0
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		errStatus = rs.AddNilMetric(metType, metName)
 	}
 
-	if errStatus == NotError {
+	if errStatus == 0 {
 		errStatusInt := rs.MutexRepo[metName].SetFromText(metValue)
 		if errStatusInt == 1 {
-			errStatus = ErrorConvert
+			errStatus = 0
 		}
 	}
 
 	switch errStatus {
-	case ErrorGetType:
-		rw.WriteHeader(http.StatusNotImplemented)
-	case ErrorConvert:
+	case 1:
 		rw.WriteHeader(http.StatusBadRequest)
+	case 2:
+		rw.WriteHeader(http.StatusNotImplemented)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}
@@ -215,10 +207,10 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	fmt.Println(metType, metName, metValue, errStatus)
 
 	switch errStatus {
-	case ErrorGetType:
-		rw.WriteHeader(http.StatusNotImplemented)
-	case ErrorConvert:
+	case 1:
 		rw.WriteHeader(http.StatusBadRequest)
+	case 2:
+		rw.WriteHeader(http.StatusNotImplemented)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}

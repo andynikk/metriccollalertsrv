@@ -18,7 +18,7 @@ type Metric interface {
 	Set(v encoding.Metrics)
 	Float64() float64
 	Int64() int64
-	SetFromText(metValue string) int64
+	SetFromText(metValue string) int
 }
 
 func (g Gauge) String() string {
@@ -44,17 +44,16 @@ func (g *Gauge) Set(v encoding.Metrics) {
 
 }
 
-func (g *Gauge) SetFromText(metValue string) int64 {
+func (g *Gauge) SetFromText(metValue string) int {
 
-	fmt.Println("value Gauge", metValue)
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
-		fmt.Println("error convert type ", metValue)
+		fmt.Println("error convert type")
 		return 1 //handlers.ErrorConvert
 	}
 	*g = Gauge(predVal)
 
-	return 0 //handlers.NotError
+	return 0
 
 }
 
@@ -76,17 +75,16 @@ func (c *Counter) Set(v encoding.Metrics) {
 	*c = *c + Counter(*v.Delta)
 }
 
-func (c *Counter) SetFromText(metValue string) int64 {
+func (c *Counter) SetFromText(metValue string) int {
 
-	fmt.Println("value Counter ", metValue)
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
-		fmt.Println("error convert type Counter ", metValue)
-		return 1 //handlers.ErrorConvert
+		fmt.Println("error convert type")
+		return 1
 	}
 	*c = *c + Counter(predVal)
 
-	return 0 //handlers.NotError
+	return 0
 
 }
 
