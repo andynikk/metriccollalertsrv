@@ -4,17 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
-
-	"github.com/caarlos0/env/v6"
-
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
+	"github.com/caarlos0/env/v6"
+	"io/ioutil"
+	"net/http"
 )
 
 func loadStoreMetrics(rs *handlers.RepStore, patch string) {
@@ -48,8 +42,8 @@ func SaveMetric2File(rs *handlers.RepStore, patch string) {
 
 func main() {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go handleSignals(cancel)
+	//ctx, cancel := context.WithCancel(context.Background())
+	//go handleSignals(cancel)
 
 	rs := handlers.NewRepStore()
 
@@ -59,7 +53,7 @@ func main() {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-	saveTicker := time.NewTicker(time.Duration(cfg.STORE_INTERVAL) * time.Second)
+	//saveTicker := time.NewTicker(time.Duration(cfg.STORE_INTERVAL) * time.Second)
 
 	if cfg.RESTORE {
 		loadStoreMetrics(rs, cfg.STORE_FILE)
@@ -74,15 +68,15 @@ func main() {
 		return
 	}
 
-	for {
-		select {
-		case <-saveTicker.C:
-			SaveMetric2File(rs, cfg.STORE_FILE)
-		case <-ctx.Done():
-			rs.SaveMetric2File(cfg.STORE_FILE)
-			log.Panicln("server stopped")
-		}
-	}
+	//for {
+	//	select {
+	//	case <-saveTicker.C:
+	//		SaveMetric2File(rs, cfg.STORE_FILE)
+	//	case <-ctx.Done():
+	//		rs.SaveMetric2File(cfg.STORE_FILE)
+	//		log.Panicln("server stopped")
+	//	}
+	//}
 
 	//for {
 	//	select {
@@ -101,17 +95,17 @@ func main() {
 }
 
 func handleSignals(cancel context.CancelFunc) {
-	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Interrupt, os.Kill)
-	<-sigCh
-
-	for {
-		sig := <-sigCh
-		switch sig {
-		case os.Interrupt:
-			fmt.Println("canceled")
-			cancel()
-			return
-		}
-	}
+	//sigCh := make(chan os.Signal)
+	//signal.Notify(sigCh, os.Interrupt, os.Kill)
+	//<-sigCh
+	//
+	//for {
+	//	sig := <-sigCh
+	//	switch sig {
+	//	case os.Interrupt:
+	//		fmt.Println("canceled")
+	//		cancel()
+	//		return
+	//	}
+	//}
 }
