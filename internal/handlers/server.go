@@ -207,7 +207,10 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
-
+	if metType == "unknown" {
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	//var ec = ErrorConvert
 	//var egt = ErrorGetType
 
