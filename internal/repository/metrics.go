@@ -46,7 +46,7 @@ func (g *Gauge) Set(v encoding.Metrics) {
 
 func (g *Gauge) SetFromText(metValue string) int64 {
 
-	fmt.Println("value", metValue)
+	fmt.Println("value Gauge", metValue)
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
 		fmt.Println("error convert type ", metValue)
@@ -78,9 +78,10 @@ func (c *Counter) Set(v encoding.Metrics) {
 
 func (c *Counter) SetFromText(metValue string) int64 {
 
+	fmt.Println("value Counter ", metValue)
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
-		fmt.Println("error convert type")
+		fmt.Println("error convert type Counter ", metValue)
 		return 1 //handlers.ErrorConvert
 	}
 	*c = *c + Counter(predVal)
