@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"os/signal"
 	"sync"
 	"time"
 
@@ -118,9 +116,9 @@ func main() {
 }
 
 func handleSignals(cancel context.CancelFunc) {
-	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Interrupt, os.Kill)
-	<-sigCh
+	//sigCh := make(chan os.Signal)
+	//signal.Notify(sigCh, os.Interrupt, os.Kill)
+	//<-sigCh
 
 	//for {
 	//	sig := <-sigCh
