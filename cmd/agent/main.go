@@ -14,15 +14,15 @@ import (
 )
 
 const (
-	//pollInterval   = 2
-	//reportInterval = 10
-	msgFormat = "%s/update/%s/%s/%v"
+//pollInterval   = 2
+//reportInterval = 10
+//msgFormat = "%s/update/%s/%s/%v"
 )
 
 type Config struct {
-	ADDRESS         string `env:"ADDRESS" envDefault:"localhost:8080"`
-	REPORT_INTERVAL int64  `env:"REPORT_INTERVAL" envDefault:"10"`
-	POLL_INTERVAL   int64  `env:"POLL_INTERVAL" envDefault:"2"`
+	address        string `env:"ADDRESS" envDefault:"localhost:8080"`
+	reportInterval int64  `env:"REPORT_INTERVAL" envDefault:"10"`
+	rollInterval   int64  `env:"POLL_INTERVAL" envDefault:"2"`
 }
 
 var Cfg = Config{}
@@ -86,7 +86,7 @@ func MakeRequest(metric MetricsGauge) {
 	//message := makeMsg(metric)
 	//rn := strings.NewReader(message)
 
-	msg := "http://" + Cfg.ADDRESS + "/update"
+	msg := "http://" + Cfg.address + "/update"
 	//msg := "http://localhost:8080/update"
 	for key, val := range metric {
 		//msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
@@ -146,8 +146,8 @@ func main() {
 
 	metric := make(MetricsGauge)
 
-	updateTicker := time.NewTicker(time.Duration(Cfg.POLL_INTERVAL) * time.Second)
-	reportTicker := time.NewTicker(time.Duration(Cfg.REPORT_INTERVAL) * time.Second)
+	updateTicker := time.NewTicker(time.Duration(Cfg.rollInterval) * time.Second)
+	reportTicker := time.NewTicker(time.Duration(Cfg.reportInterval) * time.Second)
 
 	for {
 		select {

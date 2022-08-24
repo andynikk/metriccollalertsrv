@@ -49,9 +49,9 @@ type RepStore struct {
 }
 
 type Config struct {
-	Store_Interval int64  `env:"STORE_INTERVAL" envDefault:"300"`
-	Store_File     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore        bool   `env:"RESTORE" envDefault:"true"`
+	StoreInterval int64  `env:"STORE_INTERVAL" envDefault:"300"`
+	StoreFile     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore       bool   `env:"RESTORE" envDefault:"true"`
 }
 
 func (rs *RepStore) New() {
@@ -274,8 +274,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if cfg.Store_Interval == 0 {
-		patch := cfg.Store_File
+	if cfg.StoreInterval == 0 {
+		patch := cfg.StoreFile
 		if patch != "" {
 			patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 		}

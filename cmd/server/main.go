@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,7 +29,7 @@ func loadStoreMetrics(rs *handlers.RepStore, wg *sync.WaitGroup) {
 		return
 	}
 
-	patch := cfg.Store_File
+	patch := cfg.StoreFile
 	if patch != "" {
 		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
@@ -61,69 +60,71 @@ func SaveMetric2File(rs *handlers.RepStore, cfg *handlers.Config, wg *sync.WaitG
 	wg.Add(1)
 	defer wg.Done()
 
-	patch := cfg.Store_File
+	patch := cfg.StoreFile
 	if patch != "" {
 		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
 	}
 
 	for {
 		rs.SaveMetric2File(patch)
-		time.Sleep(time.Duration(cfg.Store_Interval) * time.Second)
+		time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 	}
 }
 
 func main() {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go handleSignals(cancel)
-
+	//ctx, cancel := context.WithCancel(context.Background())
+	//go handleSignals(cancel)
+	//
 	rs := handlers.NewRepStore()
-	go http.ListenAndServe(consts.PortServer, rs.Router)
+	//go http.ListenAndServe(consts.PortServer, rs.Router)
 
-	cfg := &handlers.Config{}
-	err := env.Parse(cfg)
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
-	}
+	http.ListenAndServe(consts.PortServer, rs.Router)
 
-	patch := cfg.Store_File
-	if patch != "" {
-		patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
-	}
-
-	wg := new(sync.WaitGroup)
-	if cfg.Restore {
-		go loadStoreMetrics(rs, wg)
-	}
-	go SaveMetric2File(rs, cfg, wg)
-
-	wg.Wait()
-
-	for {
-		select {
-		case <-ctx.Done():
-
-			rs.SaveMetric2File(patch)
-			log.Panicln("server stopped")
-
-		default:
-
-			timer := time.NewTimer(2 * time.Second)
-			<-timer.C
-		}
-	}
+	//cfg := &handlers.Config{}
+	//err := env.Parse(cfg)
+	//if err != nil {
+	//	fmt.Printf("%+v\n", err)
+	//	return
+	//}
+	//
+	//patch := cfg.StoreFile
+	//if patch != "" {
+	//	patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
+	//}
+	//
+	//wg := new(sync.WaitGroup)
+	//if cfg.Restore {
+	//	go loadStoreMetrics(rs, wg)
+	//}
+	//go SaveMetric2File(rs, cfg, wg)
+	//
+	//wg.Wait()
+	//
+	//for {
+	//	select {
+	//	case <-ctx.Done():
+	//
+	//		rs.SaveMetric2File(patch)
+	//		log.Panicln("server stopped")
+	//
+	//	default:
+	//
+	//		timer := time.NewTimer(2 * time.Second)
+	//		<-timer.C
+	//	}
+	//}
 
 }
 
 func handleSignals(cancel context.CancelFunc) {
 	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Kill)
+	signal.Notify(sigCh, os.Interrupt, os.Kill)
 
 	for {
 		sig := <-sigCh
 		switch sig {
-		case os.Kill:
+		case os.Interrupt:
 			fmt.Println("canceled")
 			cancel()
 			return
