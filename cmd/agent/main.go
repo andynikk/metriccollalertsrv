@@ -99,12 +99,11 @@ func MakeRequest(metric MetricsGauge) {
 		}
 
 		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		defer req.Body.Close()
-
 		req.Header.Set("Content-Type", "application/json")
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		defer req.Body.Close()
 
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -127,6 +126,7 @@ func MakeRequest(metric MetricsGauge) {
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	defer req.Body.Close()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
