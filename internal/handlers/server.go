@@ -160,7 +160,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	//rw.WriteHeader(http.StatusOK)
+	rw.WriteHeader(205)
 }
 
 func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) {
@@ -195,7 +195,7 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	case ErrorConvert:
 		rw.WriteHeader(http.StatusBadRequest)
 	default:
-		//rw.WriteHeader(http.StatusOK)
+		rw.WriteHeader(201)
 	}
 }
 
@@ -218,7 +218,7 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	case ec:
 		rw.WriteHeader(http.StatusBadRequest)
 	default:
-		rw.WriteHeader(http.StatusFound)
+		rw.WriteHeader(202)
 	}
 }
 
@@ -291,7 +291,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
 	defer rq.Body.Close()
-	//rw.WriteHeader(http.StatusOK)
+	rw.WriteHeader(203)
 }
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
@@ -312,7 +312,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	}
 	tmpl.Execute(rw, data)
 
-	//rw.WriteHeader(http.StatusOK)
+	rw.WriteHeader(204)
 }
 
 func (rs *RepStore) SaveMetric2File(patch string) {
