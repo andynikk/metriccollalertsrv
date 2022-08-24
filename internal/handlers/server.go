@@ -182,9 +182,9 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 
 	switch errStatus {
 	case ErrorGetType:
-		rw.WriteHeader(http.StatusNotImplemented)
+		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusNotImplemented)
 	case ErrorConvert:
-		rw.WriteHeader(http.StatusBadRequest)
+		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}
@@ -199,18 +199,16 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
-	if metValue == "" {
-		metValue = "0"
-	}
+
 	var ec = ErrorConvert
 	var egt = ErrorGetType
 
 	errStatus := rs.setValueInMapa(metType, metName, metValue)
 	switch errStatus {
 	case egt:
-		rw.WriteHeader(http.StatusNotImplemented)
+		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusNotImplemented)
 	case ec:
-		rw.WriteHeader(http.StatusBadRequest)
+		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}
