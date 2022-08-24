@@ -30,7 +30,7 @@ func (g Gauge) Type() string {
 	return "gauge"
 }
 
-func (g Gauge) GetMetrics(id string, mType string) encoding.Metrics {
+func (g Gauge) GetMetrics(mType string, id string) encoding.Metrics {
 
 	value := float64(g)
 	mt := encoding.Metrics{ID: id, MType: mType, Value: &value}
@@ -93,7 +93,7 @@ func (c Counter) String() string {
 	return fmt.Sprintf("%d", c)
 }
 
-func (c Counter) GetMetrics(id string, mType string) encoding.Metrics {
+func (c Counter) GetMetrics(mType string, id string) encoding.Metrics {
 
 	delta := int64(c)
 	mt := encoding.Metrics{ID: id, MType: mType, Delta: &delta}

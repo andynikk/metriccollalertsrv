@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -15,18 +14,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
-func loadStoreMetrics(rs *handlers.RepStore, wg *sync.WaitGroup) {
-	wg.Add(1)
-	defer wg.Done()
-
-	cfg := &handlers.Config{}
-	err := env.Parse(cfg)
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
-	}
-
-	patch := cfg.STORE_FILE
+func loadStoreMetrics(rs *handlers.RepStore, patch string) {
 
 	res, err := ioutil.ReadFile(patch)
 	if err != nil {
@@ -50,16 +38,9 @@ func loadStoreMetrics(rs *handlers.RepStore, wg *sync.WaitGroup) {
 
 }
 
-func SaveMetric2File(rs *handlers.RepStore, cfg *handlers.Config, wg *sync.WaitGroup) {
-	wg.Add(1)
-	defer wg.Done()
+func SaveMetric2File(rs *handlers.RepStore, patch string) {
 
-	patch := cfg.STORE_FILE
-
-	for {
-		rs.SaveMetric2File(patch)
-		time.Sleep(time.Duration(cfg.STORE_INTERVAL) * time.Second)
-	}
+	rs.SaveMetric2File(patch)
 }
 
 func main() {
@@ -75,6 +56,10 @@ func main() {
 		fmt.Printf("%+v\n", err)
 		return
 	}
+	if cfg.RESTORE {
+		loadStoreMetrics(rs, cfg.STORE_FILE)
+	}
+
 	s := &http.Server{
 		Addr:    cfg.ADDRESS,
 		Handler: rs.Router,
@@ -84,19 +69,17 @@ func main() {
 		return
 	}
 
-	//cfg := &handlers.Config{}
-	//err := env.Parse(cfg)
-	//if err != nil {
-	//	fmt.Printf("%+v\n", err)
-	//	return
-	//}
-	//
-	//patch := cfg.StoreFile
-	//if patch != "" {
-	//	patch = "c:/Users/andrey.mikhailov/metriccollalertsrv/tmp/devops-metrics-db.json"
-	//}
-	//
-	//wg := new(sync.WaitGroup)
+	saveTicker := time.NewTicker(time.Duration(cfg.STORE_INTERVAL) * time.Second)
+
+	for {
+		select {
+		case <-saveTicker.C:
+			SaveMetric2File(rs, cfg.STORE_FILE)
+			//case <-reportTicker.C:
+			//	MakeRequest(metric)
+		}
+	}
+
 	//if cfg.Restore {
 	//	go loadStoreMetrics(rs, wg)
 	//}
