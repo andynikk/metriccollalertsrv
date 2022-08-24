@@ -331,12 +331,13 @@ func (rs *RepStore) SaveMetric2File(patch string) {
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
-	_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusNotFound)
-		return
-	}
-	rw.WriteHeader(http.StatusNotFound)
+	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
+
+	//_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
+	//if err != nil {
+	//	http.Error(rw, err.Error(), http.StatusNotFound)
+	//	return
+	//}
 }
 
 func textMetricsAndValue(mm repository.MapMetrics) []string {
