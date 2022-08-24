@@ -136,6 +136,7 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 	}
 	defer resp.Body.Close()
+
 }
 
 func main() {

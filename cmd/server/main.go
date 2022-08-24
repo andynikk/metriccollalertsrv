@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -45,9 +48,9 @@ func SaveMetric2File(rs *handlers.RepStore, patch string) {
 
 func main() {
 
-	//ctx, cancel := context.WithCancel(context.Background())
-	//go handleSignals(cancel)
-	//
+	ctx, cancel := context.WithCancel(context.Background())
+	go handleSignals(cancel)
+
 	rs := handlers.NewRepStore()
 
 	cfg := &handlers.Config{}
@@ -56,6 +59,8 @@ func main() {
 		fmt.Printf("%+v\n", err)
 		return
 	}
+	saveTicker := time.NewTicker(time.Duration(cfg.STORE_INTERVAL) * time.Second)
+
 	if cfg.RESTORE {
 		loadStoreMetrics(rs, cfg.STORE_FILE)
 	}
@@ -69,24 +74,16 @@ func main() {
 		return
 	}
 
-	saveTicker := time.NewTicker(time.Duration(cfg.STORE_INTERVAL) * time.Second)
-
 	for {
 		select {
 		case <-saveTicker.C:
 			SaveMetric2File(rs, cfg.STORE_FILE)
-			//case <-reportTicker.C:
-			//	MakeRequest(metric)
+		case <-ctx.Done():
+			rs.SaveMetric2File(cfg.STORE_FILE)
+			log.Panicln("server stopped")
 		}
 	}
 
-	//if cfg.Restore {
-	//	go loadStoreMetrics(rs, wg)
-	//}
-	//go SaveMetric2File(rs, cfg, wg)
-	//
-	//wg.Wait()
-	//
 	//for {
 	//	select {
 	//	case <-ctx.Done():
@@ -104,17 +101,17 @@ func main() {
 }
 
 func handleSignals(cancel context.CancelFunc) {
-	//sigCh := make(chan os.Signal)
-	//signal.Notify(sigCh, os.Interrupt, os.Kill)
-	//<-sigCh
+	sigCh := make(chan os.Signal)
+	signal.Notify(sigCh, os.Interrupt, os.Kill)
+	<-sigCh
 
-	//for {
-	//	sig := <-sigCh
-	//	switch sig {
-	//	case os.Interrupt:
-	//		fmt.Println("canceled")
-	//		cancel()
-	//		return
-	//	}
-	//}
+	for {
+		sig := <-sigCh
+		switch sig {
+		case os.Interrupt:
+			fmt.Println("canceled")
+			cancel()
+			return
+		}
+	}
 }

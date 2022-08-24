@@ -191,13 +191,14 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 
 	switch errStatus {
 	case ErrorGetType:
+		rw.WriteHeader(http.StatusNotImplemented)
 		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusNotImplemented)
 	case ErrorConvert:
+		rw.WriteHeader(http.StatusBadRequest)
 		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}
-
 }
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
@@ -218,7 +219,7 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 		rw.WriteHeader(http.StatusNotImplemented)
 		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusNotImplemented)
 	case ec:
-		rw.WriteHeader(http.StatusNotImplemented)
+		rw.WriteHeader(http.StatusBadRequest)
 		http.Error(rw, "Ошибка обработки запроса "+rq.URL.Path, http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
