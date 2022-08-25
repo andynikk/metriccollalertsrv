@@ -16,8 +16,11 @@ func TestmakeMsg(memStats MetricsGauge) string {
 
 	var msg []string
 
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats["Alloc"].Type(), "Alloc", 0.1))
-	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, memStats["BuckHashSys"].Type(), "BuckHashSys", 0.002))
+	val := memStats["Alloc"]
+	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, val.Type(), "Alloc", 0.1))
+
+	val = memStats["BuckHashSys"]
+	msg = append(msg, fmt.Sprintf(msgFormat, adresServer, val.Type(), "BuckHashSys", 0.002))
 
 	return strings.Join(msg, "\n")
 }
@@ -69,7 +72,8 @@ func TestFuncAgen(t *testing.T) {
 	fillMetric(resultMS, &mem)
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
-		if resultMS["Frees"].Type() != "gauge" {
+		val := resultMS["Frees"]
+		if val.Type() != "gauge" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Gauge")
 		}
 	})
@@ -84,7 +88,8 @@ func TestFuncAgen(t *testing.T) {
 	fillMetric(resultMS, &mem)
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
-		if repository.Counter(PollCount).Type() != "counter" {
+		val := repository.Counter(PollCount)
+		if val.Type() != "counter" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Counter")
 		}
 	})
@@ -98,7 +103,6 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Increasing the metric PollCount", func(t *testing.T) {
 		var res = int64(2)
-
 		if PollCount != res {
 			t.Errorf("The metric %s has not increased by %v", "PollCount", res)
 		}

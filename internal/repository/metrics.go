@@ -2,8 +2,9 @@ package repository
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"strconv"
+
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 )
 
 type Gauge float64
