@@ -336,7 +336,7 @@ func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
 	var arr []encoding.Metrics
 
 	for key, val := range mm {
-		jMetric := val.GetMetrics(key, val.Type())
+		jMetric := val.GetMetrics(val.Type(), key)
 		arr = append(arr, jMetric)
 	}
 
