@@ -50,6 +50,7 @@ func SaveMetric2File(rs *handlers.RepStore, patch string, interval int64) {
 
 func main() {
 
+	fmt.Println("Run server")
 	rs := handlers.NewRepStore()
 
 	cfg := &handlers.Config{}
