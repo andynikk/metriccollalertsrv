@@ -79,64 +79,74 @@ func (rs *RepStore) New() {
 
 	rs.Router.Get("/", rs.HandlerGetAllMetrics)
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
-	rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetrica)
+	//rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetrica)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 
 }
 
-func (rs *RepStore) AddNilMetric(metType string, metName string) int {
-	var GaugeMetric = GaugeMetric
-	var CounterMetric = CounterMetric
+func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) MetricError {
 
-	fmt.Println(metType, metName)
+	//rs.MX.Lock()
+	//defer rs.MX.Unlock()
 
 	switch metType {
 	case GaugeMetric.String():
-		var nilGauge *repository.Gauge
-		rs.MutexRepo[metName] = nilGauge
+		if val, findKey := rs.MutexRepo[metName]; findKey {
+			if err := val.SetFromText(metValue); err == 400 {
+				return http.StatusBadRequest
+			}
+		} else {
 
-		fl := repository.Gauge(0)
-		valGauge := &fl
+			valG := repository.Gauge(0)
+			if err := valG.SetFromText(metValue); err == 400 {
+				return http.StatusBadRequest
+			}
 
-		rs.MutexRepo[metName] = valGauge
+			rs.MutexRepo[metName] = &valG
+		}
+
 	case CounterMetric.String():
-		var nilCounter *repository.Counter
-		rs.MutexRepo[metName] = nilCounter
+		if val, findKey := rs.MutexRepo[metName]; findKey {
+			if err := val.SetFromText(metValue); err == 400 {
+				return http.StatusBadRequest
+			}
+		} else {
 
-		in := repository.Counter(0)
-		valCounter := &in
+			valC := repository.Counter(0)
+			if err := valC.SetFromText(metValue); err == 400 {
+				return http.StatusBadRequest
+			}
 
-		rs.MutexRepo[metName] = valCounter
+			rs.MutexRepo[metName] = &valC
+		}
 	default:
-		return 501
+		return http.StatusNotImplemented
 	}
 
-	return 200
+	return http.StatusOK
 }
 
-func (rs *RepStore) setValueInMapa(metType string, metName string, metValue string) MetricError {
+func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) MetricError {
 
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
-
-	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		status := rs.AddNilMetric(metType, metName)
-		if status != 0 {
-			return http.StatusNotImplemented
+	switch v.MType {
+	case GaugeMetric.String():
+		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
+			valG := repository.Gauge(0)
+			rs.MutexRepo[v.ID] = &valG
 		}
+	case CounterMetric.String():
+		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
+			valC := repository.Counter(0)
+			rs.MutexRepo[v.ID] = &valC
+		}
+	default:
+		return http.StatusNotImplemented
 	}
 
-	status := rs.MutexRepo[metName].SetFromText(metValue)
-	switch status {
-	case 400:
-		return http.StatusBadRequest
-	case 501:
-		return http.StatusNotImplemented
-	default:
-		return http.StatusOK
-	}
+	rs.MutexRepo[v.ID].Set(v)
+	return http.StatusOK
 }
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
@@ -163,7 +173,8 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
+
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
@@ -171,53 +182,13 @@ func (rs *RepStore) HandlerSetMetrica(rw http.ResponseWriter, rq *http.Request) 
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		rw.WriteHeader(http.StatusBadRequest)
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusBadRequest)
-		return
-	}
-
-	errStatus := 200
-	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		errStatus = rs.AddNilMetric(metType, metName)
-	}
-
-	if errStatus == 200 {
-		errStatusInt := rs.MutexRepo[metName].SetFromText(metValue)
-		if errStatusInt == 1 {
-			errStatus = 400
-		}
-	}
+	errStatus := rs.setValueInMap(metType, metName, metValue)
 
 	switch errStatus {
 	case 400:
-		rw.WriteHeader(http.StatusNotImplemented)
-	case 500:
 		rw.WriteHeader(http.StatusBadRequest)
-	default:
-		rw.WriteHeader(http.StatusOK)
-	}
-}
-
-func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
-
-	metType := chi.URLParam(rq, "metType")
-	metName := chi.URLParam(rq, "metName")
-	metValue := chi.URLParam(rq, "metValue")
-	//if metType == "unknown" {
-	//	rw.WriteHeader(http.StatusNotImplemented)
-	//	return
-	//}
-
-	fmt.Println("metType 1")
-	errStatus := rs.setValueInMapa(metType, metName, metValue)
-	fmt.Println(metType, metName, metValue, errStatus)
-
-	switch errStatus {
-	case ErrorGetType:
+	case 501:
 		rw.WriteHeader(http.StatusNotImplemented)
-	case ErrorConvert:
-		rw.WriteHeader(http.StatusBadRequest)
 	default:
 		rw.WriteHeader(http.StatusOK)
 	}
@@ -235,13 +206,17 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
-	metType := v.MType
-	metName := v.ID
 
-	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		rs.AddNilMetric(metType, metName)
+	errStatus := rs.SetValueInMapJSON(v)
+
+	switch errStatus {
+	case 400:
+		rw.WriteHeader(http.StatusBadRequest)
+	case 501:
+		rw.WriteHeader(http.StatusNotImplemented)
+	default:
+		rw.WriteHeader(http.StatusOK)
 	}
-	rs.MutexRepo[metName].Set(v)
 
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {

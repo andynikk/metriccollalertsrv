@@ -21,18 +21,18 @@ type Metric interface {
 	SetFromText(metValue string) int
 }
 
-func (g Gauge) String() string {
+func (g *Gauge) String() string {
 
-	return fmt.Sprintf("%g", g)
+	return fmt.Sprintf("%g", *g)
 }
 
-func (g Gauge) Type() string {
+func (g *Gauge) Type() string {
 	return "gauge"
 }
 
-func (g Gauge) GetMetrics(mType string, id string) encoding.Metrics {
+func (g *Gauge) GetMetrics(mType string, id string) encoding.Metrics {
 
-	value := float64(g)
+	value := float64(*g)
 	mt := encoding.Metrics{ID: id, MType: mType, Value: &value}
 
 	return mt
@@ -49,7 +49,7 @@ func (g *Gauge) SetFromText(metValue string) int {
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
 		fmt.Println("error convert type")
-		return 501
+		return 400
 	}
 	*g = Gauge(predVal)
 
@@ -57,12 +57,12 @@ func (g *Gauge) SetFromText(metValue string) int {
 
 }
 
-func (g Gauge) Int64() int64 {
-	return int64(g)
+func (g *Gauge) Int64() int64 {
+	return int64(*g)
 }
 
-func (g Gauge) Float64() float64 {
-	return float64(g)
+func (g *Gauge) Float64() float64 {
+	return float64(*g)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -77,7 +77,7 @@ func (c *Counter) Set(v encoding.Metrics) {
 
 func (c *Counter) SetFromText(metValue string) int {
 
-	predVal, err := strconv.ParseFloat(metValue, 64)
+	predVal, err := strconv.ParseInt(metValue, 10, 64)
 	if err != nil {
 		fmt.Println("error convert type")
 		return 400
@@ -88,27 +88,27 @@ func (c *Counter) SetFromText(metValue string) int {
 
 }
 
-func (c Counter) String() string {
+func (c *Counter) String() string {
 
-	return fmt.Sprintf("%d", c)
+	return fmt.Sprintf("%d", *c)
 }
 
-func (c Counter) GetMetrics(mType string, id string) encoding.Metrics {
+func (c *Counter) GetMetrics(mType string, id string) encoding.Metrics {
 
-	delta := int64(c)
+	delta := int64(*c)
 	mt := encoding.Metrics{ID: id, MType: mType, Delta: &delta}
 
 	return mt
 }
 
-func (c Counter) Type() string {
+func (c *Counter) Type() string {
 	return "counter"
 }
 
-func (c Counter) Int64() int64 {
-	return int64(c)
+func (c *Counter) Int64() int64 {
+	return int64(*c)
 }
 
-func (c Counter) Float64() float64 {
-	return float64(c)
+func (c *Counter) Float64() float64 {
+	return float64(*c)
 }

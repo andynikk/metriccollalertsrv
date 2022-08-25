@@ -1,14 +1,17 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"github.com/caarlos0/env/v6"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 )
 
 func loadStoreMetrics(rs *handlers.RepStore, patch string) {
@@ -28,8 +31,7 @@ func loadStoreMetrics(rs *handlers.RepStore, patch string) {
 	defer rs.MX.Unlock()
 
 	for _, val := range arrMatric {
-		rs.AddNilMetric(val.MType, val.ID)
-		rs.MutexRepo[val.ID].Set(val)
+		rs.SetValueInMapJSON(val)
 	}
 	fmt.Println(rs.MutexRepo)
 
@@ -37,13 +39,16 @@ func loadStoreMetrics(rs *handlers.RepStore, patch string) {
 
 func SaveMetric2File(rs *handlers.RepStore, patch string) {
 
-	rs.SaveMetric2File(patch)
+	saveTicker := time.NewTicker(time.Duration(300) * time.Second)
+	for {
+		select {
+		case <-saveTicker.C:
+			rs.SaveMetric2File(patch)
+		}
+	}
 }
 
 func main() {
-
-	//ctx, cancel := context.WithCancel(context.Background())
-	//go handleSignals(cancel)
 
 	rs := handlers.NewRepStore()
 
@@ -53,59 +58,28 @@ func main() {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-	//saveTicker := time.NewTicker(time.Duration(cfg.STORE_INTERVAL) * time.Second)
 
 	if cfg.RESTORE {
 		loadStoreMetrics(rs, cfg.STORE_FILE)
 	}
 
-	s := &http.Server{
-		Addr:    cfg.ADDRESS,
-		Handler: rs.Router,
-	}
-	if s.ListenAndServe(); err != nil {
-		fmt.Printf("%+v\n", err)
-		return
-	}
+	go SaveMetric2File(rs, cfg.STORE_FILE)
 
-	//for {
-	//	select {
-	//	case <-saveTicker.C:
-	//		SaveMetric2File(rs, cfg.STORE_FILE)
-	//	case <-ctx.Done():
-	//		rs.SaveMetric2File(cfg.STORE_FILE)
-	//		log.Panicln("server stopped")
-	//	}
-	//}
+	go func() {
+		s := &http.Server{
+			Addr:    cfg.ADDRESS,
+			Handler: rs.Router}
 
-	//for {
-	//	select {
-	//	case <-ctx.Done():
-	//
-	//		rs.SaveMetric2File(patch)
-	//		log.Panicln("server stopped")
-	//
-	//	default:
-	//
-	//		timer := time.NewTimer(2 * time.Second)
-	//		<-timer.C
-	//	}
-	//}
+		if err := s.ListenAndServe(); err != nil {
+			fmt.Printf("%+v\n", err)
+			return
+		}
+	}()
 
-}
+	stop := make(chan os.Signal)
+	signal.Notify(stop, os.Interrupt, os.Kill)
+	<-stop
+	rs.SaveMetric2File(cfg.STORE_FILE)
+	log.Panicln("server stopped")
 
-func handleSignals(cancel context.CancelFunc) {
-	//sigCh := make(chan os.Signal)
-	//signal.Notify(sigCh, os.Interrupt, os.Kill)
-	//<-sigCh
-	//
-	//for {
-	//	sig := <-sigCh
-	//	switch sig {
-	//	case os.Interrupt:
-	//		fmt.Println("canceled")
-	//		cancel()
-	//		return
-	//	}
-	//}
 }
