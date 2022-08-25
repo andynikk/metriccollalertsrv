@@ -218,6 +218,18 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		rw.WriteHeader(http.StatusOK)
 	}
 
+	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
+	metricsJSON, err := mt.MarshalMetrica()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	rw.Header().Add("Content-Type", "application/json")
+	if _, err := rw.Write(metricsJSON); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		fmt.Printf("%+v\n", err)
