@@ -33,8 +33,9 @@ func (g *Gauge) Type() string {
 
 func (g *Gauge) GetMetrics(mType string, id string) encoding.Metrics {
 
+	delta := int64(0)
 	value := float64(*g)
-	mt := encoding.Metrics{ID: id, MType: mType, Value: &value}
+	mt := encoding.Metrics{ID: id, MType: mType, Delta: &delta, Value: &value}
 
 	return mt
 }
@@ -97,7 +98,8 @@ func (c *Counter) String() string {
 func (c *Counter) GetMetrics(mType string, id string) encoding.Metrics {
 
 	delta := int64(*c)
-	mt := encoding.Metrics{ID: id, MType: mType, Delta: &delta}
+	value := float64(0)
+	mt := encoding.Metrics{ID: id, MType: mType, Value: &value, Delta: &delta}
 
 	return mt
 }
