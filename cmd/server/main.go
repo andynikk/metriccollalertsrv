@@ -61,10 +61,10 @@ func main() {
 		fmt.Printf("%+v\n", err)
 		return
 	}
-	fmt.Println("Адрес сервера:", cfg.ADDRESS)
+	log.Println("Адрес сервера:", cfg.Address)
 
-	if cfg.RESTORE {
-		loadStoreMetrics(rs, cfg.STORE_FILE)
+	if cfg.Restore {
+		loadStoreMetrics(rs, cfg.StoreFile)
 	}
 
 	//handlers.AddrServ = os.Getenv("ADDRESS")
@@ -73,11 +73,11 @@ func main() {
 	//	handlers.AddrServ = "localhost:8080"
 	//}
 
-	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
+	go SaveMetric2File(rs, cfg.StoreFile, cfg.StoreInterval)
 
 	go func() {
 		s := &http.Server{
-			Addr: cfg.ADDRESS,
+			Addr: cfg.Address,
 			//Addr:    handlers.AddrServ,
 			Handler: rs.Router}
 
@@ -90,7 +90,7 @@ func main() {
 	stop := make(chan os.Signal)
 	signal.Notify(stop, os.Interrupt, os.Kill)
 	<-stop
-	rs.SaveMetric2File(cfg.STORE_FILE)
+	rs.SaveMetric2File(cfg.StoreFile)
 	log.Panicln("server stopped")
 
 }

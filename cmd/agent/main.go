@@ -15,9 +15,9 @@ import (
 )
 
 type Config struct {
-	ADDRESS         string `env:"ADDRESS" envDefault:"localhost:8080"`
-	REPORT_INTERVAL int64  `env:"reportInterval" envDefault:"10"`
-	POLL_INTERVAL   int64  `env:"rollInterval" envDefault:"2"`
+	Address        string `env:"ADDRESS" envDefault:"localhost:8080"`
+	ReportInterval int64  `env:"reportInterval" envDefault:"10"`
+	PollInterval   int64  `env:"rollInterval" envDefault:"2"`
 }
 
 var Cfg = Config{}
@@ -79,7 +79,7 @@ func metrixScan(metric MetricsGauge) {
 
 func MakeRequest(metric MetricsGauge) {
 
-	msg := "http://" + Cfg.ADDRESS + "/update"
+	msg := "http://" + Cfg.Address + "/update"
 
 	for key, val := range metric {
 		valFloat64 := val.Float64()
@@ -122,8 +122,8 @@ func main() {
 
 	metric := make(MetricsGauge)
 
-	updateTicker := time.NewTicker(time.Duration(Cfg.POLL_INTERVAL) * time.Second)
-	reportTicker := time.NewTicker(time.Duration(Cfg.REPORT_INTERVAL) * time.Second)
+	updateTicker := time.NewTicker(time.Duration(Cfg.PollInterval) * time.Second)
+	reportTicker := time.NewTicker(time.Duration(Cfg.ReportInterval) * time.Second)
 
 	for {
 		select {
