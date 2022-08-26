@@ -240,15 +240,14 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	decoder := json.NewDecoder(rq.Body)
-	fmt.Println(decoder)
+	fmt.Println("Пришло тело", rq.Body)
 
 	v := encoding.Metrics{}
-	if err := json.NewDecoder(rq.Body).Decode(&v); err != nil {
+	err := json.NewDecoder(rq.Body).Decode(&v)
+	if err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
-
 	metType := v.MType
 	metName := v.ID
 
