@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 )
 
@@ -59,9 +60,9 @@ func main() {
 		return
 	}
 
-	if cfg.RESTORE {
-		loadStoreMetrics(rs, cfg.STORE_FILE)
-	}
+	//if cfg.RESTORE {
+	//	loadStoreMetrics(rs, cfg.STORE_FILE)
+	//}
 
 	handlers.AddrServ = os.Getenv("ADDRESS")
 	fmt.Println("AddrServ:", handlers.AddrServ)
@@ -71,26 +72,26 @@ func main() {
 
 	fmt.Println("Адрес сервера:", handlers.AddrServ)
 
-	log.Fatal(http.ListenAndServe(":8080", rs.Router))
-
 	//go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
-	//go func() {
-	//s := &http.Server{
-	//	//Addr:    cfg.ADDRESS,
-	//	Addr:    handlers.AddrServ,
-	//	Handler: rs.Router}
+	go func() {
+		//s := &http.Server{
+		//	//Addr:    cfg.ADDRESS,
+		//	Addr:    handlers.AddrServ,
+		//	Handler: rs.Router}
+		//
+		//if err := s.ListenAndServe(); err != nil {
+		//	fmt.Printf("%+v\n", err)
+		//	return
+		//}
+		log.Fatal(http.ListenAndServe(":8080", rs.Router))
+	}()
 	//
-	//if err := s.ListenAndServe(); err != nil {
-	//	fmt.Printf("%+v\n", err)
-	//	return
-	//}
-	//}()
-	//
-	//stop := make(chan os.Signal)
+	stop := make(chan os.Signal)
 	//signal.Notify(stop, os.Interrupt, os.Kill)
+	signal.Stop(stop)
 	//<-stop
 	//rs.SaveMetric2File(cfg.STORE_FILE)
-	//log.Panicln("server stopped")
+	log.Panicln("server stopped")
 
 }
