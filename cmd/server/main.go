@@ -37,9 +37,9 @@ func loadStoreMetrics(rs *handlers.RepStore, patch string) {
 
 }
 
-func SaveMetric2File(rs *handlers.RepStore, patch string) {
+func SaveMetric2File(rs *handlers.RepStore, patch string, interval int64) {
 
-	saveTicker := time.NewTicker(time.Duration(300) * time.Second)
+	saveTicker := time.NewTicker(time.Duration(interval) * time.Second)
 	for {
 		select {
 		case <-saveTicker.C:
@@ -59,15 +59,18 @@ func main() {
 		return
 	}
 
+	addrServ := os.Getenv("ADDRESS")
+
 	if cfg.RESTORE {
 		loadStoreMetrics(rs, cfg.STORE_FILE)
 	}
 
-	go SaveMetric2File(rs, cfg.STORE_FILE)
+	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
 	go func() {
 		s := &http.Server{
-			Addr:    cfg.ADDRESS,
+			//Addr:    cfg.ADDRESS,
+			Addr:    addrServ,
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
