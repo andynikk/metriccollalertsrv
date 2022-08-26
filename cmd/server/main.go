@@ -7,6 +7,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"github.com/caarlos0/env/v6"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -70,18 +71,20 @@ func main() {
 
 	fmt.Println("Адрес сервера:", handlers.AddrServ)
 
-	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
+	log.Fatal(http.ListenAndServe(":8080", rs.Router))
+
+	//go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
 	//go func() {
-	s := &http.Server{
-		//Addr:    cfg.ADDRESS,
-		Addr:    handlers.AddrServ,
-		Handler: rs.Router}
-
-	if err := s.ListenAndServe(); err != nil {
-		fmt.Printf("%+v\n", err)
-		return
-	}
+	//s := &http.Server{
+	//	//Addr:    cfg.ADDRESS,
+	//	Addr:    handlers.AddrServ,
+	//	Handler: rs.Router}
+	//
+	//if err := s.ListenAndServe(); err != nil {
+	//	fmt.Printf("%+v\n", err)
+	//	return
+	//}
 	//}()
 	//
 	//stop := make(chan os.Signal)
