@@ -80,9 +80,6 @@ func MakeRequest(metric MetricsGauge) {
 
 	msg := "http://" + Cfg.ADDRESS + "/update"
 
-	fmt.Printf("Сервер:", msg)
-	fmt.Printf("Количество метрик: %d\n", len(metric))
-
 	for key, val := range metric {
 		valFloat64 := val.Float64()
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64}
@@ -92,10 +89,8 @@ func MakeRequest(metric MetricsGauge) {
 			continue
 		}
 
-		fmt.Println("Отправка метрики", metrica.ID, metrica.MType, metrica.Value, metrica.Delta)
 		resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
 		if err != nil {
-			fmt.Println("Ошибка отправки метрики", metrica.ID, metrica.MType, metrica.Value, metrica.Delta)
 			fmt.Println(err.Error())
 		}
 		defer resp.Body.Close()
@@ -110,10 +105,8 @@ func MakeRequest(metric MetricsGauge) {
 		return
 	}
 
-	fmt.Println("Отправка метрики", metrica.ID, metrica.MType, metrica.Value, metrica.Delta)
 	resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
 	if err != nil {
-		fmt.Println("Ошибка отправки метрики", metrica.ID, metrica.MType, metrica.Value, metrica.Delta)
 		fmt.Println(err.Error())
 	}
 	defer resp.Body.Close()

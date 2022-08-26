@@ -217,6 +217,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
+	fmt.Printf("Метрик стало: %d шт", len((rs.MutexRepo)))
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -247,7 +248,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	//	log.Fatal(err)
 	//}
 	//fmt.Printf("Пришл текст: %s", b)
-	fmt.Printf("Количество метрик: %d\n", len((rs.MutexRepo)))
+	fmt.Printf("Количество метрик: %d", len((rs.MutexRepo)))
 
 	v := encoding.Metrics{}
 	if err := json.NewDecoder(rq.Body).Decode(&v); err != nil {
