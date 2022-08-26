@@ -36,6 +36,10 @@ func (et MetricError) String() string {
 const (
 	GaugeMetric MetricType = iota
 	CounterMetric
+
+	NotError MetricError = iota
+	ErrorConvert
+	ErrorGetType
 )
 
 type RepStore struct {
@@ -319,8 +323,12 @@ func (rs *RepStore) SaveMetric2File(patch string) {
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
-	rw.WriteHeader(http.StatusNotFound)
 
+	//_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
+	//if err != nil {
+	//	http.Error(rw, err.Error(), http.StatusNotFound)
+	//	return
+	//}
 }
 
 func textMetricsAndValue(mm repository.MapMetrics) []string {

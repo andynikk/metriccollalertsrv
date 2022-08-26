@@ -3,19 +3,9 @@ POST http://localhost:8080/value
 Content-Type: application/json
 
 {
-  "id": "BuckHashSys",
-  "type": "gauge"
+  "id": "PollCount",
+  "type": "counter"
 }
-
-### Send POST request with json body
-POST http://localhost:35499/value
-Content-Type: application/json
-
-{
-  "id": "BuckHashSys",
-  "type": "gauge"
-}
-
 
 ### Send POST request with json body
 POST http://localhost:8080/update/unknown/testCounter/100
