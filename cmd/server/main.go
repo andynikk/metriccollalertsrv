@@ -88,9 +88,9 @@ func main() {
 	}()
 	//
 	stop := make(chan os.Signal)
-	//signal.Notify(stop, os.Interrupt, os.Kill)
-	signal.Stop(stop)
-	//<-stop
+	signal.Notify(stop, os.Interrupt, os.Kill)
+	//signal.Stop(stop)
+	<-stop
 	//rs.SaveMetric2File(cfg.STORE_FILE)
 	log.Panicln("server stopped")
 
