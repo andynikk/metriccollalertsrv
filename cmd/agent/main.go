@@ -31,6 +31,7 @@ func fillMetric(metric MetricsGauge, mem *runtime.MemStats) {
 
 	metric["Alloc"] = repository.Gauge(mem.Alloc)
 	metric["BuckHashSys"] = repository.Gauge(mem.BuckHashSys)
+	metric["Frees"] = repository.Gauge(mem.Frees)
 	metric["GCCPUFraction"] = repository.Gauge(mem.GCCPUFraction)
 	metric["GCSys"] = repository.Gauge(mem.GCSys)
 	metric["HeapAlloc"] = repository.Gauge(mem.HeapAlloc)

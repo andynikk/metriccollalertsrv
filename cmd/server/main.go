@@ -75,23 +75,21 @@ func main() {
 	//go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
 	go func() {
-		//s := &http.Server{
-		//	//Addr:    cfg.ADDRESS,
-		//	Addr:    handlers.AddrServ,
-		//	Handler: rs.Router}
-		//
-		//if err := s.ListenAndServe(); err != nil {
-		//	fmt.Printf("%+v\n", err)
-		//	return
-		//}
-		log.Fatal(http.ListenAndServe(":8080", rs.Router))
+		s := &http.Server{
+			//Addr:    cfg.ADDRESS,
+			Addr:    handlers.AddrServ,
+			Handler: rs.Router}
+
+		if err := s.ListenAndServe(); err != nil {
+			fmt.Printf("%+v\n", err)
+			return
+		}
 	}()
 	//
 	stop := make(chan os.Signal)
 	signal.Notify(stop, os.Interrupt, os.Kill)
-	//signal.Stop(stop)
 	<-stop
-	//rs.SaveMetric2File(cfg.STORE_FILE)
+	rs.SaveMetric2File(cfg.STORE_FILE)
 	log.Panicln("server stopped")
 
 }
