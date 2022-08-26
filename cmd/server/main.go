@@ -49,7 +49,6 @@ func SaveMetric2File(rs *handlers.RepStore, patch string, interval int64) {
 }
 
 func main() {
-
 	rs := handlers.NewRepStore()
 
 	cfg := &handlers.Config{}
@@ -63,11 +62,17 @@ func main() {
 		loadStoreMetrics(rs, cfg.STORE_FILE)
 	}
 
+	handlers.AddrServ = os.Getenv("ADDRESS")
+	if handlers.AddrServ == "" {
+		handlers.AddrServ = "localhost:8080"
+	}
+
 	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
 	go func() {
 		s := &http.Server{
-			Addr:    cfg.ADDRESS,
+			//Addr:    cfg.ADDRESS,
+			Addr:    handlers.AddrServ,
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
