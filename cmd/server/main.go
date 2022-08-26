@@ -60,8 +60,6 @@ func main() {
 	fmt.Println("Run server")
 	rs := handlers.NewRepStore()
 
-	addServ := os.Getenv("ADDRESS")
-
 	cfg := &handlers.Config{}
 	err := env.Parse(cfg)
 	if err != nil {
@@ -76,8 +74,11 @@ func main() {
 	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
 	go func() {
+		addServ := os.Getenv("ADDRESS")
+
 		s := &http.Server{
-			Addr:    addServ,
+			Addr: addServ,
+			//Addr:    ":8080",
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
