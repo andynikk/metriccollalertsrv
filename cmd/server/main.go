@@ -63,13 +63,22 @@ func main() {
 
 	rs := handlers.NewRepStore()
 
-	cfg := &handlers.Config{}
-	err := env.Parse(cfg)
+	//cfg := &handlers.Config{}
+	//err := env.Parse(cfg)
+	//if err != nil {
+	//	fmt.Printf("%+v\n", err)
+	//	return
+	//}
+
+	var cfg handlers.Config
+	err := env.Parse(&cfg)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+		log.Fatal(err)
 	}
-	log.Println("Адрес сервера:", cfg.Address)
+
+	address := os.Getenv("ADDRESS")
+	log.Println("Адрес сервера (Getenv):", address)
+	log.Println("Адрес сервера (env):", cfg.Address)
 
 	if cfg.Restore {
 		loadStoreMetrics(rs, cfg.StoreFile)
@@ -96,7 +105,7 @@ func main() {
 	}()
 	//
 	stop := make(chan os.Signal, 1024)
-	signal.Notify(stop, os.Interrupt, os.Kill)
+	signal.Notify(stop, os.Interrupt) //, os.Kill)
 	<-stop
 	rs.SaveMetric2File(cfg.StoreFile)
 	log.Panicln("server stopped")
