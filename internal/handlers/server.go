@@ -203,7 +203,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
+	fmt.Println("Пришла метрика", v.ID, v.MType, v.Value, v.Delta)
 	errStatus := rs.SetValueInMapJSON(v)
+	fmt.Println("Статус установки значений метрики", errStatus)
 
 	switch errStatus {
 	case 400:
@@ -215,6 +217,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
+	fmt.Printf("Метрик стало: %d шт", len((rs.MutexRepo)))
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -245,6 +248,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	//	log.Fatal(err)
 	//}
 	//fmt.Printf("Пришл текст: %s", b)
+	fmt.Printf("Количество метрик: %d", len((rs.MutexRepo)))
 
 	v := encoding.Metrics{}
 	if err := json.NewDecoder(rq.Body).Decode(&v); err != nil {
