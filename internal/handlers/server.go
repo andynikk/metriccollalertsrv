@@ -74,16 +74,12 @@ func (rs *RepStore) New() {
 
 	rs.Router.Get("/", rs.HandlerGetAllMetrics)
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
-	rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
+	//rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetrica)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 
 }
-
-//func (rs *RepStore) HandlerSetMetrica() {
-//	fmt.Println("Что-то пошло не так")
-//}
 
 func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) MetricError {
 
@@ -181,9 +177,7 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	fmt.Println("Получена метрика", metType, metName, metValue)
 	errStatus := rs.setValueInMap(metType, metName, metValue)
-	fmt.Println("Статус установки метрики", errStatus)
 
 	switch errStatus {
 	case 400:
