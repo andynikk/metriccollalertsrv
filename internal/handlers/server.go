@@ -240,8 +240,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Println("Пришло тело", rq.Body)
-
 	v := encoding.Metrics{}
 	err := json.NewDecoder(rq.Body).Decode(&v)
 	if err != nil {
@@ -251,14 +249,10 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	metType := v.MType
 	metName := v.ID
 
-	fmt.Println("Пришла метрика:", v.MType, v.ID)
-
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		fmt.Println("Метрика не найдена:", v.MType, v.ID)
-
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
@@ -267,7 +261,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
-		fmt.Println("Метрика не получена:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
