@@ -59,9 +59,8 @@ func main() {
 		return
 	}
 
-	//addrServ := os.Getenv("ADDRESS")
-	//fmt.Println(addrServ)
-	//fmt.Println(cfg.STORE_FILE)
+	addrServ := os.Getenv("ADDRESS")
+	fmt.Println(addrServ)
 
 	if cfg.RESTORE {
 		loadStoreMetrics(rs, cfg.STORE_FILE)
@@ -70,11 +69,9 @@ func main() {
 	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
 	go func() {
-		addrServ := os.Getenv("ADDRESS")
-
 		s := &http.Server{
-			//Addr: cfg.ADDRESS,
-			Addr:    addrServ,
+			Addr: cfg.ADDRESS,
+			//Addr:    addrServ,
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
