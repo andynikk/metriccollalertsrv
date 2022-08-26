@@ -238,7 +238,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	cfg := Config{}
+	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		fmt.Printf("%+v\n", err)
 		return
