@@ -3,13 +3,14 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/caarlos0/env/v6"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
 
+	"github.com/caarlos0/env/v6"
+
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 

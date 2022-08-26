@@ -3,13 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/caarlos0/env/v6"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"sync"
 	"text/template"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -52,7 +52,7 @@ type Config struct {
 	STORE_INTERVAL int64  `env:"STORE_INTERVAL" envDefault:"300"`
 	STORE_FILE     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	RESTORE        bool   `env:"RESTORE" envDefault:"true"`
-	ADDRESS        string `env:"ADDRESS" envDefault:"localhost:8080"`
+	ADDRESS        string `env:"ADDRESS" envDefault:"localhost:80"`
 }
 
 func NewRepStore() *RepStore {

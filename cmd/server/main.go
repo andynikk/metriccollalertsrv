@@ -3,15 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/handlers"
-	"github.com/caarlos0/env/v6"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/caarlos0/env/v6"
+
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
 func loadStoreMetrics(rs *handlers.RepStore, patch string) {
@@ -59,6 +61,7 @@ func main() {
 		fmt.Printf("%+v\n", err)
 		return
 	}
+	fmt.Println("Адрес сервера:", cfg.ADDRESS)
 
 	if cfg.RESTORE {
 		loadStoreMetrics(rs, cfg.STORE_FILE)
@@ -69,8 +72,6 @@ func main() {
 	//if handlers.AddrServ == "" {
 	//	handlers.AddrServ = "localhost:8080"
 	//}
-
-	fmt.Println("Адрес сервера:", cfg.ADDRESS)
 
 	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
