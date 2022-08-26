@@ -273,6 +273,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 }
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
+
 	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
 }
