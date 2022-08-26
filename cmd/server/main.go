@@ -49,6 +49,8 @@ func SaveMetric2File(rs *handlers.RepStore, patch string, interval int64) {
 }
 
 func main() {
+	fmt.Println("Запуск сервера")
+
 	rs := handlers.NewRepStore()
 
 	cfg := &handlers.Config{}
@@ -63,9 +65,12 @@ func main() {
 	}
 
 	handlers.AddrServ = os.Getenv("ADDRESS")
+	fmt.Println("AddrServ:", handlers.AddrServ)
 	if handlers.AddrServ == "" {
 		handlers.AddrServ = "localhost:8080"
 	}
+
+	fmt.Println("Адрес сервера:", handlers.AddrServ)
 
 	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 

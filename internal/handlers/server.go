@@ -201,7 +201,7 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Println("Handler update metric JSON")
+	fmt.Println("--Handler update metric JSON")
 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(rq.Body).Decode(&v)
