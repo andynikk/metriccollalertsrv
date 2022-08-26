@@ -6,6 +6,7 @@ import (
 	"github.com/caarlos0/env/v6"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sync"
 	"text/template"
@@ -240,8 +241,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	decoder := json.NewDecoder(rq.Body)
-	fmt.Println(decoder)
+	b, err := ioutil.ReadAll(rq.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Пришл текст: %s", b)
 
 	v := encoding.Metrics{}
 	if err := json.NewDecoder(rq.Body).Decode(&v); err != nil {
