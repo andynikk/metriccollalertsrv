@@ -95,7 +95,7 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println("Отправка метрики", metrica.ID, metrica.MType, metrica.Value, metrica.Delta)
 		resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
 		if err != nil {
-			fmt.Println("Ошибка отправки JSON метрики", string(arrMterica))
+			fmt.Println("Ошибка отправки метрики", metrica.ID, metrica.MType, metrica.Value, metrica.Delta)
 			fmt.Println(err.Error())
 		}
 		defer resp.Body.Close()

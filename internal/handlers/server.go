@@ -48,6 +48,7 @@ type Config struct {
 	STORE_INTERVAL int64  `env:"STORE_INTERVAL" envDefault:"300"`
 	STORE_FILE     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	RESTORE        bool   `env:"RESTORE" envDefault:"true"`
+	ADDRESS        string `env:"ADDRESS" envDefault:"localhost:8080"`
 }
 
 func NewRepStore() *RepStore {

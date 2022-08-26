@@ -60,8 +60,6 @@ func main() {
 	fmt.Println("Run server")
 	rs := handlers.NewRepStore()
 
-	addServ := os.Getenv("ADDRESS")
-
 	cfg := &handlers.Config{}
 	err := env.Parse(cfg)
 	if err != nil {
@@ -77,7 +75,7 @@ func main() {
 
 	go func() {
 		s := &http.Server{
-			Addr:    addServ,
+			Addr:    cfg.ADDRESS,
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
