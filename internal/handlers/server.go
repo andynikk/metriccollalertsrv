@@ -37,9 +37,9 @@ const (
 	GaugeMetric MetricType = iota
 	CounterMetric
 
-	NotError MetricError = iota
-	ErrorConvert
-	ErrorGetType
+	//NotError MetricError = iota
+	//ErrorConvert
+	//ErrorGetType
 )
 
 type RepStore struct {
@@ -48,12 +48,11 @@ type RepStore struct {
 	MutexRepo repository.MapMetrics
 }
 
-var AddrServ string
-
 type Config struct {
 	STORE_INTERVAL int64  `env:"STORE_INTERVAL" envDefault:"300"`
 	STORE_FILE     string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	RESTORE        bool   `env:"RESTORE" envDefault:"true"`
+	ADDRESS        string `env:"ADDRESS" envDefault:"localhost:8080"`
 }
 
 func NewRepStore() *RepStore {
@@ -152,7 +151,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) MetricError {
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Println("--Handler get value")
+	//fmt.Println("--Handler get value")
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
@@ -178,7 +177,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Println("--Handler set metrica POST")
+	//fmt.Println("--Handler set metrica POST")
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
@@ -201,7 +200,7 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Println("--Handler update metric JSON")
+	//fmt.Println("--Handler update metric JSON")
 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(rq.Body).Decode(&v)
@@ -214,9 +213,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	fmt.Println("Пришла метрика", v.ID, v.MType, v.Value, v.Delta)
+	//fmt.Println("Пришла метрика", v.ID, v.MType, v.Value, v.Delta)
 	errStatus := rs.SetValueInMapJSON(v)
-	fmt.Println("Статус установки значений метрики", errStatus)
+	//fmt.Println("Статус установки значений метрики", errStatus)
 
 	switch errStatus {
 	case 400:
@@ -253,7 +252,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Printf("Количество метрик: %d\n", len((rs.MutexRepo)))
+	//fmt.Printf("Количество метрик: %d\n", len((rs.MutexRepo)))
 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(rq.Body).Decode(&v)
@@ -264,7 +263,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	metType := v.MType
 	metName := v.ID
 
-	fmt.Println("Пришла метрика:", v.MType, v.ID)
+	//fmt.Println("Пришла метрика:", v.MType, v.ID)
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
@@ -278,14 +277,14 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
-		fmt.Println("Метрика не получена:", v.MType, v.ID)
+		//fmt.Println("Метрика не получена:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
 
 	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
-		fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
+		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
@@ -293,7 +292,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Println("--Handle func")
+	//fmt.Println("--Handle func")
 
 	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
@@ -301,7 +300,7 @@ func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
-	fmt.Println("--Handler get all metrics")
+	//fmt.Println("--Handler get all metrics")
 
 	defer rq.Body.Close()
 
@@ -341,7 +340,7 @@ func (rs *RepStore) SaveMetric2File(patch string) {
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("--Handler not found", r.URL.Path)
+	//fmt.Println("--Handler not found", r.URL.Path)
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 

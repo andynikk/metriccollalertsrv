@@ -49,7 +49,7 @@ func SaveMetric2File(rs *handlers.RepStore, patch string, interval int64) {
 }
 
 func main() {
-	fmt.Println("Запуск сервера")
+	//fmt.Println("Запуск сервера")
 
 	rs := handlers.NewRepStore()
 
@@ -60,24 +60,24 @@ func main() {
 		return
 	}
 
-	//if cfg.RESTORE {
-	//	loadStoreMetrics(rs, cfg.STORE_FILE)
-	//}
-
-	handlers.AddrServ = os.Getenv("ADDRESS")
-	fmt.Println("AddrServ:", handlers.AddrServ)
-	if handlers.AddrServ == "" {
-		handlers.AddrServ = "localhost:8080"
+	if cfg.RESTORE {
+		loadStoreMetrics(rs, cfg.STORE_FILE)
 	}
 
-	fmt.Println("Адрес сервера:", handlers.AddrServ)
+	//handlers.AddrServ = os.Getenv("ADDRESS")
+	//fmt.Println("AddrServ:", handlers.AddrServ)
+	//if handlers.AddrServ == "" {
+	//	handlers.AddrServ = "localhost:8080"
+	//}
 
-	//go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
+	fmt.Println("Адрес сервера:", cfg.ADDRESS)
+
+	go SaveMetric2File(rs, cfg.STORE_FILE, cfg.STORE_INTERVAL)
 
 	go func() {
 		s := &http.Server{
-			//Addr:    cfg.ADDRESS,
-			Addr:    handlers.AddrServ,
+			Addr: cfg.ADDRESS,
+			//Addr:    handlers.AddrServ,
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
