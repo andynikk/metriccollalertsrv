@@ -50,12 +50,12 @@ func SaveMetric2File(rs *handlers.RepStore, patch string, interval int64) {
 
 func main() {
 
-	//args := os.Args
-	//fmt.Printf("All arguments: %v\n", args)
-	//command := os.Args[0]
-	//fmt.Printf("Command name: %v\n", command)
-	//parameters := os.Args[1:]
-	//fmt.Printf("Parameters: %v\n", parameters)
+	args := os.Args
+	fmt.Printf("All arguments: %v\n", args)
+	command := os.Args[0]
+	fmt.Printf("Command name: %v\n", command)
+	parameters := os.Args[1:]
+	fmt.Printf("Parameters: %v\n", parameters)
 
 	fmt.Println("Run server")
 	rs := handlers.NewRepStore()
@@ -91,6 +91,6 @@ func main() {
 	signal.Notify(stop, os.Interrupt, os.Kill)
 	<-stop
 	rs.SaveMetric2File(cfg.STORE_FILE)
-	log.Panicln("-server stopped")
+	log.Panicln("server stopped")
 
 }
