@@ -102,7 +102,7 @@ func (rs *RepStore) setConfig() {
 
 	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
 	restorePtr := flag.Bool("r", true, "восстанавливать значения при старте")
-	storeIntervalPtr := flag.Duration("i", 300, "интервал автосохранения (сек.)")
+	storeIntervalPtr := flag.Duration("i", 300000000000, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", "/tmp/devops-metrics-db.json", "путь к файлу метрик")
 	flag.Parse()
 
