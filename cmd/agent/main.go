@@ -3,21 +3,23 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/caarlos0/env/v6"
 	"math/rand"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
-
-	"github.com/caarlos0/env/v6"
 
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type Config struct {
-	Address        string `env:"ADDRESS" envDefault:"localhost:8080"`
-	ReportInterval int64  `env:"REPORT_INTERVAL" envDefault:"10"`
-	PollInterval   int64  `env:"POLL_INTERVAL" envDefault:"2"`
+	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+	//ReportInterval string `env:"REPORT_INTERVAL"`
+	//PollInterval   string `env:"POLL_INTERVAL"`
 }
 
 var Cfg = Config{}
@@ -116,6 +118,9 @@ func MakeRequest(metric MetricsGauge) {
 
 func main() {
 
+	ri, ok := os.LookupEnv("ReportInterval")
+	fmt.Println(ri, ok)
+
 	err := env.Parse(&Cfg)
 	if err != nil {
 		fmt.Printf("%+v\n", err)
@@ -124,8 +129,8 @@ func main() {
 
 	metric := make(MetricsGauge)
 
-	updateTicker := time.NewTicker(time.Duration(Cfg.PollInterval) * time.Second)
-	reportTicker := time.NewTicker(time.Duration(Cfg.ReportInterval) * time.Second)
+	updateTicker := time.NewTicker(Cfg.PollInterval)   //*  time.Second)
+	reportTicker := time.NewTicker(Cfg.ReportInterval) //* time.Second)
 
 	for {
 		select {
