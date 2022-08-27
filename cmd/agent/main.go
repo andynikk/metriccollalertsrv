@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"github.com/caarlos0/env/v6"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -14,10 +16,16 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
-type Config struct {
+type ConfigENV struct {
 	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+}
+
+type Config struct {
+	Address        string
+	ReportInterval time.Duration
+	PollInterval   time.Duration
 }
 
 var Cfg = Config{}
@@ -116,13 +124,42 @@ func MakeRequest(metric MetricsGauge) {
 
 func main() {
 
-	ri, ok := os.LookupEnv("ReportInterval")
-	fmt.Println(ri, ok)
+	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
+	reportIntervalPtr := flag.Duration("r", 10, "интервал отправки на сервер")
+	pollIntervalPtr := flag.Duration("p", 2, "интервал сбора метрик")
+	flag.Parse()
 
-	err := env.Parse(&Cfg)
+	var cfgENV ConfigENV
+	err := env.Parse(&cfgENV)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
+		log.Fatal(err)
+	}
+
+	addressServ := ""
+	if _, ok := os.LookupEnv("ADDRESS"); ok {
+		addressServ = cfgENV.Address
+	} else {
+		addressServ = *addressPtr
+	}
+
+	var reportIntervalMetric time.Duration
+	if _, ok := os.LookupEnv("REPORT_INTERVAL "); ok {
+		reportIntervalMetric = cfgENV.ReportInterval
+	} else {
+		reportIntervalMetric = *reportIntervalPtr
+	}
+
+	var pollIntervalMetrics time.Duration
+	if _, ok := os.LookupEnv("ADDRESS"); ok {
+		pollIntervalMetrics = cfgENV.PollInterval
+	} else {
+		pollIntervalMetrics = *pollIntervalPtr
+	}
+
+	Cfg := Config{
+		Address:        addressServ,
+		ReportInterval: reportIntervalMetric,
+		PollInterval:   pollIntervalMetrics,
 	}
 
 	metric := make(MetricsGauge)

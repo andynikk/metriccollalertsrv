@@ -120,21 +120,21 @@ func (rs *RepStore) setConfig() {
 	}
 
 	restoreMetric := false
-	if _, ok := os.LookupEnv("ADDRESS"); ok {
+	if _, ok := os.LookupEnv("RESTORE"); ok {
 		restoreMetric = cfgENV.Restore
 	} else {
 		restoreMetric = *restorePtr
 	}
 
 	var storeIntervalMetrics time.Duration
-	if _, ok := os.LookupEnv("ADDRESS"); ok {
+	if _, ok := os.LookupEnv("STORE_INTERVAL"); ok {
 		storeIntervalMetrics = cfgENV.ReportInterval
 	} else {
 		storeIntervalMetrics = *storeIntervalPtr
 	}
 
 	var storeFileMetrics string
-	if _, ok := os.LookupEnv("ADDRESS"); ok {
+	if _, ok := os.LookupEnv("STORE_FILE"); ok {
 		storeFileMetrics = cfgENV.StoreFile
 	} else {
 		storeFileMetrics = *storeFilePtr
