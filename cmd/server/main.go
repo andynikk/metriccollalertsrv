@@ -1,101 +1,48 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/caarlos0/env/v6"
-
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
-func loadStoreMetrics(rs *handlers.RepStore, patch string) {
+func SaveMetric2File(rs *handlers.RepStore) {
 
-	res, err := ioutil.ReadFile(patch)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	var arrMatric []encoding.Metrics
-	if err := json.Unmarshal(res, &arrMatric); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
-
-	for _, val := range arrMatric {
-		rs.SetValueInMapJSON(val)
-	}
-	fmt.Println(rs.MutexRepo)
-
-}
-
-func SaveMetric2File(rs *handlers.RepStore, patch string, interval int64) {
-
-	saveTicker := time.NewTicker(time.Duration(interval) * time.Second)
+	saveTicker := time.NewTicker(time.Duration(rs.Config.StoreInterval) * time.Second)
 
 	for key := range saveTicker.C {
 		fmt.Println(key)
-		rs.SaveMetric2File(patch)
+		rs.SaveMetric2File()
 	}
 
-	//for {
-	//	select {
-	//	case <-saveTicker.C:
-	//		rs.SaveMetric2File(patch)
-	//	default:
-	//		fmt.Println("--")
-	//	}
-	//}
+	for {
+		select {
+		case <-saveTicker.C:
+			rs.SaveMetric2File()
+		default:
+			fmt.Println("--")
+		}
+	}
 }
 
 func main() {
-	//fmt.Println("Запуск сервера")
 
 	rs := handlers.NewRepStore()
 
-	//cfg := &handlers.Config{}
-	//err := env.Parse(cfg)
-	//if err != nil {
-	//	fmt.Printf("%+v\n", err)
-	//	return
-	//}
-
-	var cfg handlers.Config
-	err := env.Parse(&cfg)
-	if err != nil {
-		log.Fatal(err)
+	if rs.Config.Restore {
+		rs.LoadStoreMetrics()
 	}
 
-	address := os.Getenv("ADDRESS")
-	log.Println("Адрес сервера (Getenv):", address)
-	log.Println("Адрес сервера (env):", cfg.Address)
-
-	if cfg.Restore {
-		loadStoreMetrics(rs, cfg.StoreFile)
-	}
-
-	//handlers.AddrServ = os.Getenv("ADDRESS")
-	//fmt.Println("AddrServ:", handlers.AddrServ)
-	//if handlers.AddrServ == "" {
-	//	handlers.AddrServ = "localhost:8080"
-	//}
-
-	go SaveMetric2File(rs, cfg.StoreFile, cfg.StoreInterval)
+	go SaveMetric2File(rs)
 
 	go func() {
 		s := &http.Server{
-			Addr: cfg.Address,
-			//Addr:    handlers.AddrServ,
+			Addr:    rs.Config.Address,
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
@@ -103,11 +50,11 @@ func main() {
 			return
 		}
 	}()
-	//
+
 	stop := make(chan os.Signal, 1024)
 	signal.Notify(stop, os.Interrupt) //, os.Kill)
 	<-stop
-	rs.SaveMetric2File(cfg.StoreFile)
+	rs.SaveMetric2File()
 	log.Panicln("server stopped")
 
 }

@@ -16,8 +16,8 @@ import (
 
 type Config struct {
 	Address        string `env:"ADDRESS" envDefault:"localhost:8080"`
-	ReportInterval int64  `env:"reportInterval" envDefault:"10"`
-	PollInterval   int64  `env:"rollInterval" envDefault:"2"`
+	ReportInterval int64  `env:"REPORT_INTERVAL" envDefault:"10"`
+	PollInterval   int64  `env:"POLL_INTERVAL" envDefault:"2"`
 }
 
 var Cfg = Config{}
@@ -90,10 +90,12 @@ func MakeRequest(metric MetricsGauge) {
 			continue
 		}
 
-		if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+		resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
+		if err != nil {
 			fmt.Println(err.Error())
 		}
 		//defer resp.Body.Close()
+		resp.Body.Close()
 	}
 
 	cPollCount := repository.Counter(PollCount)
@@ -105,10 +107,12 @@ func MakeRequest(metric MetricsGauge) {
 		return
 	}
 
-	if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+	resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
+	if err != nil {
 		fmt.Println(err.Error())
 	}
 	//defer resp.Body.Close()
+	resp.Body.Close()
 
 }
 

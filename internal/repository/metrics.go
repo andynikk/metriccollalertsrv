@@ -2,9 +2,8 @@ package repository
 
 import (
 	"fmt"
-	"strconv"
-
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"strconv"
 )
 
 type Gauge float64
@@ -113,3 +112,5 @@ func (c *Counter) Int64() int64 {
 func (c *Counter) Float64() float64 {
 	return float64(*c)
 }
+
+////////////////////////////////////////////////////////////////////////////////
