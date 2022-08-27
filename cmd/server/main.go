@@ -13,7 +13,7 @@ import (
 
 func SaveMetric2File(rs *handlers.RepStore) {
 
-	saveTicker := time.NewTicker(time.Duration(rs.Config.StoreInterval) * time.Second)
+	saveTicker := time.NewTicker(rs.Config.StoreInterval) // * time.Second)
 
 	for key := range saveTicker.C {
 		fmt.Println(key)

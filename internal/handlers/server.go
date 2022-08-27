@@ -14,6 +14,7 @@ import (
 	"os"
 	"sync"
 	"text/template"
+	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
@@ -52,14 +53,14 @@ type RepStore struct {
 }
 
 type ConfigENV struct {
-	Address        string `env:"ADDRESS" envDefault:"localhost:8080"`
-	ReportInterval int64  `env:"STORE_INTERVAL" envDefault:"300"`
-	StoreFile      string `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore        bool   `env:"RESTORE" envDefault:"true"`
+	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
+	ReportInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
+	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore        bool          `env:"RESTORE" envDefault:"true"`
 }
 
 type Config struct {
-	StoreInterval int64
+	StoreInterval time.Duration
 	StoreFile     string
 	Restore       bool
 	Address       string
@@ -101,7 +102,7 @@ func (rs *RepStore) setConfig() {
 
 	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
 	restorePtr := flag.Bool("r", true, "восстанавливать значения при старте")
-	storeIntervalPtr := flag.Int64("i", 300, "интервал автосохранения (сек.)")
+	storeIntervalPtr := flag.Duration("i", 300, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", "/tmp/devops-metrics-db.json", "путь к файлу метрик")
 	flag.Parse()
 
@@ -125,7 +126,7 @@ func (rs *RepStore) setConfig() {
 		restoreMetric = *restorePtr
 	}
 
-	var storeIntervalMetrics int64
+	var storeIntervalMetrics time.Duration
 	if _, ok := os.LookupEnv("ADDRESS"); ok {
 		storeIntervalMetrics = cfgENV.ReportInterval
 	} else {
