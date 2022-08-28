@@ -104,7 +104,7 @@ func CompressAndPost(arrMterica *[]byte) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	//req.Header.Set("Content-Encoding", "gzip")
-	req.Header.Set("Accept-Encoding", "gzip")
+	//req.Header.Set("Accept-Encoding", "gzip")
 
 	defer req.Body.Close()
 
@@ -121,7 +121,7 @@ func CompressAndPost(arrMterica *[]byte) error {
 
 func MakeRequest(metric MetricsGauge) {
 
-	//msg := "http://" + Cfg.Address + "/update"
+	msg := "http://" + Cfg.Address + "/update"
 
 	for key, val := range metric {
 		valFloat64 := val.Float64()
@@ -132,11 +132,11 @@ func MakeRequest(metric MetricsGauge) {
 			continue
 		}
 
-		fmt.Println("-------------", metrica, arrMterica)
-		if err := CompressAndPost(&arrMterica); err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
+		//fmt.Println("-------------", metrica, arrMterica)
+		//if err := CompressAndPost(&arrMterica); err != nil {
+		//	fmt.Println(err.Error())
+		//	continue
+		//}
 		//if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
 		//	fmt.Println(err.Error())
 		//}
@@ -150,12 +150,11 @@ func MakeRequest(metric MetricsGauge) {
 		//	continue
 		//}
 
-		//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		//req, err := http.NewRequest("POST", msg, bytes.NewReader(compData))
-		//
-		//req.Header.Set("Content-Type", "application/json")
+		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		req.Header.Set("Content-Type", "application/json")
+
 		//req.Header.Set("Content-Encoding", "gzip")
-		//
+
 		//if err != nil {
 		//	fmt.Println(err.Error())
 		//}
@@ -167,7 +166,7 @@ func MakeRequest(metric MetricsGauge) {
 		//	fmt.Println(err.Error())
 		//}
 		//defer resp.Body.Close()
-
+		//
 		//defer resp.Body.Close()
 		//resp.Body.Close()
 	}
@@ -175,22 +174,21 @@ func MakeRequest(metric MetricsGauge) {
 	cPollCount := repository.Counter(PollCount)
 	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &PollCount}
 	arrMterica, err := metrica.MarshalMetrica()
-
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	if err := CompressAndPost(&arrMterica); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
-	//if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+	//if err := CompressAndPost(&arrMterica); err != nil {
 	//	fmt.Println(err.Error())
+	//	return
 	//}
+
+	if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+		fmt.Println(err.Error())
+	}
 	//defer resp.Body.Close()
 	//resp.Body.Close()
-
+	//
 	//var bytMterica []byte
 	//b := bytes.NewBuffer(arrMterica).Bytes()
 	//bytMterica = append(bytMterica, b...)
