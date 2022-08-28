@@ -314,8 +314,19 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
+
+	var bytMterica []byte
+	b := bytes.NewBuffer(metricsJSON).Bytes()
+	bytMterica = append(bytMterica, b...)
+	compData, err := compression.Compress(bytMterica)
+	if err != nil {
+		fmt.Println("ошибка архивации данных", compData)
+	}
+
 	rw.Header().Add("Content-Type", "application/json")
-	if _, err := rw.Write(metricsJSON); err != nil {
+	rw.Header().Add("Content-Encoding", "gzip")
+
+	if _, err := rw.Write(compData); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
@@ -364,6 +375,16 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	rw.Header().Add("Content-Type", "application/json")
+	rw.Header().Add("Content-Encoding", "gzip")
+
+	var bytMterica []byte
+	b := bytes.NewBuffer(metricsJSON).Bytes()
+	bytMterica = append(bytMterica, b...)
+	compData, err := compression.Compress(bytMterica)
+	if err != nil {
+		fmt.Println("ошибка архивации данных", compData)
+	}
+
 	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
