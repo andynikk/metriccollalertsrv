@@ -96,7 +96,8 @@ func CompressAndPost(arrMterica *[]byte) error {
 		return errors.New("ошибка архивации данных")
 	}
 
-	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
+	compDataBytes := bytes.NewReader(compData)
+	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", compDataBytes)
 	if err != nil {
 		fmt.Println(err.Error())
 		return errors.New("ошибка отправки данных на сервер (POST)")
@@ -109,7 +110,7 @@ func CompressAndPost(arrMterica *[]byte) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err.Error(), arrMterica, compData, compDataBytes)
 		return errors.New("ошибка отправки данных на сервер (Do)")
 	}
 	defer resp.Body.Close()
