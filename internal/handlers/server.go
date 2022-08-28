@@ -334,8 +334,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	//fmt.Printf("Количество метрик: %d\n", len((rs.MutexRepo)))
-
 	var bodyJSON io.Reader
 
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
@@ -368,8 +366,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 	metType := v.MType
 	metName := v.ID
-
-	//fmt.Println("Пришла метрика:", v.MType, v.ID)
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
@@ -413,15 +409,11 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
-	//fmt.Println("--Handle func")
-
 	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
-
-	//fmt.Println("--Handler get all metrics")
 
 	defer rq.Body.Close()
 	arrMetricsAndValue := textMetricsAndValue(rs.MutexRepo)
@@ -486,6 +478,29 @@ func (rs *RepStore) SaveMetric2File() {
 
 }
 
+func (rs *RepStore) LoadStoreMetrics() {
+
+	res, err := ioutil.ReadFile(rs.Config.StoreFile)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	var arrMatric []encoding.Metrics
+	if err := json.Unmarshal(res, &arrMatric); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
+	for _, val := range arrMatric {
+		rs.SetValueInMapJSON(val)
+	}
+	fmt.Println(rs.MutexRepo)
+
+}
+
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
@@ -514,27 +529,4 @@ func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
 	}
 
 	return arr
-}
-
-func (rs *RepStore) LoadStoreMetrics() {
-
-	res, err := ioutil.ReadFile(rs.Config.StoreFile)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	var arrMatric []encoding.Metrics
-	if err := json.Unmarshal(res, &arrMatric); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
-
-	for _, val := range arrMatric {
-		rs.SetValueInMapJSON(val)
-	}
-	fmt.Println(rs.MutexRepo)
-
 }
