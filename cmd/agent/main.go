@@ -5,8 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/caarlos0/env/v6"
 	"log"
 	"math/rand"
 	"net/http"
@@ -14,6 +12,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/caarlos0/env/v6"
+
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
@@ -31,8 +32,6 @@ type Config struct {
 }
 
 type MetricsGauge = map[string]repository.Gauge
-
-//type Metrics = map[string]repository.Gauge
 
 var PollCount int64
 var Cfg = Config{}
@@ -100,17 +99,18 @@ func CompressAndPost(arrMterica *[]byte) error {
 	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
 	if err != nil {
 		fmt.Println(err.Error())
-		return errors.New("ошибка отправки данных на сервер")
+		return errors.New("ошибка отправки данных на сервер (POST)")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+
 	defer req.Body.Close()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err.Error())
-		return errors.New("ошибка отправки данных на сервер")
+		return errors.New("ошибка отправки данных на сервер (Do)")
 	}
 	defer resp.Body.Close()
 

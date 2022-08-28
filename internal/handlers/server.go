@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
@@ -241,8 +242,6 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	//fmt.Println("--Handler set metrica POST")
-
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
@@ -262,46 +261,43 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	}
 }
 
-func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
-
-	//fmt.Println("--Handler update metric JSON")
-
+func getBodyRequest(rq *http.Request) (io.Reader, error) {
 	var bodyJSON io.Reader
-
 	if rq.Header.Get("Content-Encoding") == "gzip" {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
-			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-			return
+			return nil, errors.New("Ошибка получения Content-Encoding")
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
-			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
-			return
+			return nil, errors.New("Ошибка распаковки")
 		}
 
 		bodyJSON = bytes.NewReader(arrBody)
-		//fmt.Println(bodyJSON)
 	} else {
 		bodyJSON = rq.Body
 	}
+	return bodyJSON, nil
+}
 
-	v := encoding.Metrics{}
-	//err := json.NewDecoder(rq.Body).Decode(&v)
-	err := json.NewDecoder(bodyJSON).Decode(&v)
+func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
+	bodyJSON, err := getBodyRequest(rq)
 	if err != nil {
-		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	v := encoding.Metrics{}
+	if err := json.NewDecoder(bodyJSON).Decode(&v); err != nil {
+		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
+		return
+	}
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	//fmt.Println("Пришла метрика", v.ID, v.MType, v.Value, v.Delta)
 	errStatus := rs.SetValueInMapJSON(v)
-	//fmt.Println("Статус установки значений метрики", errStatus)
 
 	switch errStatus {
 	case 400:
@@ -337,18 +333,19 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	//fmt.Printf("Количество метрик: %d\n", len((rs.MutexRepo)))
+	bodyJSON, err := getBodyRequest(rq)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	v := encoding.Metrics{}
-	err := json.NewDecoder(rq.Body).Decode(&v)
-	if err != nil {
+	if err := json.NewDecoder(bodyJSON).Decode(&v); err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
 	metType := v.MType
 	metName := v.ID
-
-	//fmt.Println("Пришла метрика:", v.MType, v.ID)
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
@@ -362,30 +359,23 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
-		//fmt.Println("Метрика не получена:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
 
 	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
-		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
 }
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
-
-	//fmt.Println("--Handle func")
-
 	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
-
-	//fmt.Println("--Handler get all metrics")
 
 	defer rq.Body.Close()
 
@@ -425,15 +415,8 @@ func (rs *RepStore) SaveMetric2File() {
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
-	//fmt.Println("--Handler not found", r.URL.Path)
-
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 
-	//_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
-	//if err != nil {
-	//	http.Error(rw, err.Error(), http.StatusNotFound)
-	//	return
-	//}
 }
 
 func textMetricsAndValue(mm repository.MapMetrics) []string {
