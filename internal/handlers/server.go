@@ -319,22 +319,22 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
 
-	if rq.Header.Get("Content-Encoding") == "gzip" {
-		compData, err := compression.Compress(bytMterica)
-		if err != nil {
-			fmt.Println("ошибка архивации данных", compData)
-		}
-		rw.Header().Add("Content-Encoding", "gzip")
-		if _, err := rw.Write(compData); err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-	} else {
-		if _, err := rw.Write(bytMterica); err != nil {
-			fmt.Println(err.Error())
-			return
-		}
+	//if rq.Header.Get("Content-Encoding") == "gzip" {
+	//	compData, err := compression.Compress(bytMterica)
+	//	if err != nil {
+	//		fmt.Println("ошибка архивации данных", compData)
+	//	}
+	//	rw.Header().Add("Content-Encoding", "gzip")
+	//	if _, err := rw.Write(compData); err != nil {
+	//		fmt.Println(err.Error())
+	//		return
+	//	}
+	//} else {
+	if _, err := rw.Write(bytMterica); err != nil {
+		fmt.Println(err.Error())
+		return
 	}
+	//}
 
 	rw.Header().Set("Content-Type", "application/json")
 
@@ -381,29 +381,29 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	rw.Header().Add("Content-Type", "application/json")
-	rw.Header().Add("Content-Encoding", "gzip")
+	rw.Header().Set("Content-Type", "application/json")
+	//rw.Header().Add("Content-Encoding", "gzip")
 
 	var bytMterica []byte
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
 
-	if rq.Header.Get("Content-Encoding") == "gzip" {
-		compData, err := compression.Compress(bytMterica)
-		if err != nil {
-			fmt.Println("ошибка архивации данных", compData)
-		}
-		rw.Header().Set("Content-Encoding", "gzip")
-		if _, err := rw.Write(compData); err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-	} else {
-		if _, err := rw.Write(bytMterica); err != nil {
-			fmt.Println(err.Error())
-			return
-		}
+	//if rq.Header.Get("Content-Encoding") == "gzip" {
+	//	compData, err := compression.Compress(bytMterica)
+	//	if err != nil {
+	//		fmt.Println("ошибка архивации данных", compData)
+	//	}
+	//	rw.Header().Set("Content-Encoding", "gzip")
+	//	if _, err := rw.Write(compData); err != nil {
+	//		fmt.Println(err.Error())
+	//		return
+	//	}
+	//} else {
+	if _, err := rw.Write(bytMterica); err != nil {
+		fmt.Println(err.Error())
+		return
 	}
+	//}
 
 	//compData, err := compression.Compress(bytMterica)
 	//if err != nil {
