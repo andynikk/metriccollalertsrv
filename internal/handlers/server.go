@@ -499,13 +499,13 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		bodyBate = metricsHTML
 	}
 
+	rw.Header().Add("Content-Type", "text/html")
 	if _, err := rw.Write(bodyBate); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
 	//rw.WriteHeader(http.StatusOK)
-	rw.Header().Add("Content-Type", "text/html")
 }
 
 func (rs *RepStore) SaveMetric2File() {
