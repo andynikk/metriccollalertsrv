@@ -152,11 +152,11 @@ func MakeRequest(metric MetricsGauge) {
 		//	continue
 		//}
 
-		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		req.Header.Set("Content-Type", "application/json")
+		//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//req.Header.Set("Content-Type", "application/json")
 
 		//req.Header.Set("Content-Encoding", "gzip")
 
