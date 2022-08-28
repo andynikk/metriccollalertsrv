@@ -284,30 +284,30 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	//fmt.Println("--Handler update metric JSON")
 
-	var bodyJSON io.Reader
+	//var bodyJSON io.Reader
 
-	if rq.Header.Get("Content-Encoding") == "gzip" {
-		bytBody, err := ioutil.ReadAll(rq.Body)
-		if err != nil {
-			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-			return
-		}
-
-		arrBody, err := compression.Decompress(bytBody)
-		if err != nil {
-			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
-			return
-		}
-
-		bodyJSON = bytes.NewReader(arrBody)
-		//fmt.Println(bodyJSON)
-	} else {
-		bodyJSON = rq.Body
-	}
+	//if rq.Header.Get("Content-Encoding") == "gzip" {
+	//	bytBody, err := ioutil.ReadAll(rq.Body)
+	//	if err != nil {
+	//		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
+	//		return
+	//	}
+	//
+	//	arrBody, err := compression.Decompress(bytBody)
+	//	if err != nil {
+	//		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+	//		return
+	//	}
+	//
+	//	bodyJSON = bytes.NewReader(arrBody)
+	//	//fmt.Println(bodyJSON)
+	//} else {
+	//	bodyJSON = rq.Body
+	//}
 
 	v := encoding.Metrics{}
-	//err := json.NewDecoder(rq.Body).Decode(&v)
-	err := json.NewDecoder(bodyJSON).Decode(&v)
+	err := json.NewDecoder(rq.Body).Decode(&v)
+	//err := json.NewDecoder(bodyJSON).Decode(&v)
 
 	if err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
@@ -321,7 +321,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	errStatus := rs.SetValueInMapJSON(v)
 	//fmt.Println("Статус установки значений метрики", errStatus)
 
-	//rw.Header().Add("Content-Type", "application/json")
 	switch errStatus {
 	case 400:
 		rw.WriteHeader(http.StatusBadRequest)
@@ -341,6 +340,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	//	fmt.Println(err.Error())
 	//	return
 	//}
+	rw.Header().Add("Content-Type", "application/json")
 
 	if rs.Config.StoreInterval == 0 {
 		rs.SaveMetric2File()
@@ -379,12 +379,12 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
 		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
+	rw.Header().Add("Content-Type", "application/json")
 
 	////////////////////******************//////////////////////////////////////////////
 	//rw.Header().Set("Content-Type", "application/json")
