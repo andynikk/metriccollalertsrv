@@ -110,7 +110,7 @@ func CompressAndPost(arrMterica *[]byte) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err.Error(), arrMterica, compData, compDataBytes)
+		fmt.Println(err.Error(), string(compData))
 		return errors.New("ошибка отправки данных на сервер (Do)")
 	}
 	defer resp.Body.Close()
@@ -130,6 +130,8 @@ func MakeRequest(metric MetricsGauge) {
 			fmt.Println(err.Error())
 			continue
 		}
+
+		fmt.Println("-------------", metrica, arrMterica)
 		if err := CompressAndPost(&arrMterica); err != nil {
 			fmt.Println(err.Error())
 			continue
