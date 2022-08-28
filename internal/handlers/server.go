@@ -330,16 +330,16 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		rw.WriteHeader(http.StatusOK)
 	}
 
-	//mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
-	//metricsJSON, err := mt.MarshalMetrica()
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
-	//if _, err := rw.Write(metricsJSON); err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
+	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
+	metricsJSON, err := mt.MarshalMetrica()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	if _, err := rw.Write(metricsJSON); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 	rw.Header().Add("Content-Type", "application/json")
 
 	if rs.Config.StoreInterval == 0 {

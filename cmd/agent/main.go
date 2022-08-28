@@ -99,7 +99,7 @@ func MakeRequest(metric MetricsGauge) {
 		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Content-Encoding", "gzip")
+		//req.Header.Set("Content-Encoding", "gzip")
 
 		if err != nil {
 			fmt.Println(err.Error())
@@ -107,14 +107,9 @@ func MakeRequest(metric MetricsGauge) {
 		defer req.Body.Close()
 
 		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
+		if _, err := client.Do(req); err != nil {
 			fmt.Println(err.Error())
 		}
-		defer resp.Body.Close()
-
-		defer resp.Body.Close()
-		resp.Body.Close()
 	}
 
 	cPollCount := repository.Counter(PollCount)
@@ -135,11 +130,9 @@ func MakeRequest(metric MetricsGauge) {
 	defer req.Body.Close()
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
+	if _, err := client.Do(req); err != nil {
 		fmt.Println(err.Error())
 	}
-	defer resp.Body.Close()
 
 }
 
