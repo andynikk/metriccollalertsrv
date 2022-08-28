@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/caarlos0/env/v6"
 	"log"
 	"math/rand"
@@ -88,22 +87,23 @@ func metrixScan(metric MetricsGauge) {
 
 func CompressAndPost(arrMterica *[]byte) error {
 
-	var bytMterica []byte
-	b := bytes.NewBuffer(*arrMterica).Bytes()
-	bytMterica = append(bytMterica, b...)
-	compData, err := compression.Compress(bytMterica)
-	if err != nil {
-		fmt.Println(compData)
-		return errors.New("ошибка архивации данных")
-	}
-
-	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
+	//var bytMterica []byte
+	//b := bytes.NewBuffer(*arrMterica).Bytes()
+	//bytMterica = append(bytMterica, b...)
+	//compData, err := compression.Compress(bytMterica)
+	//if err != nil {
+	//	fmt.Println(compData)
+	//	return errors.New("ошибка архивации данных")
+	//}
+	//
+	//req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
+	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
 		return errors.New("ошибка отправки данных на сервер")
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
+	//req.Header.Set("Content-Encoding", "gzip")
 	defer req.Body.Close()
 
 	client := &http.Client{}
