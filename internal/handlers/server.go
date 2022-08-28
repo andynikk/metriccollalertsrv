@@ -459,9 +459,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 
 	////////////////////////////*///////////////////////////////*///////////////////////////////
 
-	req, err := http.Get(rs.Config.Address)
-	defer req.Body.Close()
-	metricsHTML, err := ioutil.ReadAll(req.Body)
+	metricsHTML, err := ioutil.ReadAll(rq.Body)
 
 	var bytMterica []byte
 	bt := bytes.NewBuffer(metricsHTML).Bytes()
