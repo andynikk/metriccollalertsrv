@@ -313,40 +313,34 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
-	if _, err := rw.Write(metricsJSON); err != nil {
-		fmt.Println(err.Error())
-		return
+
+	var bytMterica []byte
+	b := bytes.NewBuffer(metricsJSON).Bytes()
+	bytMterica = append(bytMterica, b...)
+
+	if rq.Header.Get("Accept-Encoding") == "gzip" {
+		compData, err := compression.Compress(bytMterica)
+		fmt.Println("делаем gzip (update)")
+		if err != nil {
+			fmt.Println("ошибка архивации данных (update)", compData)
+		}
+		//rw.Header().Set("Content-Encoding", "gzip")
+		if _, err := rw.Write(compData); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		rw.Header().Set("Content-Encoding", "gzip")
+		//rw.Header().Set("Accept-Encoding", "gzip")
+		fmt.Println("записали в тело gzip (update)")
+	} else {
+		if _, err := rw.Write(bytMterica); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		fmt.Println("записали в тело JSON (update)", string(bytMterica))
 	}
+
 	rw.Header().Set("Content-Type", "application/json")
-
-	////////////////////******************//////////////////////////////////////////////
-
-	//var bytMterica []byte
-	//b := bytes.NewBuffer(metricsJSON).Bytes()
-	//bytMterica = append(bytMterica, b...)
-
-	//if rq.Header.Get("Accept-Encoding") == "gzip" {
-	//	compData, err := compression.Compress(bytMterica)
-	//	fmt.Println("делаем gzip (update)")
-	//	if err != nil {
-	//		fmt.Println("ошибка архивации данных (update)", compData)
-	//	}
-	//	//rw.Header().Set("Content-Encoding", "gzip")
-	//	if _, err := rw.Write(compData); err != nil {
-	//		fmt.Println(err.Error())
-	//		return
-	//	}
-	//	rw.Header().Set("Content-Encoding", "gzip")
-	//	//rw.Header().Set("Accept-Encoding", "gzip")
-	//	fmt.Println("записали в тело gzip (update)")
-	//} else {
-	//if _, err := rw.Write(bytMterica); err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
-	//	fmt.Println("записали в тело JSON (update)", string(bytMterica))
-	//}
-	//rw.Header().Set("Content-Type", "application/json")
 
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
@@ -390,40 +384,33 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
-	if _, err := rw.Write(metricsJSON); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+
 	rw.Header().Set("Content-Type", "application/json")
 
-	////////////////////******************//////////////////////////////////////////////
-	//rw.Header().Set("Content-Type", "application/json")
+	var bytMterica []byte
+	b := bytes.NewBuffer(metricsJSON).Bytes()
+	bytMterica = append(bytMterica, b...)
 
-	//var bytMterica []byte
-	//b := bytes.NewBuffer(metricsJSON).Bytes()
-	//bytMterica = append(bytMterica, b...)
-
-	//if rq.Header.Get("Accept-Encoding") == "gzip" {
-	//	fmt.Println("делаем gzip (value)")
-	//	compData, err := compression.Compress(bytMterica)
-	//	if err != nil {
-	//		fmt.Println("ошибка архивации данных (value)", compData)
-	//	}
-	//	if _, err := rw.Write(compData); err != nil {
-	//		fmt.Println(err.Error())
-	//		return
-	//	}
-	//	rw.Header().Set("Content-Encoding", "gzip")
-	//	//rw.Header().Set("Accept-Encoding", "gzip")
-	//	fmt.Println("записали в тело gzip (value)")
-	//} else {
-	//if _, err := rw.Write(bytMterica); err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
-	//rw.Header().Set("Content-Type", "application/json")
-	//	fmt.Println("записали в тело JSON (value)", string(bytMterica))
-	//}
+	if rq.Header.Get("Accept-Encoding") == "gzip" {
+		fmt.Println("делаем gzip (value)")
+		compData, err := compression.Compress(bytMterica)
+		if err != nil {
+			fmt.Println("ошибка архивации данных (value)", compData)
+		}
+		if _, err := rw.Write(compData); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		rw.Header().Set("Content-Encoding", "gzip")
+		//rw.Header().Set("Accept-Encoding", "gzip")
+		fmt.Println("записали в тело gzip (value)")
+	} else {
+		if _, err := rw.Write(bytMterica); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		fmt.Println("записали в тело JSON (value)", string(bytMterica))
+	}
 
 	//compData, err := compression.Compress(bytMterica)
 	//if err != nil {
