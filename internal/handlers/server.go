@@ -262,10 +262,10 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func getBodyRequest(rq *http.Request) (io.Reader, error) {
 	var bodyJSON io.Reader
-	if rq.Header.Get("Content-Encoding") == "gzip" {
+	if rq.Header.Get("Accept-Encoding") == "gzip" {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
-			return nil, errors.New("ошибка получения content-encoding")
+			return nil, errors.New("ошибка получения Accept-Encoding")
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
@@ -318,13 +318,13 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
 
-	if rq.Header.Get("Content-Encoding") == "gzip" {
+	if rq.Header.Get("Accept-Encoding") == "gzip" {
 		compData, err := compression.Compress(bytMterica)
 		fmt.Println("делаем gzip (update)")
 		if err != nil {
 			fmt.Println("ошибка архивации данных (update)", compData)
 		}
-		rw.Header().Set("Content-Encoding", "gzip")
+		//rw.Header().Set("Content-Encoding", "gzip")
 		if _, err := rw.Write(compData); err != nil {
 			fmt.Println(err.Error())
 			return
@@ -391,7 +391,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
 
-	if rq.Header.Get("Content-Encoding") == "gzip" {
+	if rq.Header.Get("Accept-Encoding") == "gzip" {
 		fmt.Println("делаем gzip (value)")
 		compData, err := compression.Compress(bytMterica)
 		if err != nil {

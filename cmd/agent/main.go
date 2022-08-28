@@ -103,8 +103,8 @@ func CompressAndPost(arrMterica *[]byte) error {
 		return errors.New("ошибка отправки данных на сервер (POST)")
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
-	//req.Header.Set("Accept-Encoding", "gzip")
+	//req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Accept-Encoding", "gzip")
 
 	defer req.Body.Close()
 
