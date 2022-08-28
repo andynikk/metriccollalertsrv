@@ -295,8 +295,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
-	metType := v.MType
-	metName := v.ID
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
@@ -305,6 +303,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	errStatus := rs.SetValueInMapJSON(v)
 	//fmt.Println("Статус установки значений метрики", errStatus)
 
+	rw.Header().Add("Content-Type", "application/json")
 	switch errStatus {
 	case 400:
 		rw.WriteHeader(http.StatusBadRequest)
@@ -314,26 +313,15 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		rw.WriteHeader(http.StatusOK)
 	}
 
-	mt := rs.MutexRepo[v.ID].GetMetrics(metType, metName)
+	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
+		//fmt.Println("Метрика не получена:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
 
-	rw.Header().Add("Content-Encoding", "gzip")
-	rw.Header().Add("Content-Type", "application/json")
-
-	var bytMterica []byte
-	bt := bytes.NewBuffer(metricsJSON).Bytes()
-	bytMterica = append(bytMterica, bt...)
-	compData, err := compression.Compress(bytMterica)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	//if _, err := rw.Write(metricsJSON); err != nil {
-	if _, err := rw.Write(compData); err != nil {
+	if _, err := rw.Write(metricsJSON); err != nil {
 		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
@@ -368,8 +356,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	rw.WriteHeader(http.StatusOK)
-
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
@@ -379,18 +365,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	rw.Header().Add("Content-Type", "application/json")
-
-	//rw.Header().Add("Content-Encoding", "gzip")
-	//var bytMterica []byte
-	//bt := bytes.NewBuffer(metricsJSON).Bytes()
-	//bytMterica = append(bytMterica, bt...)
-	//compData, err := compression.Compress(bytMterica)
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//}
-
 	if _, err := rw.Write(metricsJSON); err != nil {
-		//if _, err := rw.Write(compData); err != nil {
 		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
