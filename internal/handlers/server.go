@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"bufio"
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -460,22 +458,30 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 
 	////////////////////////////*///////////////////////////////*///////////////////////////////
-	file, _ := os.Open("internal/templates/home_pages.html")
-	read := bufio.NewReader(file)
-	dataGzip, err := ioutil.ReadAll(read)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fileName = strings.Replace(fileName, ".html", ".gz", -1)
-	file, err = os.Create(fileName)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	w := gzip.NewWriter(file)
-	w.Write(dataGzip)
-	w.Close()
 
-	if _, err := rw.Write(w.Extra); err != nil {
+	req, err := http.Get(rs.Config.Address)
+	defer req.Body.Close()
+	metricsHTML, err := ioutil.ReadAll(req.Body)
+
+	var bytMterica []byte
+	bt := bytes.NewBuffer(metricsHTML).Bytes()
+	bytMterica = append(bytMterica, bt...)
+	compData, err := compression.Compress(bytMterica)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	acceptEncoding := rq.Header.Get("Accept-Encoding")
+
+	var bodyBate []byte
+	if strings.Contains(acceptEncoding, "gzip") {
+		rw.Header().Add("Content-Encoding", "gzip")
+		bodyBate = compData
+	} else {
+		bodyBate = metricsHTML
+	}
+
+	if _, err := rw.Write(bodyBate); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
