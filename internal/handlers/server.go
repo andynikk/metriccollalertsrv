@@ -274,10 +274,10 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	fmt.Println("----------- Accept-Encoding (rw, update)", acceptEncodingRw)
 	fmt.Println("----------- Content-Encoding (rw, update)", contentEncodingRw)
 
-	acceptEncoding := rq.Header.Get("Accept-Encoding (rq, update)")
-	contentEncoding := rq.Header.Get("Content-Encoding (rq, update)")
-	fmt.Println("----------- Accept-Encoding", acceptEncoding)
-	fmt.Println("----------- Content-Encoding", contentEncoding)
+	acceptEncoding := rq.Header.Get("Accept-Encoding")
+	contentEncoding := rq.Header.Get("Content-Encoding")
+	fmt.Println("----------- Accept-Encoding (rq, update)", acceptEncoding)
+	fmt.Println("----------- Content-Encoding (rq, update)", contentEncoding)
 	//if contentEncoding == "gzip" && strings.Contains(acceptEncoding, contentEncoding) {
 	//if acceptEncoding == "gzip" {
 	if strings.Contains(acceptEncodingRw, "gzip") {
@@ -357,10 +357,10 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	fmt.Println("----------- Accept-Encoding (rw, value)", acceptEncodingRw)
 	fmt.Println("----------- Content-Encoding (rw, value)", contentEncodingRw)
 
-	acceptEncoding := rq.Header.Get("Accept-Encoding (rq, value)")
-	contentEncoding := rq.Header.Get("Content-Encoding (rq, value)")
-	fmt.Println("----------- Accept-Encoding", acceptEncoding)
-	fmt.Println("----------- Content-Encoding", contentEncoding)
+	acceptEncoding := rq.Header.Get("Accept-Encoding")
+	contentEncoding := rq.Header.Get("Content-Encoding")
+	fmt.Println("----------- Accept-Encoding (rq, value)", acceptEncoding)
+	fmt.Println("----------- Content-Encoding (rq, value)", contentEncoding)
 	//if contentEncoding == "gzip" && strings.Contains(acceptEncoding, contentEncoding) {
 	//if acceptEncoding == "gzip" {
 	if strings.Contains(acceptEncodingRw, "gzip") {
