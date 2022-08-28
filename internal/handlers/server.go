@@ -318,7 +318,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
 
-	if rq.Header.Get("Content-Encoding") == "gzip" || rq.Header.Get("Accept-Encoding") == "gzip" {
+	if rq.Header.Get("Content-Encoding") == "gzip" {
 		compData, err := compression.Compress(bytMterica)
 		fmt.Println("делаем gzip (update)")
 		if err != nil {
@@ -330,7 +330,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 			return
 		}
 		rw.Header().Set("Content-Encoding", "gzip")
-		rw.Header().Set("Accept-Encoding", "gzip")
+		//rw.Header().Set("Accept-Encoding", "gzip")
 		fmt.Println("записали в тело gzip (update)")
 	} else {
 		if _, err := rw.Write(bytMterica); err != nil {
@@ -391,7 +391,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
 
-	if rq.Header.Get("Content-Encoding") == "gzip" || rq.Header.Get("Accept-Encoding") == "gzip" {
+	if rq.Header.Get("Content-Encoding") == "gzip" {
 		fmt.Println("делаем gzip (value)")
 		compData, err := compression.Compress(bytMterica)
 		if err != nil {
@@ -402,7 +402,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 			return
 		}
 		rw.Header().Set("Content-Encoding", "gzip")
-		rw.Header().Set("Accept-Encoding", "gzip")
+		//rw.Header().Set("Accept-Encoding", "gzip")
 		fmt.Println("записали в тело gzip (value)")
 	} else {
 		if _, err := rw.Write(bytMterica); err != nil {
