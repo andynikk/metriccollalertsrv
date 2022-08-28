@@ -1,12 +1,9 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -93,6 +90,7 @@ func (rs *RepStore) New() {
 
 	rs.Router.Get("/", rs.HandlerGetAllMetrics)
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
+	//rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetrica)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
@@ -104,7 +102,7 @@ func (rs *RepStore) setConfig() {
 
 	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
 	restorePtr := flag.Bool("r", true, "восстанавливать значения при старте")
-	storeIntervalPtr := flag.Duration("i", 300000000000, "интервал автосохранения (сек.)")
+	storeIntervalPtr := flag.Duration("i", 300, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", "/tmp/devops-metrics-db.json", "путь к файлу метрик")
 	flag.Parse()
 
@@ -241,6 +239,8 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
+	//fmt.Println("--Handler set metrica POST")
+
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
@@ -260,54 +260,12 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	}
 }
 
-func getBodyRequest(rq *http.Request) (io.Reader, error) {
-	var bodyJSON io.Reader
-	if rq.Header.Get("Accept-Encoding") == "gzip" {
-		bytBody, err := ioutil.ReadAll(rq.Body)
-		if err != nil {
-			return nil, errors.New("ошибка получения Accept-Encoding")
-		}
-
-		arrBody, err := compression.Decompress(bytBody)
-		if err != nil {
-			return nil, errors.New("ошибка распаковки")
-		}
-
-		bodyJSON = bytes.NewReader(arrBody)
-	} else {
-		bodyJSON = rq.Body
-	}
-	return bodyJSON, nil
-}
-
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	//fmt.Println("--Handler update metric JSON")
 
-	//var bodyJSON io.Reader
-
-	//if rq.Header.Get("Content-Encoding") == "gzip" {
-	//	bytBody, err := ioutil.ReadAll(rq.Body)
-	//	if err != nil {
-	//		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	arrBody, err := compression.Decompress(bytBody)
-	//	if err != nil {
-	//		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
-	//		return
-	//	}
-	//
-	//	bodyJSON = bytes.NewReader(arrBody)
-	//	//fmt.Println(bodyJSON)
-	//} else {
-	//	bodyJSON = rq.Body
-	//}
-
 	v := encoding.Metrics{}
 	err := json.NewDecoder(rq.Body).Decode(&v)
-	//err := json.NewDecoder(bodyJSON).Decode(&v)
 
 	if err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
@@ -336,11 +294,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
+	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	rw.Header().Add("Content-Type", "application/json")
 
 	if rs.Config.StoreInterval == 0 {
 		rs.SaveMetric2File()
@@ -379,58 +337,25 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
+	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
 		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
 	}
-	rw.Header().Add("Content-Type", "application/json")
-
-	////////////////////******************//////////////////////////////////////////////
-	//rw.Header().Set("Content-Type", "application/json")
-
-	//var bytMterica []byte
-	//b := bytes.NewBuffer(metricsJSON).Bytes()
-	//bytMterica = append(bytMterica, b...)
-
-	//if rq.Header.Get("Accept-Encoding") == "gzip" {
-	//	fmt.Println("делаем gzip (value)")
-	//	compData, err := compression.Compress(bytMterica)
-	//	if err != nil {
-	//		fmt.Println("ошибка архивации данных (value)", compData)
-	//	}
-	//	if _, err := rw.Write(compData); err != nil {
-	//		fmt.Println(err.Error())
-	//		return
-	//	}
-	//	rw.Header().Set("Content-Encoding", "gzip")
-	//	//rw.Header().Set("Accept-Encoding", "gzip")
-	//	fmt.Println("записали в тело gzip (value)")
-	//} else {
-	//if _, err := rw.Write(bytMterica); err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
-	//rw.Header().Set("Content-Type", "application/json")
-	//	fmt.Println("записали в тело JSON (value)", string(bytMterica))
-	//}
-
-	//compData, err := compression.Compress(bytMterica)
-	//if err != nil {
-	//	fmt.Println("ошибка архивации данных", compData)
-	//}
-	//if _, err := rw.Write(metricsJSON); err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
 }
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
+
+	//fmt.Println("--Handle func")
+
 	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
+
+	//fmt.Println("--Handler get all metrics")
 
 	defer rq.Body.Close()
 
@@ -470,8 +395,15 @@ func (rs *RepStore) SaveMetric2File() {
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
+	//fmt.Println("--Handler not found", r.URL.Path)
+
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 
+	//_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
+	//if err != nil {
+	//	http.Error(rw, err.Error(), http.StatusNotFound)
+	//	return
+	//}
 }
 
 func textMetricsAndValue(mm repository.MapMetrics) []string {
