@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"text/template"
 	"time"
@@ -269,8 +270,10 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	var bodyJSON io.Reader
 
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
+	contentEncoding := rq.Header.Get("Content-Encoding")
 	fmt.Println("----------- Accept-Encoding", acceptEncoding)
-	if acceptEncoding == "gzip" {
+	fmt.Println("----------- Content-Encoding", contentEncoding)
+	if contentEncoding == "gzip" && strings.Contains(acceptEncoding, contentEncoding) {
 		fmt.Println("----------- метрика с агента gzip (update)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
@@ -342,8 +345,10 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	var bodyJSON io.Reader
 
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
+	contentEncoding := rq.Header.Get("Content-Encoding")
 	fmt.Println("----------- Accept-Encoding", acceptEncoding)
-	if acceptEncoding == "gzip" {
+	fmt.Println("----------- Content-Encoding", contentEncoding)
+	if contentEncoding == "gzip" && strings.Contains(acceptEncoding, contentEncoding) {
 		fmt.Println("----------- метрика с агента gzip (value)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
