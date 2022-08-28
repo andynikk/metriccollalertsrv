@@ -266,12 +266,12 @@ func getBodyRequest(rq *http.Request) (io.Reader, error) {
 	if rq.Header.Get("Content-Encoding") == "gzip" {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
-			return nil, errors.New("Ошибка получения Content-Encoding")
+			return nil, errors.New("ошибка получения content-encoding")
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
-			return nil, errors.New("Ошибка распаковки")
+			return nil, errors.New("ошибка распаковки")
 		}
 
 		bodyJSON = bytes.NewReader(arrBody)
@@ -318,18 +318,25 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	var bytMterica []byte
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
-	compData, err := compression.Compress(bytMterica)
-	if err != nil {
-		fmt.Println("ошибка архивации данных", compData)
+
+	if rq.Header.Get("Content-Encoding") == "gzip" {
+		compData, err := compression.Compress(bytMterica)
+		if err != nil {
+			fmt.Println("ошибка архивации данных", compData)
+		}
+		rw.Header().Add("Content-Encoding", "gzip")
+		if _, err := rw.Write(compData); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	} else {
+		if _, err := rw.Write(bytMterica); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
 	}
 
-	rw.Header().Add("Content-Type", "application/json")
-	rw.Header().Add("Content-Encoding", "gzip")
-
-	if _, err := rw.Write(compData); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	rw.Header().Set("Content-Type", "application/json")
 
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
@@ -380,15 +387,32 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	var bytMterica []byte
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
-	compData, err := compression.Compress(bytMterica)
-	if err != nil {
-		fmt.Println("ошибка архивации данных", compData)
+
+	if rq.Header.Get("Content-Encoding") == "gzip" {
+		compData, err := compression.Compress(bytMterica)
+		if err != nil {
+			fmt.Println("ошибка архивации данных", compData)
+		}
+		rw.Header().Set("Content-Encoding", "gzip")
+		if _, err := rw.Write(compData); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	} else {
+		if _, err := rw.Write(bytMterica); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
 	}
 
-	if _, err := rw.Write(metricsJSON); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	//compData, err := compression.Compress(bytMterica)
+	//if err != nil {
+	//	fmt.Println("ошибка архивации данных", compData)
+	//}
+	//if _, err := rw.Write(metricsJSON); err != nil {
+	//	fmt.Println(err.Error())
+	//	return
+	//}
 }
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
