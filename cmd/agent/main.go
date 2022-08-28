@@ -137,9 +137,11 @@ func MakeRequest(metric MetricsGauge) {
 		//	fmt.Println(err.Error())
 		//	continue
 		//}
-		//if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
-		//	fmt.Println(err.Error())
-		//}
+		resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer resp.Body.Close()
 
 		//var bytMterica []byte
 		//b := bytes.NewBuffer(arrMterica).Bytes()
@@ -151,6 +153,9 @@ func MakeRequest(metric MetricsGauge) {
 		//}
 
 		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 		req.Header.Set("Content-Type", "application/json")
 
 		//req.Header.Set("Content-Encoding", "gzip")
@@ -183,10 +188,12 @@ func MakeRequest(metric MetricsGauge) {
 	//	return
 	//}
 
-	if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+	resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
+	if err != nil {
 		fmt.Println(err.Error())
 	}
-	//defer resp.Body.Close()
+	defer resp.Body.Close()
+
 	//resp.Body.Close()
 	//
 	//var bytMterica []byte
