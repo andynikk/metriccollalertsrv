@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/caarlos0/env/v6"
 
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
@@ -85,40 +83,6 @@ func metrixScan(metric MetricsGauge) {
 	memThresholds(metric)
 }
 
-func CompressAndPost(arrMterica *[]byte) error {
-
-	var bytMterica []byte
-	b := bytes.NewBuffer(*arrMterica).Bytes()
-	bytMterica = append(bytMterica, b...)
-	compData, err := compression.Compress(bytMterica)
-	if err != nil {
-		fmt.Println(compData)
-		return errors.New("ошибка архивации данных")
-	}
-
-	compDataBytes := bytes.NewReader(compData)
-	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", compDataBytes)
-	if err != nil {
-		fmt.Println(err.Error())
-		return errors.New("ошибка отправки данных на сервер (POST)")
-	}
-	req.Header.Set("Content-Type", "application/json")
-	//req.Header.Set("Content-Encoding", "gzip")
-	//req.Header.Set("Accept-Encoding", "gzip")
-
-	defer req.Body.Close()
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err.Error(), string(compData))
-		return errors.New("ошибка отправки данных на сервер (Do)")
-	}
-	defer resp.Body.Close()
-
-	return nil
-}
-
 func MakeRequest(metric MetricsGauge) {
 
 	msg := "http://" + Cfg.Address + "/update"
@@ -132,40 +96,25 @@ func MakeRequest(metric MetricsGauge) {
 			continue
 		}
 
-		//resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
-		//if err != nil {
-		//	fmt.Println(err.Error())
-		//}
-		//defer resp.Body.Close()
-
-		//fmt.Println("-------------", metrica, arrMterica)
-		//if err := CompressAndPost(&arrMterica); err != nil {
-		//	fmt.Println(err.Error())
-		//	continue
-		//}
-
-		//var bytMterica []byte
-		//b := bytes.NewBuffer(arrMterica).Bytes()
-		//bytMterica = append(bytMterica, b...)
-		//compData, err := compression.Compress(bytMterica)
-		//if err != nil {
-		//	fmt.Println(compData)
-		//	continue
-		//}
-
-		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		req.Header.Set("Content-Type", "application/json")
-		defer req.Body.Close()
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
+		resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
 		if err != nil {
 			fmt.Println(err.Error())
 		}
 		defer resp.Body.Close()
+
+		//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//req.Header.Set("Content-Type", "application/json")
+		//defer req.Body.Close()
+		//
+		//client := &http.Client{}
+		//resp, err := client.Do(req)
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//defer resp.Body.Close()
 
 	}
 
@@ -176,43 +125,27 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 		return
 	}
-	//if err := CompressAndPost(&arrMterica); err != nil {
-	//	fmt.Println(err.Error())
-	//	return
-	//}
 
-	//resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//}
-	//defer resp.Body.Close()
-	//resp.Body.Close()
-
-	//
-	//var bytMterica []byte
-	//b := bytes.NewBuffer(arrMterica).Bytes()
-	//bytMterica = append(bytMterica, b...)
-	//compData, err := compression.Compress(bytMterica)
-	//if err != nil {
-	//	fmt.Println(compData)
-	//	return
-	//}
-	//
-	//req, err := http.NewRequest("POST", msg, bytes.NewReader(compData))
-
-	req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	req.Header.Set("Content-Type", "application/json")
-	defer req.Body.Close()
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 	defer resp.Body.Close()
+	resp.Body.Close()
+
+	//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//req.Header.Set("Content-Type", "application/json")
+	//defer req.Body.Close()
+	//
+	//client := &http.Client{}
+	//resp, err := client.Do(req)
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//defer resp.Body.Close()
 
 }
 
