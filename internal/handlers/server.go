@@ -504,7 +504,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		return
 	}
 
-	rw.WriteHeader(http.StatusOK)
+	//rw.WriteHeader(http.StatusOK)
 	rw.Header().Add("Content-Type", "text/html")
 }
 
