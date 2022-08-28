@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bufio"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -239,37 +241,6 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 	rw.WriteHeader(http.StatusOK)
 
-	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
-	metricsJSON, err := mt.MarshalMetrica()
-	if err != nil {
-		//fmt.Println("Метрика не получена:", v.MType, v.ID)
-		fmt.Println(err.Error())
-		return
-	}
-	acceptEncoding := rq.Header.Get("Accept-Encoding")
-
-	var bodyBate []byte
-	rw.Header().Add("Content-Type", "application/json")
-	if strings.Contains(acceptEncoding, "gzip") {
-		var bytMterica []byte
-		bt := bytes.NewBuffer(metricsJSON).Bytes()
-		bytMterica = append(bytMterica, bt...)
-		compData, err := compression.Compress(bytMterica)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-
-		rw.Header().Add("Content-Encoding", "gzip")
-		bodyBate = compData
-	} else {
-		bodyBate = metricsJSON
-	}
-
-	if _, err := rw.Write(bodyBate); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
 }
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
@@ -457,10 +428,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 }
 
-func formResponseBody() {
-
-}
-
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
 	//fmt.Println("--Handle func")
@@ -482,7 +449,8 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		TextMetrics: arrMetricsAndValue,
 	}
 
-	tmpl, errTpl := template.ParseFiles("internal/templates/home_pages.html")
+	fileName := "internal/templates/home_pages.html"
+	tmpl, errTpl := template.ParseFiles(fileName)
 	if errTpl != nil {
 		http.Error(rw, errTpl.Error(), http.StatusServiceUnavailable)
 		return
@@ -490,6 +458,28 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	tmpl.Execute(rw, data)
 
 	rw.WriteHeader(http.StatusOK)
+
+	////////////////////////////*///////////////////////////////*///////////////////////////////
+	file, _ := os.Open("internal/templates/home_pages.html")
+	read := bufio.NewReader(file)
+	dataGzip, err := ioutil.ReadAll(read)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fileName = strings.Replace(fileName, ".html", ".gz", -1)
+	file, err = os.Create("filePath/" + fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	w := gzip.NewWriter(file)
+	w.Write(dataGzip)
+	w.Close()
+
+	if _, err := rw.Write(w.Extra); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 }
 
 func (rs *RepStore) SaveMetric2File() {
