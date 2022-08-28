@@ -93,7 +93,6 @@ func (rs *RepStore) New() {
 
 	rs.Router.Get("/", rs.HandlerGetAllMetrics)
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
-	//rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetrica)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
@@ -382,28 +381,28 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	rw.Header().Set("Content-Type", "application/json")
-	//rw.Header().Add("Content-Encoding", "gzip")
+	rw.Header().Set("Content-Encoding", "gzip")
 
 	var bytMterica []byte
 	b := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, b...)
 
-	//if rq.Header.Get("Content-Encoding") == "gzip" {
-	//	compData, err := compression.Compress(bytMterica)
-	//	if err != nil {
-	//		fmt.Println("ошибка архивации данных", compData)
-	//	}
-	//	rw.Header().Set("Content-Encoding", "gzip")
-	//	if _, err := rw.Write(compData); err != nil {
-	//		fmt.Println(err.Error())
-	//		return
-	//	}
-	//} else {
-	if _, err := rw.Write(bytMterica); err != nil {
-		fmt.Println(err.Error())
-		return
+	if rq.Header.Get("Content-Encoding") == "gzip" {
+		compData, err := compression.Compress(bytMterica)
+		if err != nil {
+			fmt.Println("ошибка архивации данных", compData)
+		}
+		rw.Header().Set("Content-Encoding", "gzip")
+		if _, err := rw.Write(compData); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+	} else {
+		if _, err := rw.Write(bytMterica); err != nil {
+			fmt.Println(err.Error())
+			return
+		}
 	}
-	//}
 
 	//compData, err := compression.Compress(bytMterica)
 	//if err != nil {
