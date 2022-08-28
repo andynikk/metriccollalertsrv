@@ -304,7 +304,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
-	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
@@ -355,7 +355,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
-	rw.Header().Set("Content-Type", "application/json")
+	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
