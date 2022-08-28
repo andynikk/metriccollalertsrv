@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -102,7 +104,7 @@ func (rs *RepStore) setConfig() {
 
 	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
 	restorePtr := flag.Bool("r", true, "восстанавливать значения при старте")
-	storeIntervalPtr := flag.Duration("i", 300, "интервал автосохранения (сек.)")
+	storeIntervalPtr := flag.Duration("i", 300000000000, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", "/tmp/devops-metrics-db.json", "путь к файлу метрик")
 	flag.Parse()
 
@@ -264,8 +266,30 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	//fmt.Println("--Handler update metric JSON")
 
+	var bodyJSON io.Reader
+
+	if rq.Header.Get("Content-Encoding") == "gzip" {
+		bytBody, err := ioutil.ReadAll(rq.Body)
+		if err != nil {
+			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
+			return
+		}
+
+		arrBody, err := compression.Decompress(bytBody)
+		if err != nil {
+			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+			return
+		}
+
+		bodyJSON = bytes.NewReader(arrBody)
+		//fmt.Println(bodyJSON)
+	} else {
+		bodyJSON = rq.Body
+	}
+
 	v := encoding.Metrics{}
-	err := json.NewDecoder(rq.Body).Decode(&v)
+	//err := json.NewDecoder(rq.Body).Decode(&v)
+	err := json.NewDecoder(bodyJSON).Decode(&v)
 
 	if err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
@@ -300,7 +324,13 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if rs.Config.StoreInterval == 0 {
+	cfg := &Config{}
+	if err := env.Parse(cfg); err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+
+	if cfg.StoreInterval == 0 {
 		rs.SaveMetric2File()
 	}
 }
