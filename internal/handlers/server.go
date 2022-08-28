@@ -482,8 +482,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	//tmpl.Execute(rw, content)
 	////////////////////////////*///////////////////////////////*///////////////////////////////
 
-	//rw.Header().Set("Content-Type", "text/html")
-	rw.WriteHeader(http.StatusOK)
+	acceptEncoding := rq.Header.Get("Accept-Encoding")
 
 	metricsHTML := []byte(content)
 	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
@@ -491,8 +490,6 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
-	acceptEncoding := rq.Header.Get("Accept-Encoding")
 
 	var bodyBate []byte
 	if strings.Contains(acceptEncoding, "gzip") {
@@ -506,6 +503,9 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		fmt.Println(err.Error())
 		return
 	}
+
+	rq.Header.Add("Content-Type", "text/html")
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) SaveMetric2File() {
