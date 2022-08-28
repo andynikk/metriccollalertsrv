@@ -459,11 +459,10 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 
 	////////////////////////////*///////////////////////////////*///////////////////////////////
 
-	metricsHTML, err := ioutil.ReadAll(rq.Body)
+	metricsHTML, _ := ioutil.ReadFile(fileName)
+	rw.Header().Set("Content-Type", "text/html")
 
-	var bytMterica []byte
-	bt := bytes.NewBuffer(metricsHTML).Bytes()
-	bytMterica = append(bytMterica, bt...)
+	bytMterica := bytes.NewBuffer(metricsHTML).Bytes()
 	compData, err := compression.Compress(bytMterica)
 	if err != nil {
 		fmt.Println(err.Error())

@@ -20,3 +20,7 @@ Content-Type: application/json
   "type": "counter",
   "delta": 123
 }
+
+### GET request with a header
+GET http://localhost:8080/
+Accept: application/json
