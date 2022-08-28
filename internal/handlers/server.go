@@ -269,12 +269,18 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	var bodyJSON io.Reader
 
-	acceptEncoding := rq.Header.Get("Accept-Encoding")
-	contentEncoding := rq.Header.Get("Content-Encoding")
+	acceptEncodingRw := rw.Header().Get("Accept-Encoding")
+	contentEncodingRw := rw.Header().Get("Content-Encoding")
+	fmt.Println("----------- Accept-Encoding (rw)", acceptEncodingRw)
+	fmt.Println("----------- Content-Encoding (rw)", contentEncodingRw)
+
+	acceptEncoding := rq.Header.Get("Accept-Encoding (rq)")
+	contentEncoding := rq.Header.Get("Content-Encoding (rq)")
 	fmt.Println("----------- Accept-Encoding", acceptEncoding)
 	fmt.Println("----------- Content-Encoding", contentEncoding)
 	//if contentEncoding == "gzip" && strings.Contains(acceptEncoding, contentEncoding) {
-	if acceptEncoding == "gzip" {
+	//if acceptEncoding == "gzip" {
+	if strings.Contains(acceptEncodingRw, "gzip") {
 		fmt.Println("----------- метрика с агента gzip (update)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
