@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/caarlos0/env/v6"
 	"log"
 	"math/rand"
@@ -84,9 +86,40 @@ func metrixScan(metric MetricsGauge) {
 	memThresholds(metric)
 }
 
+func CompressAndPost(arrMterica *[]byte) error {
+
+	var bytMterica []byte
+	b := bytes.NewBuffer(*arrMterica).Bytes()
+	bytMterica = append(bytMterica, b...)
+	compData, err := compression.Compress(bytMterica)
+	if err != nil {
+		fmt.Println(compData)
+		return errors.New("ошибка архивации данных")
+	}
+
+	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("ошибка отправки данных на сервер")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	defer req.Body.Close()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("ошибка отправки данных на сервер")
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 func MakeRequest(metric MetricsGauge) {
 
-	msg := "http://" + Cfg.Address + "/update"
+	//msg := "http://" + Cfg.Address + "/update"
 
 	for key, val := range metric {
 		valFloat64 := val.Float64()
@@ -96,10 +129,41 @@ func MakeRequest(metric MetricsGauge) {
 			fmt.Println(err.Error())
 			continue
 		}
-
-		if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+		if err := CompressAndPost(&arrMterica); err != nil {
 			fmt.Println(err.Error())
+			continue
 		}
+		//if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+		//	fmt.Println(err.Error())
+		//}
+
+		//var bytMterica []byte
+		//b := bytes.NewBuffer(arrMterica).Bytes()
+		//bytMterica = append(bytMterica, b...)
+		//compData, err := compression.Compress(bytMterica)
+		//if err != nil {
+		//	fmt.Println(compData)
+		//	continue
+		//}
+
+		//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		//req, err := http.NewRequest("POST", msg, bytes.NewReader(compData))
+		//
+		//req.Header.Set("Content-Type", "application/json")
+		//req.Header.Set("Content-Encoding", "gzip")
+		//
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//defer req.Body.Close()
+		//
+		//client := &http.Client{}
+		//resp, err := client.Do(req)
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//defer resp.Body.Close()
+
 		//defer resp.Body.Close()
 		//resp.Body.Close()
 	}
@@ -112,12 +176,43 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 		return
 	}
-
-	if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+	if err := CompressAndPost(&arrMterica); err != nil {
 		fmt.Println(err.Error())
+		return
 	}
+
+	//if _, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica)); err != nil {
+	//	fmt.Println(err.Error())
+	//}
 	//defer resp.Body.Close()
 	//resp.Body.Close()
+
+	//var bytMterica []byte
+	//b := bytes.NewBuffer(arrMterica).Bytes()
+	//bytMterica = append(bytMterica, b...)
+	//compData, err := compression.Compress(bytMterica)
+	//if err != nil {
+	//	fmt.Println(compData)
+	//	return
+	//}
+	//
+	////req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+	//req, err := http.NewRequest("POST", msg, bytes.NewReader(compData))
+	//
+	//req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Content-Encoding", "gzip")
+	//
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//defer req.Body.Close()
+	//
+	//client := &http.Client{}
+	//resp, err := client.Do(req)
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//defer resp.Body.Close()
 
 }
 
