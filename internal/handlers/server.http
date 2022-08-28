@@ -23,4 +23,4 @@ Content-Type: application/json
 
 ### GET request with a header
 GET http://localhost:8080/
-Accept: application/json
+Accept: html/text
