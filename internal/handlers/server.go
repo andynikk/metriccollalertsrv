@@ -309,6 +309,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	errStatus := rs.SetValueInMapJSON(v)
 	//fmt.Println("Статус установки значений метрики", errStatus)
 
+	rw.Header().Add("Content-Encoding", "gzip")
 	rw.Header().Add("Content-Type", "application/json")
 	switch errStatus {
 	case 400:
@@ -396,6 +397,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
+	rw.Header().Add("Content-Encoding", "gzip")
 	rw.Header().Add("Content-Type", "application/json")
 	if _, err := rw.Write(metricsJSON); err != nil {
 		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
