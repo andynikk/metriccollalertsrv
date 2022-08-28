@@ -41,10 +41,6 @@ func (et MetricError) String() string {
 const (
 	GaugeMetric MetricType = iota
 	CounterMetric
-
-	//NotError MetricError = iota
-	//ErrorConvert
-	//ErrorGetType
 )
 
 type RepStore struct {
@@ -269,19 +265,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	var bodyJSON io.Reader
 
-	acceptEncodingRw := rw.Header().Get("Accept-Encoding")
-	contentEncodingRw := rw.Header().Get("Content-Encoding")
-	fmt.Println("----------- Accept-Encoding (rw, update)", acceptEncodingRw)
-	fmt.Println("----------- Content-Encoding (rw, update)", contentEncodingRw)
-
-	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
-	fmt.Println("----------- Accept-Encoding (rq, update)", acceptEncoding)
-	fmt.Println("----------- Content-Encoding (rq, update)", contentEncoding)
-	//if contentEncoding == "gzip" && strings.Contains(acceptEncoding, contentEncoding) {
-	//if acceptEncoding == "gzip" {
-	if strings.Contains(acceptEncodingRw, "gzip") {
-		fmt.Println("----------- метрика с агента gzip (update)")
+	if strings.Contains(contentEncoding, "gzip") {
+		//fmt.Println("----------- метрика с агента gzip (update)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
@@ -440,23 +426,6 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	defer rq.Body.Close()
 	arrMetricsAndValue := textMetricsAndValue(rs.MutexRepo)
 
-	//////////////////////*/////////////////////*////////////////////*///////////////
-	//
-	//
-	//data := HTMLParam{
-	//	Title:       "МЕТРИКИ",
-	//	TextMetrics: arrMetricsAndValue,
-	//}
-	//
-	//fileName := "internal/templates/home_pages.html"
-	//tmpl, errTpl := template.ParseFiles(fileName)
-	//if errTpl != nil {
-	//	http.Error(rw, errTpl.Error(), http.StatusServiceUnavailable)
-	//	return
-	//}
-	//tmpl.Execute(rw, data)
-	//////////////////////*/////////////////////*////////////////////*///////////////
-
 	content := `<!DOCTYPE html>
 				<html>
 				<head>
@@ -473,14 +442,6 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	content = content + `</ul>
 						</body>
 						</html>`
-
-	//_, err := template.New("home_page").Parse(content)
-	//if err != nil {
-	//	http.Error(rw, err.Error(), 400)
-	//	return
-	//}
-	//tmpl.Execute(rw, content)
-	////////////////////////////*///////////////////////////////*///////////////////////////////
 
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 
@@ -505,7 +466,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		return
 	}
 
-	//rw.WriteHeader(http.StatusOK)
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) SaveMetric2File() {
@@ -527,15 +488,8 @@ func (rs *RepStore) SaveMetric2File() {
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
-	//fmt.Println("--Handler not found", r.URL.Path)
-
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 
-	//_, err := io.WriteString(rw, "Метрика "+r.URL.Path+" не найдена")
-	//if err != nil {
-	//	http.Error(rw, err.Error(), http.StatusNotFound)
-	//	return
-	//}
 }
 
 func textMetricsAndValue(mm repository.MapMetrics) []string {
