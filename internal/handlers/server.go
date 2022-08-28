@@ -238,6 +238,38 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	}
 
 	rw.WriteHeader(http.StatusOK)
+
+	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
+	metricsJSON, err := mt.MarshalMetrica()
+	if err != nil {
+		//fmt.Println("Метрика не получена:", v.MType, v.ID)
+		fmt.Println(err.Error())
+		return
+	}
+	acceptEncoding := rq.Header.Get("Accept-Encoding")
+
+	var bodyBate []byte
+	rw.Header().Add("Content-Type", "application/json")
+	if strings.Contains(acceptEncoding, "gzip") {
+		var bytMterica []byte
+		bt := bytes.NewBuffer(metricsJSON).Bytes()
+		bytMterica = append(bytMterica, bt...)
+		compData, err := compression.Compress(bytMterica)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		rw.Header().Add("Content-Encoding", "gzip")
+		bodyBate = compData
+	} else {
+		bodyBate = metricsJSON
+	}
+
+	if _, err := rw.Write(bodyBate); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
 }
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
@@ -352,18 +384,9 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 	var bodyJSON io.Reader
 
-	acceptEncodingRw := rw.Header().Get("Accept-Encoding")
-	contentEncodingRw := rw.Header().Get("Content-Encoding")
-	fmt.Println("----------- Accept-Encoding (rw, value)", acceptEncodingRw)
-	fmt.Println("----------- Content-Encoding (rw, value)", contentEncodingRw)
-
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
-	fmt.Println("----------- Accept-Encoding (rq, value)", acceptEncoding)
-	fmt.Println("----------- Content-Encoding (rq, value)", contentEncoding)
-	//if contentEncoding == "gzip" && strings.Contains(acceptEncoding, contentEncoding) {
-	//if acceptEncoding == "gzip" {
-	if strings.Contains(acceptEncodingRw, "gzip") {
+	if strings.Contains(contentEncoding, "gzip") {
 		fmt.Println("----------- метрика с агента gzip (value)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
@@ -419,28 +442,23 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 	}
 
+	var bodyBate []byte
 	rw.Header().Add("Content-Type", "application/json")
 	if strings.Contains(acceptEncoding, "gzip") {
 		rw.Header().Add("Content-Encoding", "gzip")
-		if _, err := rw.Write(compData); err != nil {
-			//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
-			fmt.Println(err.Error())
-			return
-		}
+		bodyBate = compData
 	} else {
-		if _, err := rw.Write(metricsJSON); err != nil {
-			//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
-			fmt.Println(err.Error())
-			return
-		}
+		bodyBate = metricsJSON
 	}
 
-	////if _, err := rw.Write(metricsJSON); err != nil {
-	//if _, err := rw.Write(compData); err != nil {
-	//	//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
-	//	fmt.Println(err.Error())
-	//	return
-	//}
+	if _, err := rw.Write(bodyBate); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+}
+
+func formResponseBody() {
+
 }
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
