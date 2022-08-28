@@ -16,7 +16,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
@@ -475,18 +474,16 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 						</body>
 						</html>`
 
-	tmpl, err := template.New("home_page").Parse(content)
-	if err != nil {
-		http.Error(rw, err.Error(), 400)
-		return
-	}
-	tmpl.Execute(rw, content)
-
-	rw.WriteHeader(http.StatusOK)
-
+	//_, err := template.New("home_page").Parse(content)
+	//if err != nil {
+	//	http.Error(rw, err.Error(), 400)
+	//	return
+	//}
+	//tmpl.Execute(rw, content)
 	////////////////////////////*///////////////////////////////*///////////////////////////////
 
-	rw.Header().Set("Content-Type", "text/html")
+	//rw.Header().Set("Content-Type", "text/html")
+	rw.WriteHeader(http.StatusOK)
 
 	metricsHTML := []byte(content)
 	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
