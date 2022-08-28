@@ -132,16 +132,17 @@ func MakeRequest(metric MetricsGauge) {
 			continue
 		}
 
+		//resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//}
+		//defer resp.Body.Close()
+
 		//fmt.Println("-------------", metrica, arrMterica)
 		//if err := CompressAndPost(&arrMterica); err != nil {
 		//	fmt.Println(err.Error())
 		//	continue
 		//}
-		resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		defer resp.Body.Close()
 
 		//var bytMterica []byte
 		//b := bytes.NewBuffer(arrMterica).Bytes()
@@ -152,28 +153,20 @@ func MakeRequest(metric MetricsGauge) {
 		//	continue
 		//}
 
-		//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		//if err != nil {
-		//	fmt.Println(err.Error())
-		//}
-		//req.Header.Set("Content-Type", "application/json")
+		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		req.Header.Set("Content-Type", "application/json")
+		defer req.Body.Close()
 
-		//req.Header.Set("Content-Encoding", "gzip")
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer resp.Body.Close()
 
-		//if err != nil {
-		//	fmt.Println(err.Error())
-		//}
-		//defer req.Body.Close()
-		//
-		//client := &http.Client{}
-		//resp, err := client.Do(req)
-		//if err != nil {
-		//	fmt.Println(err.Error())
-		//}
-		//defer resp.Body.Close()
-		//
-		//defer resp.Body.Close()
-		//resp.Body.Close()
 	}
 
 	cPollCount := repository.Counter(PollCount)
@@ -188,13 +181,13 @@ func MakeRequest(metric MetricsGauge) {
 	//	return
 	//}
 
-	resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	defer resp.Body.Close()
-
+	//resp, err := http.Post(msg, "application/json", bytes.NewReader(arrMterica))
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
+	//defer resp.Body.Close()
 	//resp.Body.Close()
+
 	//
 	//var bytMterica []byte
 	//b := bytes.NewBuffer(arrMterica).Bytes()
@@ -205,23 +198,21 @@ func MakeRequest(metric MetricsGauge) {
 	//	return
 	//}
 	//
-	////req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
 	//req, err := http.NewRequest("POST", msg, bytes.NewReader(compData))
-	//
-	//req.Header.Set("Content-Type", "application/json")
-	//req.Header.Set("Content-Encoding", "gzip")
-	//
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//}
-	//defer req.Body.Close()
-	//
-	//client := &http.Client{}
-	//resp, err := client.Do(req)
-	//if err != nil {
-	//	fmt.Println(err.Error())
-	//}
-	//defer resp.Body.Close()
+
+	req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	req.Header.Set("Content-Type", "application/json")
+	defer req.Body.Close()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	defer resp.Body.Close()
 
 }
 
