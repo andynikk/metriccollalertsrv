@@ -131,7 +131,6 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 	}
 	defer resp.Body.Close()
-	resp.Body.Close()
 
 	//req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
 	//if err != nil {
