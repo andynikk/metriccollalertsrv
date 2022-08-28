@@ -464,12 +464,12 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	read := bufio.NewReader(file)
 	dataGzip, err := ioutil.ReadAll(read)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 	fileName = strings.Replace(fileName, ".html", ".gz", -1)
-	file, err = os.Create("filePath/" + fileName)
+	file, err = os.Create(fileName)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
 	}
 	w := gzip.NewWriter(file)
 	w.Write(dataGzip)
