@@ -378,19 +378,19 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	rw.Header().Add("Content-Encoding", "gzip")
 	rw.Header().Add("Content-Type", "application/json")
 
-	var bytMterica []byte
-	bt := bytes.NewBuffer(metricsJSON).Bytes()
-	bytMterica = append(bytMterica, bt...)
-	compData, err := compression.Compress(bytMterica)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
+	//rw.Header().Add("Content-Encoding", "gzip")
+	//var bytMterica []byte
+	//bt := bytes.NewBuffer(metricsJSON).Bytes()
+	//bytMterica = append(bytMterica, bt...)
+	//compData, err := compression.Compress(bytMterica)
+	//if err != nil {
+	//	fmt.Println(err.Error())
+	//}
 
-	//if _, err := rw.Write(metricsJSON); err != nil {
-	if _, err := rw.Write(compData); err != nil {
+	if _, err := rw.Write(metricsJSON); err != nil {
+		//if _, err := rw.Write(compData); err != nil {
 		//fmt.Println("Метрика не вписано в тело:", v.MType, v.ID)
 		fmt.Println(err.Error())
 		return
