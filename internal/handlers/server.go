@@ -439,31 +439,58 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	//fmt.Println("--Handler get all metrics")
 
 	defer rq.Body.Close()
-
 	arrMetricsAndValue := textMetricsAndValue(rs.MutexRepo)
 
-	data := HTMLParam{
-		Title:       "МЕТРИКИ",
-		TextMetrics: arrMetricsAndValue,
-	}
+	//////////////////////*/////////////////////*////////////////////*///////////////
+	//
+	//
+	//data := HTMLParam{
+	//	Title:       "МЕТРИКИ",
+	//	TextMetrics: arrMetricsAndValue,
+	//}
+	//
+	//fileName := "internal/templates/home_pages.html"
+	//tmpl, errTpl := template.ParseFiles(fileName)
+	//if errTpl != nil {
+	//	http.Error(rw, errTpl.Error(), http.StatusServiceUnavailable)
+	//	return
+	//}
+	//tmpl.Execute(rw, data)
+	//////////////////////*/////////////////////*////////////////////*///////////////
 
-	fileName := "internal/templates/home_pages.html"
-	tmpl, errTpl := template.ParseFiles(fileName)
-	if errTpl != nil {
-		http.Error(rw, errTpl.Error(), http.StatusServiceUnavailable)
+	content := `<!DOCTYPE html>
+				<html>
+				<head>
+  					<meta charset="UTF-8">
+  					<title>МЕТРИКИ</title>
+				</head>
+				<body>
+				<h1>МЕТРИКИ</h1>
+				<ul>
+				`
+	for _, val := range arrMetricsAndValue {
+		content = content + `<li><b>` + val + `</b></li>` + "\n"
+	}
+	content = content + `</ul>
+						</body>
+						</html>`
+
+	tmpl, err := template.New("home_page").Parse(content)
+	if err != nil {
+		http.Error(rw, err.Error(), 400)
 		return
 	}
-	tmpl.Execute(rw, data)
+	tmpl.Execute(rw, content)
 
 	rw.WriteHeader(http.StatusOK)
 
 	////////////////////////////*///////////////////////////////*///////////////////////////////
 
-	metricsHTML, _ := ioutil.ReadFile(fileName)
 	rw.Header().Set("Content-Type", "text/html")
 
-	bytMterica := bytes.NewBuffer(metricsHTML).Bytes()
-	compData, err := compression.Compress(bytMterica)
+	metricsHTML := []byte(content)
+	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
+	compData, err := compression.Compress(byteMterics)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -482,7 +509,6 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		fmt.Println(err.Error())
 		return
 	}
-
 }
 
 func (rs *RepStore) SaveMetric2File() {
