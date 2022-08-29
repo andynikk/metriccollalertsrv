@@ -99,7 +99,7 @@ func CompressAndPost(arrMterica *[]byte) error {
 	//req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
 	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err.Error(), req)
 		return errors.New("-------ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
