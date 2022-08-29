@@ -300,6 +300,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
+	rw.Header().Add("Content-Type", "application/json")
+
 	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
