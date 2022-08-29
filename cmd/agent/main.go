@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	"log"
@@ -82,9 +83,29 @@ func metrixScan(metric MetricsGauge) {
 	memThresholds(metric)
 }
 
-func MakeRequest(metric MetricsGauge) {
+func PostFromServer(arrMterica *[]byte) error {
 
-	//msg := "http://" + Cfg.Address + "/update"
+	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("-------ошибка отправки данных на сервер (1)")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Content-Encoding", "gzip")
+	defer req.Body.Close()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("-------ошибка отправки данных на сервер (2)")
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func MakeRequest(metric MetricsGauge) {
 
 	for key, val := range metric {
 		valFloat64 := val.Float64()
@@ -94,20 +115,10 @@ func MakeRequest(metric MetricsGauge) {
 			fmt.Println(err.Error())
 			continue
 		}
-		req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(arrMterica))
-		if err != nil {
-			fmt.Println(err.Error(), req)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		//req.Header.Set("Content-Encoding", "gzip")
-		defer req.Body.Close()
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
+		if err := PostFromServer(&arrMterica); err != nil {
 			fmt.Println(err.Error())
+			continue
 		}
-		defer resp.Body.Close()
 	}
 
 	cPollCount := repository.Counter(PollCount)
@@ -118,21 +129,10 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 		return
 	}
-
-	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(arrMterica))
-	if err != nil {
-		fmt.Println(err.Error(), req)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	//req.Header.Set("Content-Encoding", "gzip")
-	defer req.Body.Close()
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
+	if err := PostFromServer(&arrMterica); err != nil {
 		fmt.Println(err.Error())
+		return
 	}
-	defer resp.Body.Close()
 
 }
 
