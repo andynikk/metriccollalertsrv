@@ -3,9 +3,10 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -13,13 +14,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricType int
@@ -51,17 +47,11 @@ type RepStore struct {
 }
 
 type ConfigENV struct {
-	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
-	ReportInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
-	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore        bool          `env:"RESTORE" envDefault:"true"`
+	Address string `env:"ADDRESS" envDefault:"localhost:8080"`
 }
 
 type Config struct {
-	StoreInterval time.Duration
-	StoreFile     string
-	Restore       bool
-	Address       string
+	Address string
 }
 
 func NewRepStore() *RepStore {
@@ -98,51 +88,16 @@ func (rs *RepStore) New() {
 
 func (rs *RepStore) setConfig() {
 
-	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
-	restorePtr := flag.Bool("r", true, "восстанавливать значения при старте")
-	storeIntervalPtr := flag.Duration("i", 300000000000, "интервал автосохранения (сек.)")
-	storeFilePtr := flag.String("f", "/tmp/devops-metrics-db.json", "путь к файлу метрик")
-	flag.Parse()
-
 	var cfgENV ConfigENV
 	err := env.Parse(&cfgENV)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	addressServ := ""
-	if _, ok := os.LookupEnv("ADDRESS"); ok {
-		addressServ = cfgENV.Address
-	} else {
-		addressServ = *addressPtr
-	}
-
-	restoreMetric := false
-	if _, ok := os.LookupEnv("RESTORE"); ok {
-		restoreMetric = cfgENV.Restore
-	} else {
-		restoreMetric = *restorePtr
-	}
-
-	var storeIntervalMetrics time.Duration
-	if _, ok := os.LookupEnv("STORE_INTERVAL"); ok {
-		storeIntervalMetrics = cfgENV.ReportInterval
-	} else {
-		storeIntervalMetrics = *storeIntervalPtr
-	}
-
-	var storeFileMetrics string
-	if _, ok := os.LookupEnv("STORE_FILE"); ok {
-		storeFileMetrics = cfgENV.StoreFile
-	} else {
-		storeFileMetrics = *storeFilePtr
-	}
+	addressServ := cfgENV.Address
 
 	rs.Config = Config{
-		StoreInterval: storeIntervalMetrics,
-		StoreFile:     storeFileMetrics,
-		Restore:       restoreMetric,
-		Address:       addressServ,
+		Address: addressServ,
 	}
 }
 
@@ -327,14 +282,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if rs.Config.StoreInterval == time.Duration(0) {
-		rs.SaveMetric2File()
-	}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
-
-	//fmt.Printf("Количество метрик: %d\n", len((rs.MutexRepo)))
 
 	var bodyJSON io.Reader
 
@@ -368,8 +318,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 	metType := v.MType
 	metName := v.ID
-
-	//fmt.Println("Пришла метрика:", v.MType, v.ID)
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
@@ -413,15 +361,11 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
-	//fmt.Println("--Handle func")
-
 	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
-
-	//fmt.Println("--Handler get all metrics")
 
 	defer rq.Body.Close()
 	arrMetricsAndValue := textMetricsAndValue(rs.MutexRepo)
@@ -469,23 +413,6 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) SaveMetric2File() {
-
-	arr := JSONMetricsAndValue(rs.MutexRepo)
-	arrJSON, err := json.Marshal(arr)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	if rs.Config.StoreFile == "" {
-		return
-	}
-
-	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-		fmt.Println(err.Error())
-	}
-
-}
-
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
@@ -502,39 +429,4 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 	}
 
 	return msg
-}
-
-func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
-
-	var arr []encoding.Metrics
-
-	for key, val := range mm {
-		jMetric := val.GetMetrics(val.Type(), key)
-		arr = append(arr, jMetric)
-	}
-
-	return arr
-}
-
-func (rs *RepStore) LoadStoreMetrics() {
-
-	res, err := ioutil.ReadFile(rs.Config.StoreFile)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	var arrMatric []encoding.Metrics
-	if err := json.Unmarshal(res, &arrMatric); err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
-
-	for _, val := range arrMatric {
-		rs.SetValueInMapJSON(val)
-	}
-	fmt.Println(rs.MutexRepo)
-
 }
