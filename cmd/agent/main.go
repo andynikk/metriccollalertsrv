@@ -31,8 +31,6 @@ type Config struct {
 
 type MetricsGauge = map[string]repository.Gauge
 
-//type Metrics = map[string]repository.Gauge
-
 var PollCount int64
 var Cfg = Config{}
 
@@ -85,14 +83,25 @@ func metrixScan(metric MetricsGauge) {
 	memThresholds(metric)
 }
 
-func PostFromServer(arrMterica *[]byte) error {
+func CompressAndPost(arrMterica *[]byte) error {
 
+	//var bytMterica []byte
+	//b := bytes.NewBuffer(*arrMterica).Bytes()
+	//bytMterica = append(bytMterica, b...)
+	//compData, err := compression.Compress(bytMterica)
+	//if err != nil {
+	//	fmt.Println(compData)
+	//	return errors.New("ошибка архивации данных")
+	//}
+	//
+	//req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
 	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
 		return errors.New("-------ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Content-Encoding", "gzip")
 	defer req.Body.Close()
 
 	client := &http.Client{}
@@ -116,7 +125,7 @@ func MakeRequest(metric MetricsGauge) {
 			fmt.Println(err.Error())
 			continue
 		}
-		if err := PostFromServer(&arrMterica); err != nil {
+		if err := CompressAndPost(&arrMterica); err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
@@ -130,7 +139,7 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 		return
 	}
-	if err := PostFromServer(&arrMterica); err != nil {
+	if err := CompressAndPost(&arrMterica); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
