@@ -1,21 +1,21 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 	"sync"
+	"time"
+
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricType int
@@ -47,11 +47,17 @@ type RepStore struct {
 }
 
 type ConfigENV struct {
-	Address string `env:"ADDRESS" envDefault:"localhost:8080"`
+	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
+	ReportInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
+	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore        bool          `env:"RESTORE" envDefault:"true"`
 }
 
 type Config struct {
-	Address string
+	StoreInterval time.Duration
+	StoreFile     string
+	Restore       bool
+	Address       string
 }
 
 func NewRepStore() *RepStore {
@@ -78,7 +84,6 @@ func (rs *RepStore) New() {
 
 	rs.Router.Get("/", rs.HandlerGetAllMetrics)
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
-	//rs.Router.Get("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetrica)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
@@ -95,9 +100,15 @@ func (rs *RepStore) setConfig() {
 	}
 
 	addressServ := cfgENV.Address
+	restoreMetric := cfgENV.Restore
+	storeIntervalMetrics := cfgENV.ReportInterval
+	storeFileMetrics := cfgENV.StoreFile
 
 	rs.Config = Config{
-		Address: addressServ,
+		StoreInterval: storeIntervalMetrics,
+		StoreFile:     storeFileMetrics,
+		Restore:       restoreMetric,
+		Address:       addressServ,
 	}
 }
 
@@ -166,8 +177,6 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) MetricError {
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
-	//fmt.Println("--Handler get value")
-
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 
@@ -218,32 +227,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	//fmt.Println("--Handler update metric JSON")
 
-	var bodyJSON io.Reader
-
-	contentEncoding := rq.Header.Get("Content-Encoding")
-	if strings.Contains(contentEncoding, "gzip") {
-		//fmt.Println("----------- метрика с агента gzip (update)")
-		bytBody, err := ioutil.ReadAll(rq.Body)
-		if err != nil {
-			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-			return
-		}
-
-		arrBody, err := compression.Decompress(bytBody)
-		if err != nil {
-			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
-			return
-		}
-
-		bodyJSON = bytes.NewReader(arrBody)
-		//fmt.Println(bodyJSON)
-	} else {
-		bodyJSON = rq.Body
-	}
-
 	v := encoding.Metrics{}
 	//err := json.NewDecoder(rq.Body).Decode(&v)
-	err := json.NewDecoder(bodyJSON).Decode(&v)
+	err := json.NewDecoder(rq.Body).Decode(&v)
 
 	if err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
@@ -257,7 +243,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	errStatus := rs.SetValueInMapJSON(v)
 	//fmt.Println("Статус установки значений метрики", errStatus)
 
-	//rw.Header().Add("Content-Encoding", "gzip")
 	rw.Header().Add("Content-Type", "application/json")
 	switch errStatus {
 	case 400:
@@ -282,36 +267,15 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
+	if rs.Config.StoreInterval == time.Duration(0) {
+		rs.SaveMetric2File()
+	}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	var bodyJSON io.Reader
-
-	acceptEncoding := rq.Header.Get("Accept-Encoding")
-	contentEncoding := rq.Header.Get("Content-Encoding")
-	if strings.Contains(contentEncoding, "gzip") {
-		fmt.Println("----------- метрика с агента gzip (value)")
-		bytBody, err := ioutil.ReadAll(rq.Body)
-		if err != nil {
-			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-			return
-		}
-
-		arrBody, err := compression.Decompress(bytBody)
-		if err != nil {
-			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
-			return
-		}
-
-		bodyJSON = bytes.NewReader(arrBody)
-		//fmt.Println(bodyJSON)
-	} else {
-		bodyJSON = rq.Body
-	}
-
 	v := encoding.Metrics{}
-	err := json.NewDecoder(bodyJSON).Decode(&v)
+	err := json.NewDecoder(rq.Body).Decode(&v)
 	if err != nil {
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
@@ -336,24 +300,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	var bytMterica []byte
-	bt := bytes.NewBuffer(metricsJSON).Bytes()
-	bytMterica = append(bytMterica, bt...)
-	compData, err := compression.Compress(bytMterica)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	var bodyBate []byte
-	rw.Header().Add("Content-Type", "application/json")
-	if strings.Contains(acceptEncoding, "gzip") {
-		rw.Header().Add("Content-Encoding", "gzip")
-		bodyBate = compData
-	} else {
-		bodyBate = metricsJSON
-	}
-
-	if _, err := rw.Write(bodyBate); err != nil {
+	if _, err := rw.Write(metricsJSON); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
@@ -387,30 +334,54 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 						</body>
 						</html>`
 
-	acceptEncoding := rq.Header.Get("Accept-Encoding")
+	tmpl, err := template.New("home_page").Parse(content)
+	if err != nil {
+		http.Error(rw, err.Error(), 400)
+		return
+	}
+	tmpl.Execute(rw, content)
 
-	metricsHTML := []byte(content)
-	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
-	compData, err := compression.Compress(byteMterics)
+	rw.WriteHeader(http.StatusOK)
+}
+
+func (rs *RepStore) SaveMetric2File() {
+
+	arr := JSONMetricsAndValue(rs.MutexRepo)
+	arrJSON, err := json.Marshal(arr)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
-	var bodyBate []byte
-	if strings.Contains(acceptEncoding, "gzip") {
-		rw.Header().Add("Content-Encoding", "gzip")
-		bodyBate = compData
-	} else {
-		bodyBate = metricsHTML
+	if rs.Config.StoreFile == "" {
+		return
 	}
 
-	rw.Header().Add("Content-Type", "text/html")
-	if _, err := rw.Write(bodyBate); err != nil {
+	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+		fmt.Println(err.Error())
+	}
+
+}
+
+func (rs *RepStore) LoadStoreMetrics() {
+
+	res, err := ioutil.ReadFile(rs.Config.StoreFile)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	var arrMatric []encoding.Metrics
+	if err := json.Unmarshal(res, &arrMatric); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	rw.WriteHeader(http.StatusOK)
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
+	for _, val := range arrMatric {
+		rs.SetValueInMapJSON(val)
+	}
+	fmt.Println(rs.MutexRepo)
+
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
@@ -429,4 +400,16 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 	}
 
 	return msg
+}
+
+func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
+
+	var arr []encoding.Metrics
+
+	for key, val := range mm {
+		jMetric := val.GetMetrics(val.Type(), key)
+		arr = append(arr, jMetric)
+	}
+
+	return arr
 }

@@ -91,7 +91,6 @@ func PostFromServer(arrMterica *[]byte) error {
 		return errors.New("-------ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
-	//req.Header.Set("Content-Encoding", "gzip")
 	defer req.Body.Close()
 
 	client := &http.Client{}
