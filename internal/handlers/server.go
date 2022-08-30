@@ -1,15 +1,16 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
@@ -262,7 +264,27 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	//fmt.Println("--Handler update metric JSON")
 
 	var bodyJSON io.Reader
-	bodyJSON = rq.Body
+
+	contentEncoding := rq.Header.Get("Content-Encoding")
+	if strings.Contains(contentEncoding, "gzip") {
+		//fmt.Println("----------- метрика с агента gzip (update)")
+		bytBody, err := ioutil.ReadAll(rq.Body)
+		if err != nil {
+			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
+			return
+		}
+
+		arrBody, err := compression.Decompress(bytBody)
+		if err != nil {
+			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+			return
+		}
+
+		bodyJSON = bytes.NewReader(arrBody)
+		//fmt.Println(bodyJSON)
+	} else {
+		bodyJSON = rq.Body
+	}
 
 	v := encoding.Metrics{}
 	//err := json.NewDecoder(rq.Body).Decode(&v)
@@ -313,7 +335,28 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	var bodyJSON io.Reader
-	bodyJSON = rq.Body
+
+	acceptEncoding := rq.Header.Get("Accept-Encoding")
+	contentEncoding := rq.Header.Get("Content-Encoding")
+	if strings.Contains(contentEncoding, "gzip") {
+		fmt.Println("----------- метрика с агента gzip (value)")
+		bytBody, err := ioutil.ReadAll(rq.Body)
+		if err != nil {
+			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
+			return
+		}
+
+		arrBody, err := compression.Decompress(bytBody)
+		if err != nil {
+			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+			return
+		}
+
+		bodyJSON = bytes.NewReader(arrBody)
+		//fmt.Println(bodyJSON)
+	} else {
+		bodyJSON = rq.Body
+	}
 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(bodyJSON).Decode(&v)
@@ -340,7 +383,23 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
-	bodyBate := metricsJSON
+
+	var bytMterica []byte
+	bt := bytes.NewBuffer(metricsJSON).Bytes()
+	bytMterica = append(bytMterica, bt...)
+	compData, err := compression.Compress(bytMterica)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	var bodyBate []byte
+	rw.Header().Add("Content-Type", "application/json")
+	if strings.Contains(acceptEncoding, "gzip") {
+		rw.Header().Add("Content-Encoding", "gzip")
+		bodyBate = compData
+	} else {
+		bodyBate = metricsJSON
+	}
 
 	if _, err := rw.Write(bodyBate); err != nil {
 		fmt.Println(err.Error())
@@ -376,12 +435,28 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 						</body>
 						</html>`
 
-	tmpl, err := template.New("home_page").Parse(content)
+	acceptEncoding := rq.Header.Get("Accept-Encoding")
+
+	metricsHTML := []byte(content)
+	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
+	compData, err := compression.Compress(byteMterics)
 	if err != nil {
-		http.Error(rw, err.Error(), 400)
+		fmt.Println(err.Error())
+	}
+
+	var bodyBate []byte
+	if strings.Contains(acceptEncoding, "gzip") {
+		rw.Header().Add("Content-Encoding", "gzip")
+		bodyBate = compData
+	} else {
+		bodyBate = metricsHTML
+	}
+
+	rw.Header().Add("Content-Type", "text/html")
+	if _, err := rw.Write(bodyBate); err != nil {
+		fmt.Println(err.Error())
 		return
 	}
-	tmpl.Execute(rw, content)
 
 	rw.WriteHeader(http.StatusOK)
 }

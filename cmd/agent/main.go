@@ -84,8 +84,18 @@ func metrixScan(metric MetricsGauge) {
 	memThresholds(metric)
 }
 
-func post2Server(arrMterica *[]byte) error {
+func CompressAndPost(arrMterica *[]byte) error {
 
+	//var bytMterica []byte
+	//b := bytes.NewBuffer(*arrMterica).Bytes()
+	//bytMterica = append(bytMterica, b...)
+	//compData, err := compression.Compress(bytMterica)
+	//if err != nil {
+	//	fmt.Println(compData)
+	//	return errors.New("ошибка архивации данных")
+	//}
+	//
+	//req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
 	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
@@ -116,7 +126,7 @@ func MakeRequest(metric MetricsGauge) {
 			fmt.Println(err.Error())
 			continue
 		}
-		if err := post2Server(&arrMterica); err != nil {
+		if err := CompressAndPost(&arrMterica); err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
@@ -130,7 +140,7 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 		return
 	}
-	if err := post2Server(&arrMterica); err != nil {
+	if err := CompressAndPost(&arrMterica); err != nil {
 		fmt.Println(err.Error())
 		return
 	}

@@ -20,14 +20,14 @@ func SaveMetric2File(rs *handlers.RepStore) {
 		rs.SaveMetric2File()
 	}
 
-	for {
-		select {
-		case <-saveTicker.C:
-			rs.SaveMetric2File()
-		default:
-			fmt.Println("--")
-		}
-	}
+	//for {
+	//	select {
+	//	case <-saveTicker.C:
+	//		rs.SaveMetric2File()
+	//	default:
+	//		fmt.Println("--")
+	//	}
+	//}
 }
 
 func main() {
