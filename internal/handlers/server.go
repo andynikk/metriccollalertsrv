@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -242,10 +241,9 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
-
+  
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
-	metValue := chi.URLParam(rq, "metValue")
 
 	errStatus := rs.setValueInMap(metType, metName, metValue)
 
@@ -384,7 +382,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	var bytMterica []byte
+  var bytMterica []byte
 	bt := bytes.NewBuffer(metricsJSON).Bytes()
 	bytMterica = append(bytMterica, bt...)
 	compData, err := compression.Compress(bytMterica)
@@ -451,13 +449,15 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	} else {
 		bodyBate = metricsHTML
 	}
+	content = content + `</ul>
+						</body>
+						</html>`
 
 	rw.Header().Add("Content-Type", "text/html")
 	if _, err := rw.Write(bodyBate); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-
 	rw.WriteHeader(http.StatusOK)
 }
 
