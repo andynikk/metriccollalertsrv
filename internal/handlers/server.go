@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/caarlos0/env/v6"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"io/ioutil"
 	"log"
@@ -18,6 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/caarlos0/env/v6"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )

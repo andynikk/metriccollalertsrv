@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/caarlos0/env/v6"
 	"log"
 	"math/rand"
 	"net/http"
@@ -13,11 +12,13 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/caarlos0/env/v6"
+
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
-type ConfigENV struct {
+type configENV struct {
 	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
@@ -153,7 +154,7 @@ func main() {
 	pollIntervalPtr := flag.Duration("p", 2*time.Second, "интервал сбора метрик")
 	flag.Parse()
 
-	var cfgENV ConfigENV
+	var cfgENV configENV
 	err := env.Parse(&cfgENV)
 	if err != nil {
 		log.Fatal(err)
