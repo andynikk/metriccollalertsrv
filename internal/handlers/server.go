@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
@@ -46,11 +48,17 @@ type RepStore struct {
 }
 
 type ConfigENV struct {
-	Address string `env:"ADDRESS" envDefault:"localhost:8080"`
+	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
+	ReportInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
+	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore        bool          `env:"RESTORE" envDefault:"true"`
 }
 
 type Config struct {
-	Address string
+	StoreInterval time.Duration
+	StoreFile     string
+	Restore       bool
+	Address       string
 }
 
 func NewRepStore() *RepStore {
@@ -93,9 +101,15 @@ func (rs *RepStore) setConfig() {
 	}
 
 	addressServ := cfgENV.Address
+	restoreMetric := cfgENV.Restore
+	storeIntervalMetrics := cfgENV.ReportInterval
+	storeFileMetrics := cfgENV.StoreFile
 
 	rs.Config = Config{
-		Address: addressServ,
+		StoreInterval: storeIntervalMetrics,
+		StoreFile:     storeFileMetrics,
+		Restore:       restoreMetric,
+		Address:       addressServ,
 	}
 }
 
@@ -259,6 +273,10 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println(err.Error())
 		return
 	}
+
+	if rs.Config.StoreInterval == time.Duration(0) {
+		rs.SaveMetric2File()
+	}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -337,6 +355,46 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 }
 
+func (rs *RepStore) SaveMetric2File() {
+
+	arr := JSONMetricsAndValue(rs.MutexRepo)
+	arrJSON, err := json.Marshal(arr)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	if rs.Config.StoreFile == "" {
+		return
+	}
+
+	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+		fmt.Println(err.Error())
+	}
+
+}
+
+func (rs *RepStore) LoadStoreMetrics() {
+
+	res, err := ioutil.ReadFile(rs.Config.StoreFile)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	var arrMatric []encoding.Metrics
+	if err := json.Unmarshal(res, &arrMatric); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
+	for _, val := range arrMatric {
+		rs.SetValueInMapJSON(val)
+	}
+	fmt.Println(rs.MutexRepo)
+
+}
+
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
@@ -353,4 +411,16 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 	}
 
 	return msg
+}
+
+func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
+
+	var arr []encoding.Metrics
+
+	for key, val := range mm {
+		jMetric := val.GetMetrics(val.Type(), key)
+		arr = append(arr, jMetric)
+	}
+
+	return arr
 }

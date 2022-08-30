@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/caarlos0/env/v6"
 	"log"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/caarlos0/env/v6"
 
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
