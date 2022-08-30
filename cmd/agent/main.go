@@ -85,7 +85,7 @@ func metrixScan(metric MetricsGauge) {
 }
 
 func CompressAndPost(arrMterica *[]byte) error {
-	/////////////*/////////////////////*///////////////////////
+
 	//var bytMterica []byte
 	//b := bytes.NewBuffer(*arrMterica).Bytes()
 	//bytMterica = append(bytMterica, b...)
@@ -96,7 +96,6 @@ func CompressAndPost(arrMterica *[]byte) error {
 	//}
 	//
 	//req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
-	/////////////*/////////////////////*///////////////////////
 	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
