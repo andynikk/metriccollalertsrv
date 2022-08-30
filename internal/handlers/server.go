@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -94,16 +96,45 @@ func (rs *RepStore) New() {
 
 func (rs *RepStore) setConfig() {
 
+	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
+	restorePtr := flag.Bool("r", true, "восстанавливать значения при старте")
+	storeIntervalPtr := flag.Duration("i", 300000000000, "интервал автосохранения (сек.)")
+	storeFilePtr := flag.String("f", "/tmp/devops-metrics-db.json", "путь к файлу метрик")
+	flag.Parse()
+
 	var cfgENV ConfigENV
 	err := env.Parse(&cfgENV)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	addressServ := cfgENV.Address
-	restoreMetric := cfgENV.Restore
-	storeIntervalMetrics := cfgENV.ReportInterval
-	storeFileMetrics := cfgENV.StoreFile
+	addressServ := ""
+	if _, ok := os.LookupEnv("ADDRESS"); ok {
+		addressServ = cfgENV.Address
+	} else {
+		addressServ = *addressPtr
+	}
+
+	restoreMetric := false
+	if _, ok := os.LookupEnv("RESTORE"); ok {
+		restoreMetric = cfgENV.Restore
+	} else {
+		restoreMetric = *restorePtr
+	}
+
+	var storeIntervalMetrics time.Duration
+	if _, ok := os.LookupEnv("STORE_INTERVAL"); ok {
+		storeIntervalMetrics = cfgENV.ReportInterval
+	} else {
+		storeIntervalMetrics = *storeIntervalPtr
+	}
+
+	var storeFileMetrics string
+	if _, ok := os.LookupEnv("STORE_FILE"); ok {
+		storeFileMetrics = cfgENV.StoreFile
+	} else {
+		storeFileMetrics = *storeFilePtr
+	}
 
 	rs.Config = Config{
 		StoreInterval: storeIntervalMetrics,

@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"runtime"
 	"time"
 
@@ -137,15 +139,37 @@ func MakeRequest(metric MetricsGauge) {
 
 func main() {
 
+	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
+	reportIntervalPtr := flag.Duration("r", 10*time.Second, "интервал отправки на сервер")
+	pollIntervalPtr := flag.Duration("p", 2*time.Second, "интервал сбора метрик")
+	flag.Parse()
+
 	var cfgENV ConfigENV
 	err := env.Parse(&cfgENV)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	addressServ := cfgENV.Address
-	reportIntervalMetric := cfgENV.ReportInterval
-	pollIntervalMetrics := cfgENV.PollInterval
+	addressServ := ""
+	if _, ok := os.LookupEnv("ADDRESS"); ok {
+		addressServ = cfgENV.Address
+	} else {
+		addressServ = *addressPtr
+	}
+
+	var reportIntervalMetric time.Duration
+	if _, ok := os.LookupEnv("REPORT_INTERVAL"); ok {
+		reportIntervalMetric = cfgENV.ReportInterval
+	} else {
+		reportIntervalMetric = *reportIntervalPtr
+	}
+
+	var pollIntervalMetrics time.Duration
+	if _, ok := os.LookupEnv("POLL_INTERVAL"); ok {
+		pollIntervalMetrics = cfgENV.PollInterval
+	} else {
+		pollIntervalMetrics = *pollIntervalPtr
+	}
 
 	Cfg = Config{
 		Address:        addressServ,
