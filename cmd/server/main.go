@@ -1,15 +1,33 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 
-	"github.com/andynikk/metriccollalertsrv/internal/consts"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
 func main() {
 
-	log.Fatal(http.ListenAndServe(consts.PortServer, handlers.NewRepStore()))
+	rs := handlers.NewRepStore()
+
+	go func() {
+		s := &http.Server{
+			Addr:    "localhost:8080",
+			Handler: rs.Router}
+
+		if err := s.ListenAndServe(); err != nil {
+			fmt.Printf("%+v\n", err)
+			return
+		}
+	}()
+
+	stop := make(chan os.Signal, 1024)
+	signal.Notify(stop, os.Interrupt) //, os.Kill)
+	<-stop
+	log.Panicln("server stopped")
 
 }

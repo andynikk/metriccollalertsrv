@@ -2,32 +2,26 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"math/rand"
 	"net/http"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/andynikk/metriccollalertsrv/internal/consts"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
-const (
-	pollInterval   = 2
-	reportInterval = 10
-	msgFormat      = "%s/update/%s/%s/%v"
-)
-
-//type Metrics = map[string]repository.Gauge
+type MetricsGauge = map[string]repository.Gauge
 
 var PollCount int64
 
-func fillMetric(metric encoding.MetricsGauge, mem *runtime.MemStats) {
+func fillMetric(metric MetricsGauge, mem *runtime.MemStats) {
 
 	metric["Alloc"] = repository.Gauge(mem.Alloc)
 	metric["BuckHashSys"] = repository.Gauge(mem.BuckHashSys)
+	metric["Frees"] = repository.Gauge(mem.Frees)
 	metric["GCCPUFraction"] = repository.Gauge(mem.GCCPUFraction)
 	metric["GCSys"] = repository.Gauge(mem.GCSys)
 	metric["HeapAlloc"] = repository.Gauge(mem.HeapAlloc)
@@ -58,7 +52,7 @@ func fillMetric(metric encoding.MetricsGauge, mem *runtime.MemStats) {
 
 }
 
-func memThresholds(metric encoding.MetricsGauge) {
+func memThresholds(metric MetricsGauge) {
 
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
@@ -67,62 +61,69 @@ func memThresholds(metric encoding.MetricsGauge) {
 
 }
 
-func metrixScan(metric encoding.MetricsGauge) {
+func metrixScan(metric MetricsGauge) {
 
 	memThresholds(metric)
 }
 
-func MakeRequest(metric encoding.MetricsGauge) {
+func Post2Server(arrMterica *[]byte) error {
 
-	//message := makeMsg(metric)
-	//rn := strings.NewReader(message)
+	req, err := http.NewRequest("POST", "http://localhost:8080/update", bytes.NewReader(*arrMterica))
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("-------ошибка отправки данных на сервер (1)")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	defer req.Body.Close()
 
-	msg := consts.AddressServer + "/update"
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("-------ошибка отправки данных на сервер (2)")
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func MakeRequest(metric MetricsGauge) {
+
 	for key, val := range metric {
-		//msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
 		valFloat64 := val.Float64()
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64}
-
 		arrMterica, err := metrica.MarshalMetrica()
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
-
-		req, err := http.NewRequest("POST", msg, bytes.NewBuffer(arrMterica))
-		req.Header.Set("Content-Type", "application/json")
-		if err != nil {
+		if err := Post2Server(&arrMterica); err != nil {
 			fmt.Println(err.Error())
+			continue
 		}
-		defer req.Body.Close()
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		defer resp.Body.Close()
-
 	}
 
 	cPollCount := repository.Counter(PollCount)
-	msg1 := fmt.Sprintf(msgFormat, consts.AddressServer, cPollCount.Type(), "PollCount", cPollCount)
-	rn := strings.NewReader(msg1)
+	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &PollCount}
+	arrMterica, err := metrica.MarshalMetrica()
 
-	resp, err := http.Post(msg1, "text/plain", rn)
 	if err != nil {
 		fmt.Println(err.Error())
+		return
 	}
-	defer resp.Body.Close()
+	if err := Post2Server(&arrMterica); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
 }
 
 func main() {
 
-	metric := make(encoding.MetricsGauge)
+	metric := make(MetricsGauge)
 
-	updateTicker := time.NewTicker(pollInterval * time.Second)
-	reportTicker := time.NewTicker(reportInterval * time.Second)
+	updateTicker := time.NewTicker(2 * time.Second)
+	reportTicker := time.NewTicker(10 * time.Second)
 
 	for {
 		select {
