@@ -16,7 +16,7 @@ func main() {
 
 	go func() {
 		s := &http.Server{
-			Addr:    "localhost:8080",
+			Addr:    rs.Config.Address,
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {

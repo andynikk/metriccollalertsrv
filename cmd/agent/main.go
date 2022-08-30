@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/caarlos0/env/v6"
+	"log"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -13,9 +15,22 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
+type ConfigENV struct {
+	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+}
+
+type Config struct {
+	Address        string
+	ReportInterval time.Duration
+	PollInterval   time.Duration
+}
+
 type MetricsGauge = map[string]repository.Gauge
 
 var PollCount int64
+var Cfg = Config{}
 
 func fillMetric(metric MetricsGauge, mem *runtime.MemStats) {
 
@@ -66,14 +81,15 @@ func metrixScan(metric MetricsGauge) {
 	memThresholds(metric)
 }
 
-func Post2Server(arrMterica *[]byte) error {
+func post2Server(arrMterica *[]byte) error {
 
-	req, err := http.NewRequest("POST", "http://localhost:8080/update", bytes.NewReader(*arrMterica))
+	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
 		return errors.New("-------ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Content-Encoding", "gzip")
 	defer req.Body.Close()
 
 	client := &http.Client{}
@@ -97,7 +113,7 @@ func MakeRequest(metric MetricsGauge) {
 			fmt.Println(err.Error())
 			continue
 		}
-		if err := Post2Server(&arrMterica); err != nil {
+		if err := post2Server(&arrMterica); err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
@@ -111,7 +127,7 @@ func MakeRequest(metric MetricsGauge) {
 		fmt.Println(err.Error())
 		return
 	}
-	if err := Post2Server(&arrMterica); err != nil {
+	if err := post2Server(&arrMterica); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
@@ -120,10 +136,26 @@ func MakeRequest(metric MetricsGauge) {
 
 func main() {
 
+	var cfgENV ConfigENV
+	err := env.Parse(&cfgENV)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	addressServ := cfgENV.Address
+	reportIntervalMetric := cfgENV.ReportInterval
+	pollIntervalMetrics := cfgENV.PollInterval
+
+	Cfg = Config{
+		Address:        addressServ,
+		ReportInterval: reportIntervalMetric,
+		PollInterval:   pollIntervalMetrics,
+	}
+
 	metric := make(MetricsGauge)
 
-	updateTicker := time.NewTicker(2 * time.Second)
-	reportTicker := time.NewTicker(10 * time.Second)
+	updateTicker := time.NewTicker(Cfg.PollInterval)   // * time.Second)
+	reportTicker := time.NewTicker(Cfg.ReportInterval) // * time.Second)
 
 	for {
 		select {

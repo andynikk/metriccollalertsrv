@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"sync"
 
+	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -37,9 +39,18 @@ const (
 )
 
 type RepStore struct {
+	Config    Config
 	Router    chi.Router
 	MX        sync.Mutex
 	MutexRepo repository.MapMetrics
+}
+
+type ConfigENV struct {
+	Address string `env:"ADDRESS" envDefault:"localhost:8080"`
+}
+
+type Config struct {
+	Address string
 }
 
 func NewRepStore() *RepStore {
@@ -69,6 +80,23 @@ func (rs *RepStore) New() {
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
+
+	rs.setConfig()
+}
+
+func (rs *RepStore) setConfig() {
+
+	var cfgENV ConfigENV
+	err := env.Parse(&cfgENV)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	addressServ := cfgENV.Address
+
+	rs.Config = Config{
+		Address: addressServ,
+	}
 }
 
 func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) MetricError {
@@ -192,6 +220,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	bodyJSON = rq.Body
 
 	v := encoding.Metrics{}
+	//err := json.NewDecoder(rq.Body).Decode(&v)
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 
 	if err != nil {
@@ -202,8 +231,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
+	//fmt.Println("Пришла метрика", v.ID, v.MType, v.Value, v.Delta)
 	errStatus := rs.SetValueInMapJSON(v)
+	//fmt.Println("Статус установки значений метрики", errStatus)
 
+	//rw.Header().Add("Content-Encoding", "gzip")
 	rw.Header().Add("Content-Type", "application/json")
 	switch errStatus {
 	case 400:
@@ -251,6 +283,20 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
+
+	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
+	metricsJSON, err := mt.MarshalMetrica()
+	if err != nil {
+		//fmt.Println("Метрика не получена:", v.MType, v.ID)
+		fmt.Println(err.Error())
+		return
+	}
+	bodyBate := metricsJSON
+
+	if _, err := rw.Write(bodyBate); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 }
 
 func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
@@ -287,6 +333,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		return
 	}
 	tmpl.Execute(rw, content)
+
 	rw.WriteHeader(http.StatusOK)
 }
 
