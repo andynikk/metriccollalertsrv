@@ -20,6 +20,8 @@ func BackupData(rs *handlers.RepStore) {
 		select {
 		case <-saveTicker.C:
 			rs.SaveMetric2File()
+		default:
+
 		}
 	}
 }
