@@ -24,8 +24,6 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 		case <-ctx.Done():
 			cancel()
 			return
-		default:
-
 		}
 	}
 }
