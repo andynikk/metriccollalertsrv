@@ -1,31 +1,28 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
-func SaveMetric2File(rs *handlers.RepStore) {
+func BackupData(rs *handlers.RepStore, ctx context.Context) {
 
-	saveTicker := time.NewTicker(rs.Config.StoreInterval * time.Second)
-
-	for key := range saveTicker.C {
-		fmt.Println(key)
-		rs.SaveMetric2File()
-	}
+	saveTicker := time.NewTicker(rs.Config.StoreInterval)
 
 	for {
 		select {
 		case <-saveTicker.C:
 			rs.SaveMetric2File()
-		default:
-			fmt.Println("--")
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -38,7 +35,8 @@ func main() {
 		rs.LoadStoreMetrics()
 	}
 
-	go SaveMetric2File(rs)
+	ctx, _ := context.WithCancel(context.Background())
+	go BackupData(rs, ctx)
 
 	go func() {
 		s := &http.Server{
@@ -51,8 +49,8 @@ func main() {
 		}
 	}()
 
-	stop := make(chan os.Signal, 1024)
-	signal.Notify(stop, os.Interrupt) //, os.Kill)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
 	rs.SaveMetric2File()
 	log.Panicln("server stopped")

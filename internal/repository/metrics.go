@@ -2,8 +2,10 @@ package repository
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"net/http"
 	"strconv"
+
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 )
 
 type Gauge float64
@@ -14,11 +16,9 @@ type MapMetrics = map[string]Metric
 type Metric interface {
 	String() string
 	Type() string
-	GetMetrics(id string, mType string) encoding.Metrics
 	Set(v encoding.Metrics)
-	Float64() float64
-	Int64() int64
 	SetFromText(metValue string) int
+	GetMetrics(id string, mType string) encoding.Metrics
 }
 
 func (g *Gauge) String() string {
@@ -49,29 +49,18 @@ func (g *Gauge) SetFromText(metValue string) int {
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
 		fmt.Println("error convert type")
-		return 400
+		return http.StatusBadRequest
 	}
 	*g = Gauge(predVal)
 
-	return 200
+	return http.StatusOK
 
-}
-
-func (g *Gauge) Int64() int64 {
-	return int64(*g)
-}
-
-func (g *Gauge) Float64() float64 {
-	return float64(*g)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 func (c *Counter) Set(v encoding.Metrics) {
-	//ival, ok := val.(int64)
-	//if ok {
-	//	*c = *c + Counter(ival)
-	//}
+
 	*c = *c + Counter(*v.Delta)
 }
 
@@ -80,11 +69,11 @@ func (c *Counter) SetFromText(metValue string) int {
 	predVal, err := strconv.ParseInt(metValue, 10, 64)
 	if err != nil {
 		fmt.Println("error convert type")
-		return 400
+		return http.StatusBadRequest
 	}
 	*c = *c + Counter(predVal)
 
-	return 200
+	return http.StatusOK
 
 }
 
@@ -103,14 +92,6 @@ func (c *Counter) GetMetrics(mType string, id string) encoding.Metrics {
 
 func (c *Counter) Type() string {
 	return "counter"
-}
-
-func (c *Counter) Int64() int64 {
-	return int64(*c)
-}
-
-func (c *Counter) Float64() float64 {
-	return float64(*c)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

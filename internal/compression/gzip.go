@@ -9,10 +9,6 @@ import (
 func Compress(data []byte) ([]byte, error) {
 	var valByte bytes.Buffer
 	writer := gzip.NewWriter(&valByte)
-	//flate.NewWriter(&valByte, flate.BestCompression)
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed init compress writer: %v", err)
-	//}
 	if _, err := writer.Write(data); err != nil {
 		return nil, fmt.Errorf("failed write data to compress temporary buffer: %v", err)
 	}

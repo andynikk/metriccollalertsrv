@@ -26,14 +26,16 @@ func TestmakeMsg(memStats MetricsGauge) string {
 }
 
 func TestFuncAgen(t *testing.T) {
-	var resultMS = make(MetricsGauge)
+	agent := Agent{}
+	agent.MetricsGauge = make(MetricsGauge)
+
 	var argErr = "err"
 
 	t.Run("Checking the structure creation", func(t *testing.T) {
 
 		var realResult MetricsGauge
 
-		if resultMS["Alloc"] != realResult["Alloc"] && resultMS["RandomValue"] != realResult["RandomValue"] {
+		if agent.MetricsGauge["Alloc"] != realResult["Alloc"] && agent.MetricsGauge["RandomValue"] != realResult["RandomValue"] {
 
 			//t.Errorf("Structure creation error", resultMS, realResult)
 			t.Errorf("Structure creation error (%s)", argErr)
@@ -69,33 +71,33 @@ func TestFuncAgen(t *testing.T) {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
 
-	fillMetric(resultMS, &mem)
+	agent.fillMetric(&mem)
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
-		val := resultMS["Frees"]
+		val := agent.MetricsGauge["Frees"]
 		if val.Type() != "gauge" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Gauge")
 		}
 	})
 
 	t.Run("Checking the metrics value Gauge", func(t *testing.T) {
-		if resultMS["Alloc"] == 0 {
+		if agent.MetricsGauge["Alloc"] == 0 {
 			t.Errorf("The metric %s a value of %v", "Alloc", 0)
 		}
 
 	})
 
-	fillMetric(resultMS, &mem)
+	agent.fillMetric(&mem)
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
-		val := repository.Counter(PollCount)
+		val := repository.Counter(agent.PollCount)
 		if val.Type() != "counter" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Counter")
 		}
 	})
 
 	t.Run("Checking the metrics value Gauge", func(t *testing.T) {
-		if PollCount == 0 {
+		if agent.PollCount == 0 {
 			t.Errorf("The metric %s a value of %v", "PollCount", 0)
 		}
 
@@ -103,7 +105,7 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Increasing the metric PollCount", func(t *testing.T) {
 		var res = int64(2)
-		if PollCount != res {
+		if agent.PollCount != res {
 			t.Errorf("The metric %s has not increased by %v", "PollCount", res)
 		}
 
