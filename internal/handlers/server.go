@@ -14,9 +14,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/andynikk/metriccollalertsrv/internal/Config"
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -42,7 +42,7 @@ const (
 )
 
 type RepStore struct {
-	Config    Config.ServerConfig
+	Config    environment.ServerConfig
 	Router    chi.Router
 	MX        sync.Mutex
 	MutexRepo repository.MapMetrics
@@ -76,7 +76,7 @@ func (rs *RepStore) New() {
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 
-	rs.Config = Config.SetConfigServer()
+	rs.Config = environment.SetConfigServer()
 }
 
 func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) int {

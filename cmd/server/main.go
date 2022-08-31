@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,7 +12,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
-func BackupData(rs *handlers.RepStore, ctx context.Context) {
+func BackupData(rs *handlers.RepStore) {
 
 	saveTicker := time.NewTicker(rs.Config.StoreInterval)
 
@@ -21,8 +20,6 @@ func BackupData(rs *handlers.RepStore, ctx context.Context) {
 		select {
 		case <-saveTicker.C:
 			rs.SaveMetric2File()
-		case <-ctx.Done():
-			return
 		}
 	}
 }
@@ -35,8 +32,7 @@ func main() {
 		rs.LoadStoreMetrics()
 	}
 
-	ctx, _ := context.WithCancel(context.Background())
-	go BackupData(rs, ctx)
+	go BackupData(rs)
 
 	go func() {
 		s := &http.Server{

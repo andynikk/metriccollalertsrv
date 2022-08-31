@@ -26,7 +26,7 @@ func TestmakeMsg(memStats MetricsGauge) string {
 }
 
 func TestFuncAgen(t *testing.T) {
-	agent := Agent{}
+	agent := agent{}
 	agent.MetricsGauge = make(MetricsGauge)
 
 	var argErr = "err"
@@ -88,6 +88,7 @@ func TestFuncAgen(t *testing.T) {
 	})
 
 	agent.fillMetric(&mem)
+
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
 		val := repository.Counter(agent.PollCount)
@@ -96,7 +97,7 @@ func TestFuncAgen(t *testing.T) {
 		}
 	})
 
-	t.Run("Checking the metrics value Gauge", func(t *testing.T) {
+	t.Run("Checking the metrics value PollCount", func(t *testing.T) {
 		if agent.PollCount == 0 {
 			t.Errorf("The metric %s a value of %v", "PollCount", 0)
 		}

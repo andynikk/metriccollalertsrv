@@ -9,20 +9,20 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/andynikk/metriccollalertsrv/internal/Config"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricsGauge map[string]repository.Gauge
 
-type Agent struct {
+type agent struct {
 	MetricsGauge MetricsGauge
 	PollCount    int64
-	Cfg          Config.AgentConfig
+	Cfg          environment.AgentConfig
 }
 
-func (a Agent) fillMetric(mem *runtime.MemStats) {
+func (a *agent) fillMetric(mem *runtime.MemStats) {
 
 	a.MetricsGauge["Alloc"] = repository.Gauge(mem.Alloc)
 	a.MetricsGauge["BuckHashSys"] = repository.Gauge(mem.BuckHashSys)
@@ -57,13 +57,13 @@ func (a Agent) fillMetric(mem *runtime.MemStats) {
 
 }
 
-func (a Agent) metrixScan() {
+func (a *agent) metrixScan() {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
 	a.fillMetric(&mem)
 }
 
-func (a Agent) Post2Server(arrMterica *[]byte) error {
+func (a *agent) Post2Server(arrMterica *[]byte) error {
 
 	addressPost := fmt.Sprintf("http://%s/update", a.Cfg.Address)
 	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*arrMterica))
@@ -85,7 +85,7 @@ func (a Agent) Post2Server(arrMterica *[]byte) error {
 	return nil
 }
 
-func (a Agent) MakeRequest() {
+func (a *agent) MakeRequest() {
 
 	for key, val := range a.MetricsGauge {
 		valFloat64 := float64(val)
@@ -118,9 +118,11 @@ func (a Agent) MakeRequest() {
 
 func main() {
 
-	agent := Agent{}
-	agent.Cfg = Config.SetConfigAgent()
-	agent.MetricsGauge = make(MetricsGauge)
+	agent := agent{
+		Cfg:          environment.SetConfigAgent(),
+		MetricsGauge: make(MetricsGauge),
+		PollCount:    0,
+	}
 
 	updateTicker := time.NewTicker(agent.Cfg.PollInterval)
 	reportTicker := time.NewTicker(agent.Cfg.ReportInterval)
