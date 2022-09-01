@@ -1,31 +1,45 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"flag"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"runtime"
-	"strings"
 	"time"
 
-	"github.com/andynikk/metriccollalertsrv/internal/consts"
+	"github.com/caarlos0/env/v6"
+
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
-const (
-	pollInterval   = 2
-	reportInterval = 10
-	msgFormat      = "%s/update/%s/%s/%v"
-)
+type configENV struct {
+	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
+	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
+	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
+}
 
-type Metrics = map[string]repository.Gauge
+type Config struct {
+	Address        string
+	ReportInterval time.Duration
+	PollInterval   time.Duration
+}
+
+type MetricsGauge = map[string]repository.Gauge
 
 var PollCount int64
+var Cfg = Config{}
 
-func fillMetric(metric Metrics, mem *runtime.MemStats) {
+func fillMetric(metric MetricsGauge, mem *runtime.MemStats) {
 
 	metric["Alloc"] = repository.Gauge(mem.Alloc)
 	metric["BuckHashSys"] = repository.Gauge(mem.BuckHashSys)
+	metric["Frees"] = repository.Gauge(mem.Frees)
 	metric["GCCPUFraction"] = repository.Gauge(mem.GCCPUFraction)
 	metric["GCSys"] = repository.Gauge(mem.GCSys)
 	metric["HeapAlloc"] = repository.Gauge(mem.HeapAlloc)
@@ -56,7 +70,7 @@ func fillMetric(metric Metrics, mem *runtime.MemStats) {
 
 }
 
-func memThresholds(metric Metrics) {
+func memThresholds(metric MetricsGauge) {
 
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
@@ -65,45 +79,118 @@ func memThresholds(metric Metrics) {
 
 }
 
-func metrixScan(metric Metrics) {
+func metrixScan(metric MetricsGauge) {
 
 	memThresholds(metric)
 }
 
-func MakeRequest(metric Metrics) {
+func CompressAndPost(arrMterica *[]byte) error {
 
-	//message := makeMsg(metric)
-	//rn := strings.NewReader(message)
+	//var bytMterica []byte
+	//b := bytes.NewBuffer(*arrMterica).Bytes()
+	//bytMterica = append(bytMterica, b...)
+	//compData, err := compression.Compress(bytMterica)
+	//if err != nil {
+	//	fmt.Println(compData)
+	//	return errors.New("ошибка архивации данных")
+	//}
+	//
+	//req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(compData))
+	req, err := http.NewRequest("POST", "http://"+Cfg.Address+"/update", bytes.NewReader(*arrMterica))
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("-------ошибка отправки данных на сервер (1)")
+	}
+	req.Header.Set("Content-Type", "application/json")
+	//req.Header.Set("Content-Encoding", "gzip")
+	defer req.Body.Close()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return errors.New("-------ошибка отправки данных на сервер (2)")
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func MakeRequest(metric MetricsGauge) {
 
 	for key, val := range metric {
-		msg := fmt.Sprintf(msgFormat, consts.AddressServer, val.Type(), key, val)
-		rn := strings.NewReader(msg)
-
-		resp, err := http.Post(msg, "text/plain", rn)
+		valFloat64 := val.Float64()
+		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64}
+		arrMterica, err := metrica.MarshalMetrica()
 		if err != nil {
 			fmt.Println(err.Error())
+			continue
 		}
-		defer resp.Body.Close()
+		if err := CompressAndPost(&arrMterica); err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
 	}
 
 	cPollCount := repository.Counter(PollCount)
-	msg := fmt.Sprintf(msgFormat, consts.AddressServer, cPollCount.Type(), "PollCount", cPollCount)
-	rn := strings.NewReader(msg)
+	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &PollCount}
+	arrMterica, err := metrica.MarshalMetrica()
 
-	resp, err := http.Post(msg, "text/plain", rn)
 	if err != nil {
 		fmt.Println(err.Error())
+		return
 	}
-	defer resp.Body.Close()
+	if err := CompressAndPost(&arrMterica); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
 }
 
 func main() {
 
-	metric := make(Metrics)
+	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
+	reportIntervalPtr := flag.Duration("r", 10*time.Second, "интервал отправки на сервер")
+	pollIntervalPtr := flag.Duration("p", 2*time.Second, "интервал сбора метрик")
+	flag.Parse()
 
-	updateTicker := time.NewTicker(pollInterval * time.Second)
-	reportTicker := time.NewTicker(reportInterval * time.Second)
+	var cfgENV configENV
+	err := env.Parse(&cfgENV)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	addressServ := ""
+	if _, ok := os.LookupEnv("ADDRESS"); ok {
+		addressServ = cfgENV.Address
+	} else {
+		addressServ = *addressPtr
+	}
+
+	var reportIntervalMetric time.Duration
+	if _, ok := os.LookupEnv("REPORT_INTERVAL"); ok {
+		reportIntervalMetric = cfgENV.ReportInterval
+	} else {
+		reportIntervalMetric = *reportIntervalPtr
+	}
+
+	var pollIntervalMetrics time.Duration
+	if _, ok := os.LookupEnv("POLL_INTERVAL"); ok {
+		pollIntervalMetrics = cfgENV.PollInterval
+	} else {
+		pollIntervalMetrics = *pollIntervalPtr
+	}
+
+	Cfg = Config{
+		Address:        addressServ,
+		ReportInterval: reportIntervalMetric,
+		PollInterval:   pollIntervalMetrics,
+	}
+
+	metric := make(MetricsGauge)
+
+	updateTicker := time.NewTicker(Cfg.PollInterval)   // * time.Second)
+	reportTicker := time.NewTicker(Cfg.ReportInterval) // * time.Second)
 
 	for {
 		select {
