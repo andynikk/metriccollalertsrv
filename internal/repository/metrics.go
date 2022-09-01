@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
@@ -17,7 +16,7 @@ type Metric interface {
 	String() string
 	Type() string
 	Set(v encoding.Metrics)
-	SetFromText(metValue string) int
+	SetFromText(metValue string) bool
 	GetMetrics(id string, mType string) encoding.Metrics
 }
 
@@ -44,16 +43,16 @@ func (g *Gauge) Set(v encoding.Metrics) {
 
 }
 
-func (g *Gauge) SetFromText(metValue string) int {
+func (g *Gauge) SetFromText(metValue string) bool {
 
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
 		fmt.Println("error convert type")
-		return http.StatusBadRequest
+		return false
 	}
 	*g = Gauge(predVal)
 
-	return http.StatusOK
+	return true
 
 }
 
@@ -64,16 +63,16 @@ func (c *Counter) Set(v encoding.Metrics) {
 	*c = *c + Counter(*v.Delta)
 }
 
-func (c *Counter) SetFromText(metValue string) int {
+func (c *Counter) SetFromText(metValue string) bool {
 
 	predVal, err := strconv.ParseInt(metValue, 10, 64)
 	if err != nil {
 		fmt.Println("error convert type")
-		return http.StatusBadRequest
+		return false
 	}
 	*c = *c + Counter(predVal)
 
-	return http.StatusOK
+	return true
 
 }
 

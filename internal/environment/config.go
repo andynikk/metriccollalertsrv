@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
+
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 )
 
 type AgentConfigENV struct {
@@ -22,10 +24,10 @@ type AgentConfig struct {
 }
 
 type ServerConfigENV struct {
-	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
-	ReportInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
-	StoreFile      string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
-	Restore        bool          `env:"RESTORE" envDefault:"true"`
+	Address       string        `env:"ADDRESS" envDefault:"localhost:8080"`
+	StoreInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
+	StoreFile     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
+	Restore       bool          `env:"RESTORE" envDefault:"true"`
 }
 
 type ServerConfig struct {
@@ -36,9 +38,9 @@ type ServerConfig struct {
 }
 
 func SetConfigAgent() AgentConfig {
-	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
-	reportIntervalPtr := flag.Duration("r", 10*time.Second, "интервал отправки на сервер")
-	pollIntervalPtr := flag.Duration("p", 2*time.Second, "интервал сбора метрик")
+	addressPtr := flag.String("a", constants.AddressServer, "имя сервера")
+	reportIntervalPtr := flag.Duration("r", constants.ReportInterval*time.Second, "интервал отправки на сервер")
+	pollIntervalPtr := flag.Duration("p", constants.PollInterval*time.Second, "интервал сбора метрик")
 	flag.Parse()
 
 	var cfgENV AgentConfigENV
@@ -78,10 +80,10 @@ func SetConfigAgent() AgentConfig {
 
 func SetConfigServer() ServerConfig {
 
-	addressPtr := flag.String("a", "localhost:8080", "имя сервера")
-	restorePtr := flag.Bool("r", true, "восстанавливать значения при старте")
-	storeIntervalPtr := flag.Duration("i", 300000000000, "интервал автосохранения (сек.)")
-	storeFilePtr := flag.String("f", "/tmp/devops-metrics-db.json", "путь к файлу метрик")
+	addressPtr := flag.String("a", constants.AddressServer, "имя сервера")
+	restorePtr := flag.Bool("r", constants.Restore, "восстанавливать значения при старте")
+	storeIntervalPtr := flag.Duration("i", constants.StoreInterval, "интервал автосохранения (сек.)")
+	storeFilePtr := flag.String("f", constants.StoreFile, "путь к файлу метрик")
 	flag.Parse()
 
 	var cfgENV ServerConfigENV
@@ -106,7 +108,7 @@ func SetConfigServer() ServerConfig {
 
 	var storeIntervalMetrics time.Duration
 	if _, ok := os.LookupEnv("STORE_INTERVAL"); ok {
-		storeIntervalMetrics = cfgENV.ReportInterval
+		storeIntervalMetrics = cfgENV.StoreInterval
 	} else {
 		storeIntervalMetrics = *storeIntervalPtr
 	}

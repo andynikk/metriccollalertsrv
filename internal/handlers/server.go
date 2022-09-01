@@ -84,14 +84,14 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 	switch metType {
 	case GaugeMetric.String():
 		if val, findKey := rs.MutexRepo[metName]; findKey {
-			if err := val.SetFromText(metValue); err != http.StatusOK {
-				return err
+			if ok := val.SetFromText(metValue); !ok {
+				return http.StatusBadRequest
 			}
 		} else {
 
 			valG := repository.Gauge(0)
-			if err := valG.SetFromText(metValue); err != http.StatusOK {
-				return err
+			if ok := valG.SetFromText(metValue); !ok {
+				return http.StatusBadRequest
 			}
 
 			rs.MutexRepo[metName] = &valG
@@ -99,14 +99,14 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 
 	case CounterMetric.String():
 		if val, findKey := rs.MutexRepo[metName]; findKey {
-			if err := val.SetFromText(metValue); err != http.StatusOK {
-				return err
+			if ok := val.SetFromText(metValue); !ok {
+				return http.StatusBadRequest
 			}
 		} else {
 
 			valC := repository.Counter(0)
-			if err := valC.SetFromText(metValue); err != http.StatusOK {
-				return err
+			if ok := valC.SetFromText(metValue); !ok {
+				return http.StatusBadRequest
 			}
 
 			rs.MutexRepo[metName] = &valC
