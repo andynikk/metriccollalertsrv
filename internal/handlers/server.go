@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"crypto/hmac"
 	"encoding/json"
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
@@ -122,7 +121,7 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 
 func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
-	var heshVal []byte
+	var heshVal string
 
 	switch v.MType {
 	case GaugeMetric.String():
@@ -149,8 +148,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		return http.StatusNotImplemented
 	}
 
-	hmacEqual := hmac.Equal(heshVal, v.Hash)
-	if !hmacEqual {
+	if heshVal != v.Hash {
 		return http.StatusBadRequest
 	}
 

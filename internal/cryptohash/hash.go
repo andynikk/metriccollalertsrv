@@ -3,20 +3,18 @@ package cryptohash
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"fmt"
 )
 
-func HeshSHA256(val string, key string) []byte {
-	var dst []byte
-	if key == "" {
-		return dst
+func HeshSHA256(data string, strKey string) string {
+	if strKey == "" {
+		return ""
 	}
 
-	src := []byte(val)
-	b := []byte(key)
+	key := []byte(strKey)
 
-	h := hmac.New(sha256.New, b)
-	h.Write(src)
-	dst = h.Sum(nil)
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(data))
+	return fmt.Sprintf("%x", h.Sum(nil))
 
-	return dst
 }
