@@ -15,7 +15,7 @@ type AgentConfigENV struct {
 	Address        string        `env:"ADDRESS" envDefault:"localhost:8080"`
 	ReportInterval time.Duration `env:"REPORT_INTERVAL" envDefault:"10s"`
 	PollInterval   time.Duration `env:"POLL_INTERVAL" envDefault:"2s"`
-	Key            string        `env:"KEY" envDefault:"localkey"`
+	Key            string        `env:"KEY"`
 }
 
 type AgentConfig struct {
@@ -30,7 +30,7 @@ type ServerConfigENV struct {
 	StoreInterval time.Duration `env:"STORE_INTERVAL" envDefault:"300s"`
 	StoreFile     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore       bool          `env:"RESTORE" envDefault:"true"`
-	Key           string        `env:"KEY" envDefault:"localkey"`
+	Key           string        `env:"KEY"`
 }
 
 type ServerConfig struct {
@@ -45,7 +45,7 @@ func SetConfigAgent() AgentConfig {
 	addressPtr := flag.String("a", constants.AddressServer, "имя сервера")
 	reportIntervalPtr := flag.Duration("r", constants.ReportInterval*time.Second, "интервал отправки на сервер")
 	pollIntervalPtr := flag.Duration("p", constants.PollInterval*time.Second, "интервал сбора метрик")
-	//keyFlag := flag.String("k", "", "ключ хеширования")
+	keyFlag := flag.String("k", "", "ключ хеширования")
 	flag.Parse()
 
 	var cfgENV AgentConfigENV
@@ -76,11 +76,11 @@ func SetConfigAgent() AgentConfig {
 	}
 
 	keyHash := ""
-	//if _, ok := os.LookupEnv("KEY"); ok {
-	keyHash = cfgENV.Key
-	//} else {
-	//	keyHash = *keyFlag
-	//}
+	if _, ok := os.LookupEnv("KEY"); ok {
+		keyHash = cfgENV.Key
+	} else {
+		keyHash = *keyFlag
+	}
 
 	return AgentConfig{
 		Address:        addressServ,
@@ -97,7 +97,7 @@ func SetConfigServer() ServerConfig {
 	restorePtr := flag.Bool("r", constants.Restore, "восстанавливать значения при старте")
 	storeIntervalPtr := flag.Duration("i", constants.StoreInterval, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", constants.StoreFile, "путь к файлу метрик")
-	//keyFlag := flag.String("k", "", "ключ хеша")
+	keyFlag := flag.String("k", "", "ключ хеша")
 
 	flag.Parse()
 
@@ -136,11 +136,11 @@ func SetConfigServer() ServerConfig {
 	}
 
 	keyHash := ""
-	//if _, ok := os.LookupEnv("KEY"); ok {
-	keyHash = cfgENV.Key
-	//} else {
-	//	keyHash = *keyFlag
-	//}
+	if _, ok := os.LookupEnv("KEY"); ok {
+		keyHash = cfgENV.Key
+	} else {
+		keyHash = *keyFlag
+	}
 
 	return ServerConfig{
 		StoreInterval: storeIntervalMetrics,
