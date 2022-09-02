@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"math/rand"
 	"net/http"
 	"runtime"
@@ -89,7 +90,13 @@ func (a *agent) MakeRequest() {
 
 	for key, val := range a.MetricsGauge {
 		valFloat64 := float64(val)
-		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64}
+
+		//для gauge — hash(fmt.Sprintf("%s:gauge:%f", id, value), key).
+
+		msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
+		heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
+
+		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
 		arrMterica, err := metrica.MarshalMetrica()
 		if err != nil {
 			fmt.Println(err.Error())
@@ -102,7 +109,11 @@ func (a *agent) MakeRequest() {
 	}
 
 	cPollCount := repository.Counter(a.PollCount)
-	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount}
+
+	msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.PollCount)
+	heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
+
+	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
 	arrMterica, err := metrica.MarshalMetrica()
 
 	if err != nil {

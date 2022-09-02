@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"encoding/json"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -120,19 +122,36 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 
 func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
+	var heshVal []byte
+
 	switch v.MType {
 	case GaugeMetric.String():
+		var valValue float64
+		valValue = *v.Value
+
+		msg := fmt.Sprintf("%s:gauge:%f", v.ID, valValue)
+		heshVal = cryptohash.HeshSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valG := repository.Gauge(0)
 			rs.MutexRepo[v.ID] = &valG
 		}
 	case CounterMetric.String():
+		var valDelta int64
+		valDelta = *v.Delta
+
+		msg := fmt.Sprintf("%s:counter:%d", v.ID, valDelta)
+		heshVal = cryptohash.HeshSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valC := repository.Counter(0)
 			rs.MutexRepo[v.ID] = &valC
 		}
 	default:
 		return http.StatusNotImplemented
+	}
+
+	hmacEqual := hmac.Equal(heshVal, v.Hash)
+	if !hmacEqual {
+		return http.StatusBadRequest
 	}
 
 	rs.MutexRepo[v.ID].Set(v)
