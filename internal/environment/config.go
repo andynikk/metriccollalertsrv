@@ -31,6 +31,7 @@ type ServerConfigENV struct {
 	StoreFile     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore       bool          `env:"RESTORE" envDefault:"true"`
 	Key           string        `env:"KEY"`
+	DatabaseDsn   string        `env:"DATABASE_DSN " envDefault:"postgresql://postgres:101650@localhost:5433/golang"`
 }
 
 type ServerConfig struct {
@@ -39,6 +40,7 @@ type ServerConfig struct {
 	Restore       bool
 	Address       string
 	Key           string
+	DatabaseDsn   string
 }
 
 func SetConfigAgent() AgentConfig {
@@ -98,6 +100,7 @@ func SetConfigServer() ServerConfig {
 	storeIntervalPtr := flag.Duration("i", constants.StoreInterval, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", constants.StoreFile, "путь к файлу метрик")
 	keyFlag := flag.String("k", "", "ключ хеша")
+	keyDatabaseDsn := flag.String("d", "", "строка соединения с базой")
 
 	flag.Parse()
 
@@ -142,11 +145,20 @@ func SetConfigServer() ServerConfig {
 		keyHash = *keyFlag
 	}
 
+	databaseDsn := ""
+	if _, ok := os.LookupEnv("DATABASE_DSN"); ok {
+		databaseDsn = cfgENV.DatabaseDsn
+	} else {
+		println(keyDatabaseDsn)
+		databaseDsn = "postgresql://postgres:101650@localhost:5433/golang" //*keyDatabaseDsn
+	}
+
 	return ServerConfig{
 		StoreInterval: storeIntervalMetrics,
 		StoreFile:     storeFileMetrics,
 		Restore:       restoreMetric,
 		Address:       addressServ,
 		Key:           keyHash,
+		DatabaseDsn:   databaseDsn,
 	}
 }
