@@ -301,7 +301,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
+	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		//fmt.Println("Метрика не получена:", v.MType, v.ID)
@@ -392,7 +392,7 @@ func (rs *RepStore) SaveMetric2File() {
 		return
 	}
 
-	arr := JSONMetricsAndValue(rs.MutexRepo)
+	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
 	arrJSON, err := json.Marshal(arr)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -445,12 +445,12 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 	return msg
 }
 
-func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
+func JSONMetricsAndValue(mm repository.MapMetrics, hashKey string) []encoding.Metrics {
 
 	var arr []encoding.Metrics
 
 	for key, val := range mm {
-		jMetric := val.GetMetrics(val.Type(), key)
+		jMetric := val.GetMetrics(val.Type(), key, hashKey)
 		arr = append(arr, jMetric)
 	}
 
