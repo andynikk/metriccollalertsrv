@@ -122,7 +122,7 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 
 func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
-	var heshVal []byte
+	var heshVal string
 
 	switch v.MType {
 	case GaugeMetric.String():
@@ -149,7 +149,10 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		return http.StatusNotImplemented
 	}
 
-	hmacEqual := hmac.Equal(heshVal, v.Hash)
+	heshAgent := []byte(v.Hash)
+	heshServer := []byte(heshVal)
+
+	hmacEqual := hmac.Equal(heshServer, heshAgent)
 	if !hmacEqual {
 		return http.StatusBadRequest
 	}
@@ -236,7 +239,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	rw.Header().Add("Content-Type", "application/json")
 	rw.WriteHeader(rs.SetValueInMapJSON(v))
 
-	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
+	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
+
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		fmt.Println(err.Error())
