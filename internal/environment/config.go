@@ -149,7 +149,6 @@ func SetConfigServer() ServerConfig {
 	if _, ok := os.LookupEnv("DATABASE_DSN"); ok {
 		databaseDsn = cfgENV.DatabaseDsn
 	} else {
-		println(keyDatabaseDsn)
 		databaseDsn = *keyDatabaseDsn //"postgresql://postgres:101650@localhost:5433/golang" //
 	}
 
