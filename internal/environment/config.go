@@ -31,7 +31,7 @@ type ServerConfigENV struct {
 	StoreFile     string        `env:"STORE_FILE" envDefault:"/tmp/devops-metrics-db.json"`
 	Restore       bool          `env:"RESTORE" envDefault:"true"`
 	Key           string        `env:"KEY"`
-	DatabaseDsn   string        `env:"DATABASE_DSN " envDefault:"postgresql://postgres:101650@localhost:5433/golang"`
+	DatabaseDsn   string        `env:"DATABASE_DSN"` // envDefault:"postgresql://postgres:101650@localhost:5433/golang"`
 }
 
 type ServerConfig struct {
@@ -150,7 +150,7 @@ func SetConfigServer() ServerConfig {
 		databaseDsn = cfgENV.DatabaseDsn
 	} else {
 		println(keyDatabaseDsn)
-		databaseDsn = "postgresql://postgres:101650@localhost:5433/golang" //*keyDatabaseDsn
+		databaseDsn = *keyDatabaseDsn //"postgresql://postgres:101650@localhost:5433/golang" //
 	}
 
 	return ServerConfig{
