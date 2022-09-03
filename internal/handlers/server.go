@@ -411,17 +411,17 @@ func (rs *RepStore) SaveMetric2File() {
 		fmt.Println(err.Error())
 	}
 
-	if rs.Config.DatabaseDsn == "" {
-		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-			fmt.Println(err.Error())
-		}
-	} else {
-		//repositoriy := postgresql.Repositoriy{}
-		//if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-		//	fmt.Println(err.Error())
-		//}
-		//postgresql.InsertMetric(context.Background(), rs.Config, arr)
+	//if rs.Config.DatabaseDsn == "" {
+	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+		fmt.Println(err.Error())
 	}
+	//} else {
+	//	//repositoriy := postgresql.Repositoriy{}
+	//	//if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+	//	//	fmt.Println(err.Error())
+	//	//}
+	//	//postgresql.InsertMetric(context.Background(), rs.Config, arr)
+	//}
 
 }
 
