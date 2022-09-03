@@ -79,7 +79,7 @@ func (rs *RepStore) New() {
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
-	rs.Router.Post("/ping", rs.HandlerPingDB)
+	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	rs.Config = environment.SetConfigServer()
 }
@@ -411,17 +411,18 @@ func (rs *RepStore) SaveMetric2File() {
 		fmt.Println(err.Error())
 	}
 
-	//if rs.Config.DatabaseDsn == "" {
-	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-		fmt.Println(err.Error())
+	if rs.Config.DatabaseDsn == "" {
+		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+			fmt.Println(err.Error())
+		}
+	} else {
+		//	//repositoriy := postgresql.Repositoriy{}
+		//	//if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+		//	//	fmt.Println(err.Error())
+		//	//}
+		//	//postgresql.InsertMetric(context.Background(), rs.Config, arr)
+		fmt.Println("Нет описания заполнения таблиц БД")
 	}
-	//} else {
-	//	//repositoriy := postgresql.Repositoriy{}
-	//	//if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-	//	//	fmt.Println(err.Error())
-	//	//}
-	//	//postgresql.InsertMetric(context.Background(), rs.Config, arr)
-	//}
 
 }
 
