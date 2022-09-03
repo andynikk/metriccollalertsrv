@@ -33,7 +33,6 @@ func (g *Gauge) Type() string {
 func (g *Gauge) GetMetrics(mType string, id string, hashKey string) encoding.Metrics {
 
 	value := float64(*g)
-
 	msg := fmt.Sprintf("%s:%s:%f", id, mType, value)
 	heshVal := cryptohash.HeshSHA256(msg, hashKey)
 
