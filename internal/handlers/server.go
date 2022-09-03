@@ -420,7 +420,7 @@ func (rs *RepStore) SaveMetric2File() {
 		//if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
 		//	fmt.Println(err.Error())
 		//}
-		postgresql.InsertMetric(context.Background(), rs.Config, arr)
+		//postgresql.InsertMetric(context.Background(), rs.Config, arr)
 	}
 
 }
