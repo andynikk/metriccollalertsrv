@@ -428,13 +428,13 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 				fmt.Println(err.Error())
 				continue
 			}
-			defer pool.Close()
+			//defer pool.Close()
 
-			err = postgresql.SetMetric2DB(pool, val)
-			if err != nil {
+			if err := postgresql.SetMetric2DB(pool, val); err != nil {
 				fmt.Println(err.Error())
 				continue
 			}
+
 		}
 		//	if err != nil {
 		//		fmt.Printf(err.Error(), val.ID, val.MType)
