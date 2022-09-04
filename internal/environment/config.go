@@ -100,7 +100,7 @@ func SetConfigServer() ServerConfig {
 	storeIntervalPtr := flag.Duration("i", constants.StoreInterval, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", constants.StoreFile, "путь к файлу метрик")
 	keyFlag := flag.String("k", "", "ключ хеша")
-	keyDatabaseDsn := flag.String("d", "", "строка соединения с базой")
+	//keyDatabaseDsn := flag.String("d", "", "строка соединения с базой")
 
 	flag.Parse()
 
@@ -145,12 +145,13 @@ func SetConfigServer() ServerConfig {
 		keyHash = *keyFlag
 	}
 
-	databaseDsn := ""
-	if _, ok := os.LookupEnv("DATABASE_DSN"); ok {
-		databaseDsn = cfgENV.DatabaseDsn
-	} else {
-		databaseDsn = *keyDatabaseDsn //"postgresql://postgres:101650@localhost:5433/golang" //
-	}
+	//databaseDsn := ""
+	//if _, ok := os.LookupEnv("DATABASE_DSN"); ok {
+	//	databaseDsn = cfgENV.DatabaseDsn
+	//} else {
+	//	databaseDsn = *keyDatabaseDsn //"postgresql://postgres:101650@localhost:5433/golang" //
+	//}
+	databaseDsn := "postgresql://postgres:101650@localhost:5433/golang"
 
 	return ServerConfig{
 		StoreInterval: storeIntervalMetrics,

@@ -412,18 +412,28 @@ func (rs *RepStore) SaveMetric2File() {
 	}
 
 	//fmt.Println("-------------", rs.Config.DatabaseDsn)
-	//if rs.Config.DatabaseDsn == "" {
-	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-		fmt.Println(err.Error())
+	if rs.Config.DatabaseDsn == "" {
+		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+			fmt.Println(err.Error())
+		}
+	} else {
+		ctx := context.Background()
+		pool, err := postgresql.NewClient(ctx, rs.Config)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		pp := postgresql.PostgrePool{
+			Pool: pool,
+			Cfg:  rs.Config,
+			Ctx:  ctx,
+			Data: arr,
+		}
+
+		if ok := pp.InsertMetric(); !ok {
+			fmt.Println("Ошибка сохранения данны в БД")
+		}
 	}
-	//} else {
-	//	//	//repositoriy := postgresql.Repositoriy{}
-	//	//	//if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-	//	//	//	fmt.Println(err.Error())
-	//	//	//}
-	//	//	//postgresql.InsertMetric(context.Background(), rs.Config, arr)
-	//	fmt.Println("Нет описания заполнения таблиц БД")
-	//}
 
 }
 
