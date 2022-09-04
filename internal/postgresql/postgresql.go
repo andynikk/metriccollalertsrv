@@ -99,9 +99,15 @@ func (p *PostgrePool) GetMetricFromDB() ([]encoding.Metrics, error) {
 		return nil, errors.New("ошибка чтения БД")
 	}
 	for poolRow.Next() {
-		nst := encoding.Metrics{}
+		var nst encoding.Metrics
 
 		err = poolRow.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
+
+		intNul := int64(0)
+		if nst.Delta == &intNul {
+			nst.Delta = nil
+		}
+
 		if err != nil {
 			fmt.Println("Ошибка получения записи БД")
 			continue
