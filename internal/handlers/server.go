@@ -79,7 +79,7 @@ func (rs *RepStore) New() {
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
-	rs.Router.Get("/value", rs.HandlerValueMetricaJSON)
+	//rs.Router.Get("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	rs.Config = environment.SetConfigServer()
@@ -413,30 +413,30 @@ func (rs *RepStore) SaveMetric2File() {
 	}
 
 	fmt.Println("-------------", rs.Config.DatabaseDsn)
-	if rs.Config.DatabaseDsn == "" {
-		fmt.Println("-------------", 1)
-		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-			fmt.Println(err.Error())
-		}
-	} else {
-		fmt.Println("-------------", 2)
-		ctx := context.Background()
-		pool, err := postgresql.NewClient(ctx, rs.Config)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-
-		pp := postgresql.PostgrePool{
-			Pool: pool,
-			Cfg:  rs.Config,
-			Ctx:  ctx,
-			Data: arr,
-		}
-
-		if ok := pp.InsertMetric(); !ok {
-			fmt.Println("Ошибка сохранения данны в БД")
-		}
+	//if rs.Config.DatabaseDsn == "" {
+	fmt.Println("-------------", 1)
+	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+		fmt.Println(err.Error())
 	}
+	//} else {
+	//	fmt.Println("-------------", 2)
+	//	ctx := context.Background()
+	//	pool, err := postgresql.NewClient(ctx, rs.Config)
+	//	if err != nil {
+	//		fmt.Println(err.Error())
+	//	}
+	//
+	//	pp := postgresql.PostgrePool{
+	//		Pool: pool,
+	//		Cfg:  rs.Config,
+	//		Ctx:  ctx,
+	//		Data: arr,
+	//	}
+	//
+	//	if ok := pp.InsertMetric(); !ok {
+	//		fmt.Println("Ошибка сохранения данны в БД")
+	//	}
+	//}
 
 }
 
