@@ -38,7 +38,7 @@ func (p *PostgrePool) InsertMetric() bool {
 
 	for _, val := range p.Data {
 
-		poolRow := p.Pool.QueryRow(p.Ctx, query, val.ID, val.MType, val.Value, val.Delta, "val.Hash")
+		poolRow := p.Pool.QueryRow(p.Ctx, query, val.ID, val.MType, val.Value, val.Delta, val.Hash)
 		err := poolRow.Scan(&val.ID)
 		//pgError, ok := err.(*pgconn.PgError)
 		if err != nil {
