@@ -74,13 +74,12 @@ func SetMetric2DB(pool *pgxpool.Pool, data encoding.Metrics) error {
 
 	if rows.Next() {
 		if _, err := pool.Query(
-			ctx, queryUpdate, data.ID, data.MType, dataValue, dataDelta); err != nil {
+			ctx, queryUpdate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 			return errors.New("ошибка обновления данных в БД")
 		}
 	} else {
-		println(3)
 		if _, err := pool.Query(
-			ctx, queryInsert, data.ID, data.MType, dataValue, dataDelta); err != nil {
+			ctx, queryInsert, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 			return errors.New("ошибка добавления данных в БД")
 		}
 	}

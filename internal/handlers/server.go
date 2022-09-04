@@ -6,22 +6,19 @@ import (
 	"crypto/hmac"
 	"encoding/json"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricType int
@@ -256,9 +253,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if rs.Config.StoreInterval == time.Duration(0) {
-		rs.SaveMetric()
-	}
+	//if rs.Config.StoreInterval == time.Duration(0) {
+	rs.SaveMetric(v)
+	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -400,33 +397,44 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) SaveMetric() {
+func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 
 	if rs.Config.StoreFile == "" && rs.Config.DatabaseDsn == "" {
 		return
 	}
 
-	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
-	if rs.Config.StoreFile != "" {
-		arrJSON, err := json.Marshal(arr)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-			fmt.Println(err.Error())
-		}
+	var arr []encoding.Metrics
+	if metric.ID == "" && metric.MType == "" {
+		arr = JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
+	} else {
+		arr = append(arr, metric)
 	}
+	//if rs.Config.StoreFile != "" {
+	//	arrJSON, err := json.Marshal(arr)
+	//	if err != nil {
+	//		fmt.Println(err.Error())
+	//	}
+	//	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+	//		fmt.Println(err.Error())
+	//	}
+	//}
+
 	if rs.Config.DatabaseDsn != "" {
 		ctx := context.Background()
+
 		for _, val := range arr {
 			pool, err := postgresql.NewClient(ctx, rs.Config)
 			if err != nil {
 				fmt.Println(err.Error())
-				return
+				continue
 			}
 			defer pool.Close()
 
 			err = postgresql.SetMetric2DB(pool, val)
+			if err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
 		}
 		//	if err != nil {
 		//		fmt.Printf(err.Error(), val.ID, val.MType)
@@ -467,7 +475,6 @@ func (rs *RepStore) SaveMetric() {
 		//		fmt.Printf(err.Error(), val.ID, val.MType)
 		//	}
 	}
-	fmt.Println("finish save")
 	//}
 
 }
