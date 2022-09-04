@@ -151,7 +151,7 @@ func SetConfigServer() ServerConfig {
 	} else {
 		databaseDsn = *keyDatabaseDsn
 	}
-	//databaseDsn := "postgresql://postgres:101650@localhost:5433/golang"
+	//databaseDsn := "postgresql://postgres:101650@localhost:5433/yapracticum"
 
 	return ServerConfig{
 		StoreInterval: storeIntervalMetrics,

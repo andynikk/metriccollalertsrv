@@ -257,7 +257,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	if rs.Config.StoreInterval == time.Duration(0) {
-		rs.SaveMetric2File()
+		rs.SaveMetric()
 	}
 }
 
@@ -400,47 +400,85 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) SaveMetric2File() {
+func (rs *RepStore) SaveMetric() {
 
-	if rs.Config.StoreFile == "" {
+	if rs.Config.StoreFile == "" && rs.Config.DatabaseDsn == "" {
 		return
 	}
 
 	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
-	arrJSON, err := json.Marshal(arr)
+	if rs.Config.StoreFile != "" {
+		arrJSON, err := json.Marshal(arr)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+			fmt.Println(err.Error())
+		}
+	}
+	if rs.Config.DatabaseDsn != "" {
+		ctx := context.Background()
+		pool, err := postgresql.NewClient(ctx, rs.Config)
+		defer pool.Close()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		querySelect := `SELECT * FROM metrics.store`
+		poolRow, err := pool.Query(ctx, querySelect)
+		if err != nil {
+			fmt.Println("ошибка выборки данных в БД")
+		}
+
+		var arrDB []encoding.Metrics
+		for poolRow.Next() {
+			var mc encoding.Metrics
+			poolRow.Scan(mc.ID, mc.MType, mc.Value, mc.Value)
+			arrDB = append(arrDB, mc)
+		}
+
+		for _, val := range arr {
+			if err := postgresql.SetMetric2DB(pool, arrDB, val); err != nil {
+				fmt.Printf(err.Error(), val.ID, val.MType)
+			}
+		}
+		fmt.Println("finish save")
+	}
+
+}
+
+func (rs *RepStore) LoadStoreMetricsDB() {
+	ctx := context.Background()
+	pool, err := postgresql.NewClient(ctx, rs.Config)
+	defer pool.Close()
+
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	fmt.Println("-------------", rs.Config.DatabaseDsn)
-	//if rs.Config.DatabaseDsn == "" {
-	fmt.Println("-------------", 1)
-	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-		fmt.Println(err.Error())
+	pp := postgresql.PostgrePool{
+		Pool: pool,
+		Cfg:  rs.Config,
+		Ctx:  ctx,
 	}
-	//} else {
-	//	fmt.Println("-------------", 2)
-	//	ctx := context.Background()
-	//	pool, err := postgresql.NewClient(ctx, rs.Config)
-	//	if err != nil {
-	//		fmt.Println(err.Error())
-	//	}
-	//
-	//	pp := postgresql.PostgrePool{
-	//		Pool: pool,
-	//		Cfg:  rs.Config,
-	//		Ctx:  ctx,
-	//		Data: arr,
-	//	}
-	//
-	//	if ok := pp.InsertMetric(); !ok {
-	//		fmt.Println("Ошибка сохранения данны в БД")
-	//	}
-	//}
+
+	arrMatric, err := pp.GetMetricFromDB()
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
+	for _, val := range arrMatric {
+		rs.SetValueInMapJSON(val)
+	}
+	fmt.Println(rs.MutexRepo)
 
 }
 
-func (rs *RepStore) LoadStoreMetrics() {
+func (rs *RepStore) LoadStoreMetricsFile() {
 
 	res, err := ioutil.ReadFile(rs.Config.StoreFile)
 	if err != nil {
@@ -461,6 +499,15 @@ func (rs *RepStore) LoadStoreMetrics() {
 	}
 	fmt.Println(rs.MutexRepo)
 
+}
+
+func (rs *RepStore) LoadStoreMetrics() {
+
+	if rs.Config.DatabaseDsn != "" {
+		rs.LoadStoreMetricsDB()
+	} else {
+		rs.LoadStoreMetricsFile()
+	}
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {

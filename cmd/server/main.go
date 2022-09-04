@@ -19,7 +19,7 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 	for {
 		select {
 		case <-saveTicker.C:
-			rs.SaveMetric2File()
+			rs.SaveMetric()
 		case <-ctx.Done():
 			cancel()
 			return
@@ -52,7 +52,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	rs.SaveMetric2File()
+	rs.SaveMetric()
 	//log.Panicln("server stopped")
 
 }
