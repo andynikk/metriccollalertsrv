@@ -34,60 +34,55 @@ func NewClient(ctx context.Context, cfg environment.ServerConfig) (*pgxpool.Pool
 	return pool, nil
 }
 
-func SetMetric2DB(pool *pgxpool.Pool, arrDB []encoding.Metrics, data encoding.Metrics) error {
-
-	//querySelect := `SELECT
-	//					*
-	//				FROM
-	//					metrics.store`
+func SetMetric2DB(pool *pgxpool.Pool, data encoding.Metrics) error {
 
 	queryInsert := `INSERT INTO 
-						metrics.store ("ID", "MType", "Value", "Delta") 
+						metrics.store ("ID", "MType", "Value", "Delta", "Hash") 
 					VALUES
-						($1, $2, $3, $4)`
+						($1, $2, $3, $4, $5)`
 
 	queryUpdate := `UPDATE 
 						metrics.store 
 					SET 
-						"Value"=$3, "Delta"=$4
+						"Value"=$3, "Delta"=$4, "Hash"=$5
 					WHERE 
 						"ID" = $1 
 						and "MType" = $2;`
 
+	querySelect := `SELECT 
+						* 
+					FROM 
+						metrics.store
+					WHERE
+						"ID" = $1 
+						and "MType" = $2;`
+
 	ctx := context.Background()
-	//
-	////poolRow, err := pool.Query(ctx, querySelect, data.ID, data.MType)
-	//poolRow, err := pool.Query(ctx, querySelect)
-	//
-	//var arrDB []encoding.Metrics
-
-	//if err != nil {
-	//	return errors.New("ошибка выборки данных в БД")
-	//}
-	//if poolRow.Next() {
-	//	if _, err := pool.Query(
-	//		ctx, queryUpdate, data.ID, data.MType, data.Value, data.Delta); err != nil {
-	//		return errors.New("ошибка обновления данных в БД")
-	//	}
-	//} else {
-	//	println(3)
-	//	if _, err := pool.Query(
-	//		ctx, queryInsert, data.ID, data.MType, data.Value, data.Delta); err != nil {
-	//		return errors.New("ошибка добавления данных в БД")
-	//	}
-	//}
-
-	for _, val := range arrDB {
-		if val.ID == data.ID && val.MType == data.MType {
-			if _, err := pool.Query(ctx, queryUpdate, data.ID, data.MType, data.Value, data.Delta); err != nil {
-				return errors.New("ошибка обновления данных в БД")
-			}
-			return nil
-		}
+	rows, err := pool.Query(ctx, querySelect, data.ID, data.MType)
+	if err != nil {
+		return errors.New("ошибка выборки данных в БД")
 	}
 
-	if _, err := pool.Query(ctx, queryInsert, data.ID, data.MType, data.Value, data.Delta); err != nil {
-		return errors.New("ошибка добавления данных в БД")
+	dataValue := float64(0)
+	if data.Value != nil {
+		dataValue = *data.Value
+	}
+	dataDelta := int64(0)
+	if data.Delta != nil {
+		dataDelta = *data.Delta
+	}
+
+	if rows.Next() {
+		if _, err := pool.Query(
+			ctx, queryUpdate, data.ID, data.MType, dataValue, dataDelta); err != nil {
+			return errors.New("ошибка обновления данных в БД")
+		}
+	} else {
+		println(3)
+		if _, err := pool.Query(
+			ctx, queryInsert, data.ID, data.MType, dataValue, dataDelta); err != nil {
+			return errors.New("ошибка добавления данных в БД")
+		}
 	}
 
 	return nil
@@ -127,18 +122,18 @@ func CreateTable(pool *pgxpool.Pool) {
 	}
 
 	queryTable := `CREATE TABLE IF NOT EXISTS metrics.store
-				(
-					"ID" character varying COLLATE pg_catalog."default",
-					"MType" character varying COLLATE pg_catalog."default",
-					"Value" double precision,
-					"Delta" integer,
-					"Hash" character varying COLLATE pg_catalog."default"
-				)
-			
-				TABLESPACE pg_default;
-			
-				ALTER TABLE IF EXISTS metrics.store
-				OWNER to postgres;`
+					(
+						"ID" character varying COLLATE pg_catalog."default",
+						"MType" character varying COLLATE pg_catalog."default",
+						"Value" double precision NOT NULL DEFAULT 0,
+						"Delta" integer NOT NULL DEFAULT 0,
+						"Hash" character varying COLLATE pg_catalog."default"
+					)
+					
+					TABLESPACE pg_default;
+					
+					ALTER TABLE IF EXISTS metrics.store
+						OWNER to postgres;`
 
 	if _, err := pool.Exec(context.Background(), queryTable); err != nil {
 		fmt.Println(err.Error())

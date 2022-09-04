@@ -418,43 +418,67 @@ func (rs *RepStore) SaveMetric() {
 	}
 	if rs.Config.DatabaseDsn != "" {
 		ctx := context.Background()
-		pool, err := postgresql.NewClient(ctx, rs.Config)
-		defer pool.Close()
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-
-		querySelect := `SELECT * FROM metrics.store`
-		poolRow, err := pool.Query(ctx, querySelect)
-		if err != nil {
-			fmt.Println("ошибка выборки данных в БД")
-		}
-
-		var arrDB []encoding.Metrics
-		for poolRow.Next() {
-			var mc encoding.Metrics
-			poolRow.Scan(mc.ID, mc.MType, mc.Value, mc.Value)
-			arrDB = append(arrDB, mc)
-		}
-
 		for _, val := range arr {
-			if err := postgresql.SetMetric2DB(pool, arrDB, val); err != nil {
-				fmt.Printf(err.Error(), val.ID, val.MType)
+			pool, err := postgresql.NewClient(ctx, rs.Config)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
 			}
+			defer pool.Close()
+
+			err = postgresql.SetMetric2DB(pool, val)
 		}
-		fmt.Println("finish save")
+		//	if err != nil {
+		//		fmt.Printf(err.Error(), val.ID, val.MType)
+		//	}
+
+		////defer pool.Close()
+		//
+		//querySelect := `SELECT * FROM metrics.store`
+		//rows, err := pool.Query(ctx, querySelect)
+		//if err != nil {
+		//	fmt.Println("ошибка выборки данных в БД")
+		//	return
+		//}
+		//
+		//var arrMetrics []encoding.Metrics
+		//for rows.Next() {
+		//	var nst encoding.Metrics
+		//
+		//	err = rows.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
+		//	if err != nil {
+		//		fmt.Println("Ошибка получения записи БД")
+		//		return
+		//	}
+		//	arrMetrics = append(arrMetrics, nst)
+		//	println(1)
+		//}
+		//for _, val := range arr {
+		//	fmt.Println(val)
+		//
+		//	pool, err = postgresql.NewClient(ctx, rs.Config)
+		//	if err != nil {
+		//		fmt.Println(err.Error())
+		//		return
+		//	}
+		//
+		//	err = postgresql.SetMetric2DB(ctx, pool, arrMetrics, val)
+		//	if err != nil {
+		//		fmt.Printf(err.Error(), val.ID, val.MType)
+		//	}
 	}
+	fmt.Println("finish save")
+	//}
 
 }
 
 func (rs *RepStore) LoadStoreMetricsDB() {
 	ctx := context.Background()
 	pool, err := postgresql.NewClient(ctx, rs.Config)
-	defer pool.Close()
-
 	if err != nil {
 		fmt.Println(err.Error())
 	}
+	defer pool.Close()
 
 	pp := postgresql.PostgrePool{
 		Pool: pool,
