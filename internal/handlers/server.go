@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type MetricType int
@@ -253,9 +254,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	//if rs.Config.StoreInterval == time.Duration(0) {
-	rs.SaveMetric(v)
-	//}
+	if rs.Config.StoreInterval == time.Duration(0) {
+		rs.SaveMetric(v)
+	}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -428,7 +429,6 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 				fmt.Println(err.Error())
 				continue
 			}
-			//defer pool.Close()
 
 			if err := postgresql.SetMetric2DB(pool, val); err != nil {
 				fmt.Println(err.Error())
