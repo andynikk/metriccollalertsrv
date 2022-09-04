@@ -411,12 +411,14 @@ func (rs *RepStore) SaveMetric2File() {
 		fmt.Println(err.Error())
 	}
 
-	//fmt.Println("-------------", rs.Config.DatabaseDsn)
+	fmt.Println("-------------", rs.Config.DatabaseDsn)
 	if rs.Config.DatabaseDsn == "" {
+		fmt.Println("-------------", 1)
 		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
 			fmt.Println(err.Error())
 		}
 	} else {
+		fmt.Println("-------------", 2)
 		ctx := context.Background()
 		pool, err := postgresql.NewClient(ctx, rs.Config)
 		if err != nil {
