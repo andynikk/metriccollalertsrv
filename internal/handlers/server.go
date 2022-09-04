@@ -78,7 +78,7 @@ func (rs *RepStore) New() {
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
-	//rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
+	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
