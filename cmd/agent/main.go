@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"math/rand"
 	"net/http"
@@ -66,13 +67,14 @@ func (a *agent) metrixScan() {
 
 func (a *agent) Post2Server(arrMterica *[]byte) error {
 
-	addressPost := fmt.Sprintf("http://%s/update", a.Cfg.Address)
+	addressPost := fmt.Sprintf("http://%s/updates", a.Cfg.Address)
 	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*arrMterica))
 	if err != nil {
 		fmt.Println(err.Error())
 		return errors.New("-------ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
 	defer req.Body.Close()
 
 	client := &http.Client{}
@@ -88,6 +90,8 @@ func (a *agent) Post2Server(arrMterica *[]byte) error {
 
 func (a *agent) MakeRequest() {
 
+	var allMterics []byte
+
 	for key, val := range a.MetricsGauge {
 		valFloat64 := float64(val)
 
@@ -102,10 +106,10 @@ func (a *agent) MakeRequest() {
 			fmt.Println(err.Error())
 			continue
 		}
-		if err := a.Post2Server(&arrMterica); err != nil {
-			fmt.Println(err.Error())
-			continue
+		for _, val := range arrMterica {
+			allMterics = append(allMterics, val)
 		}
+
 	}
 
 	cPollCount := repository.Counter(a.PollCount)
@@ -115,12 +119,20 @@ func (a *agent) MakeRequest() {
 
 	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
 	arrMterica, err := metrica.MarshalMetrica()
-
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	if err := a.Post2Server(&arrMterica); err != nil {
+	for _, val := range arrMterica {
+		allMterics = append(allMterics, val)
+	}
+
+	gziparrMterica, err := compression.Compress(allMterics)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	if err := a.Post2Server(&gziparrMterica); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
