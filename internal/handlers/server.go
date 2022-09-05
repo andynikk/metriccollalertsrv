@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type MetricType int
@@ -260,11 +261,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	//if rs.Config.StoreInterval == time.Duration(0) {
-	if res == http.StatusOK {
-		rs.SaveMetric(v)
+	if rs.Config.StoreInterval == time.Duration(0) {
+		if res == http.StatusOK {
+			rs.SaveMetric(v)
+		}
 	}
-	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
