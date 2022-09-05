@@ -50,8 +50,8 @@ func SetMetric2DB(ctx context.Context, db *pgx.Conn, data encoding.Metrics) erro
 
 	if insert {
 		if _, err := db.Exec(ctx, constants.QueryInsert, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-			fmt.Println("@@@@@@@@@@@@@@@@@@ ошибка добавления данных в БД", data.ID, data.MType, dataValue, dataDelta, "")
-			return errors.New("ошибка добавления данных в БД")
+			fmt.Println("@@@@@@@@@@@@@@@@@@ ошибка добавления данных в БД", data.ID, data.MType, dataValue, dataDelta, "", err)
+			return errors.New(err.Error())
 		}
 	} else {
 		if _, err := db.Exec(ctx, constants.QueryUpdate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
