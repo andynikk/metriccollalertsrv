@@ -6,14 +6,6 @@ import (
 	"crypto/hmac"
 	"encoding/json"
 	"fmt"
-	"github.com/jackc/pgx/v4"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
@@ -22,6 +14,12 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v4"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"sync"
 )
 
 type MetricType int
@@ -261,9 +259,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if rs.Config.StoreInterval == time.Duration(0) {
-		rs.SaveMetric(v)
-	}
+	//if rs.Config.StoreInterval == time.Duration(0) {
+	rs.SaveMetric(v)
+	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
