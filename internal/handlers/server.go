@@ -6,20 +6,22 @@ import (
 	"crypto/hmac"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"sync"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v4"
+
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"strings"
-	"sync"
-	"time"
 )
 
 type MetricType int
@@ -254,9 +256,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if rs.Config.StoreInterval == time.Duration(0) {
-		rs.SaveMetric(v)
-	}
+	//if rs.Config.StoreInterval == time.Duration(0) {
+	rs.SaveMetric(mt)
+	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -335,11 +337,14 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 }
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
-	pool, err := postgresql.NewClient(context.Background(), rs.Config)
+	defer rq.Body.Close()
+
+	ctx := context.Background()
+	pool, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
 	if err != nil {
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
-	defer pool.Close()
+	defer pool.Close(ctx)
 
 	rw.WriteHeader(http.StatusOK)
 }
@@ -410,6 +415,7 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 	} else {
 		arr = append(arr, metric)
 	}
+
 	//if rs.Config.StoreFile != "" {
 	//	arrJSON, err := json.Marshal(arr)
 	//	if err != nil {
@@ -423,77 +429,32 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 	if rs.Config.DatabaseDsn != "" {
 		ctx := context.Background()
 
-		for _, val := range arr {
-			pool, err := postgresql.NewClient(ctx, rs.Config)
-			if err != nil {
-				fmt.Println(err.Error())
-				continue
-			}
+		db, err := pgx.Connect(ctx, rs.Config.DatabaseDsn)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer db.Close(ctx)
 
-			if err := postgresql.SetMetric2DB(pool, val); err != nil {
+		for _, val := range arr {
+
+			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
 				fmt.Println(err.Error())
 				continue
 			}
 
 		}
-		//	if err != nil {
-		//		fmt.Printf(err.Error(), val.ID, val.MType)
-		//	}
-
-		////defer pool.Close()
-		//
-		//querySelect := `SELECT * FROM metrics.store`
-		//rows, err := pool.Query(ctx, querySelect)
-		//if err != nil {
-		//	fmt.Println("ошибка выборки данных в БД")
-		//	return
-		//}
-		//
-		//var arrMetrics []encoding.Metrics
-		//for rows.Next() {
-		//	var nst encoding.Metrics
-		//
-		//	err = rows.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
-		//	if err != nil {
-		//		fmt.Println("Ошибка получения записи БД")
-		//		return
-		//	}
-		//	arrMetrics = append(arrMetrics, nst)
-		//	println(1)
-		//}
-		//for _, val := range arr {
-		//	fmt.Println(val)
-		//
-		//	pool, err = postgresql.NewClient(ctx, rs.Config)
-		//	if err != nil {
-		//		fmt.Println(err.Error())
-		//		return
-		//	}
-		//
-		//	err = postgresql.SetMetric2DB(ctx, pool, arrMetrics, val)
-		//	if err != nil {
-		//		fmt.Printf(err.Error(), val.ID, val.MType)
-		//	}
 	}
-	//}
-
 }
 
 func (rs *RepStore) LoadStoreMetricsDB() {
 	ctx := context.Background()
-	pool, err := postgresql.NewClient(ctx, rs.Config)
+	db, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	defer pool.Close()
+	defer db.Close(ctx)
 
-	pp := postgresql.PostgrePool{
-		Pool: pool,
-		Cfg:  rs.Config,
-		Ctx:  ctx,
-	}
-
-	arrMatric, err := pp.GetMetricFromDB()
+	arrMatric, err := postgresql.GetMetricFromDB(ctx, db)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
