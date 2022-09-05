@@ -72,7 +72,7 @@ func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, err
 	for poolRow.Next() {
 		var nst encoding.Metrics
 
-		err = poolRow.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
+		err = poolRow.Scan(nst.ID, nst.MType, nst.Value, nst.Delta, nst.Hash)
 		if err != nil {
 			return nil, errors.New("ошибка получения данных БД")
 		}
