@@ -34,7 +34,7 @@ func main() {
 	rs := handlers.NewRepStore()
 
 	if rs.Config.Restore {
-		//		rs.LoadStoreMetrics()
+		rs.LoadStoreMetrics()
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

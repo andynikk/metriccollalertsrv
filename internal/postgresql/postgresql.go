@@ -29,7 +29,7 @@ func SetMetric2DB(ctx context.Context, pool *pgx.Conn, data encoding.Metrics) er
 
 	rows, err := pool.Query(ctx, constants.QuerySelectWithWhere, data.ID, data.MType)
 	if err != nil {
-		fmt.Println(constants.QuerySelectWithWhere, data.ID, data.MType)
+		//fmt.Println(constants.QuerySelectWithWhere, data.ID, data.MType)
 		return errors.New("ошибка выборки данных в БД")
 	}
 

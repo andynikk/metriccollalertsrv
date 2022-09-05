@@ -158,7 +158,9 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
 	hmacEqual := hmac.Equal(heshServer, heshAgent)
 
+	fmt.Println("-----", v.Hash, heshServer)
 	if v.Hash != "" && !hmacEqual {
+		fmt.Println("++++", v.Hash, heshServer)
 		return http.StatusBadRequest
 	}
 
@@ -177,6 +179,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
+		fmt.Println("========", 3)
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
@@ -301,6 +304,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
+		fmt.Println("========", 1)
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
@@ -505,6 +509,7 @@ func (rs *RepStore) LoadStoreMetrics() {
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
+	fmt.Println("========", 2)
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 
 }
