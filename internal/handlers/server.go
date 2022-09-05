@@ -262,7 +262,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	//if rs.Config.StoreInterval == time.Duration(0) {
 	if res == http.StatusOK {
-		rs.SaveMetric(v)
+		rs.SaveMetric()
 	}
 	//}
 }
@@ -416,18 +416,18 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
+func (rs *RepStore) SaveMetric() {
 
 	if rs.Config.StoreFile == "" && rs.Config.DatabaseDsn == "" {
 		return
 	}
 
-	var arr []encoding.Metrics
-	if metric.ID == "" && metric.MType == "" {
-		arr = JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
-	} else {
-		arr = append(arr, metric)
-	}
+	//var arr []encoding.Metrics
+	//if metric.ID == "" && metric.MType == "" {
+	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
+	//} else {
+	//	arr = append(arr, metric)
+	//}
 
 	if rs.Config.StoreFile != "" {
 		arrJSON, err := json.Marshal(arr)

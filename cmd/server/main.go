@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
@@ -20,8 +19,8 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 	for {
 		select {
 		case <-saveTicker.C:
-			var mt encoding.Metrics
-			rs.SaveMetric(mt)
+			//var mt encoding.Metrics
+			rs.SaveMetric()
 		case <-ctx.Done():
 			cancel()
 			return
@@ -54,8 +53,8 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	var mt encoding.Metrics
-	rs.SaveMetric(mt)
+	//var mt encoding.Metrics
+	rs.SaveMetric()
 	//log.Panicln("server stopped")
 
 }
