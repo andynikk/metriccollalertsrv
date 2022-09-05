@@ -450,8 +450,9 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 		}
 		defer db.Close(ctx)
 
+		fmt.Println("############# Удаление")
 		if _, err := db.Exec(ctx, "DELETE FROM metrics.store;"); err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("############# ошибка удаления", err.Error())
 		}
 
 		for _, val := range arr {
@@ -461,6 +462,14 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 				continue
 			}
 
+		}
+		mts, err := postgresql.GetMetricFromDB(ctx, db)
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		for key, val := range mts {
+			fmt.Println("############# - ", key, val)
 		}
 	}
 }
