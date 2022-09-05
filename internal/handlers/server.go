@@ -157,7 +157,8 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 	heshServer := []byte(heshVal)
 
 	hmacEqual := hmac.Equal(heshServer, heshAgent)
-	if !hmacEqual {
+
+	if v.Hash != "" && !hmacEqual {
 		return http.StatusBadRequest
 	}
 
@@ -257,7 +258,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	//if rs.Config.StoreInterval == time.Duration(0) {
-	rs.SaveMetric(mt)
+	rs.SaveMetric(v)
 	//}
 }
 
