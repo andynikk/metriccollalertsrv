@@ -450,6 +450,10 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 		}
 		defer db.Close(ctx)
 
+		if _, err := db.Exec(ctx, "DELETE FROM metrics.store;"); err != nil {
+			fmt.Println(err.Error())
+		}
+
 		for _, val := range arr {
 
 			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
