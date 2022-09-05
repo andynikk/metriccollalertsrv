@@ -45,11 +45,12 @@ func SetMetric2DB(ctx context.Context, db *pgx.Conn, data encoding.Metrics) erro
 	insert := true
 	if rows.Next() {
 		insert = false
-		rows.Close()
 	}
+	rows.Close()
 
 	if insert {
 		if _, err := db.Exec(ctx, constants.QueryInsert, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+			fmt.Println("@@@@@@@@@@@@@@@@@@ ошибка добавления данных в БД", data.ID, data.MType, dataValue, dataDelta, "")
 			return errors.New("ошибка добавления данных в БД")
 		}
 	} else {
