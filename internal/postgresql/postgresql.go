@@ -44,7 +44,7 @@ func SetMetric2DB(ctx context.Context, pool *pgx.Conn, data encoding.Metrics) er
 
 	insert := true
 	if rows.Next() {
-		insert = true
+		insert = false
 		rows.Close()
 	}
 
@@ -65,6 +65,7 @@ func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, err
 
 	var arrMatrics []encoding.Metrics
 
+	//poolRow, err := db.Query(ctx, constants.QuerySelect)
 	poolRow, err := db.Query(ctx, constants.QuerySelect)
 	if err != nil {
 		fmt.Println("@@@@@@@@@@@@@@@@@@", 1, constants.QuerySelect)
@@ -73,10 +74,11 @@ func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, err
 	for poolRow.Next() {
 		var nst encoding.Metrics
 
-		err = poolRow.Scan(nst.ID, nst.MType, nst.Value, nst.Delta, nst.Hash)
+		err = poolRow.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
 		if err != nil {
-			fmt.Println("@@@@@@@@@@@@@@@@@@", 2, nst.ID, nst.MType, nst.Value, nst.Delta, nst.Hash)
-			return nil, errors.New("ошибка получения данных БД")
+			fmt.Println("@@@@@@@@@@@@@@@@@@", 2, &nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
+			continue
+			//return nil, errors.New("ошибка получения данных БД")
 		}
 		arrMatrics = append(arrMatrics, nst)
 	}

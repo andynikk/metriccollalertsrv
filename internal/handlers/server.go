@@ -244,7 +244,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	//rw.Header().Add("Content-Encoding", "gzip")
 	rw.Header().Add("Content-Type", "application/json")
-	rw.WriteHeader(rs.SetValueInMapJSON(v))
+	res := rs.SetValueInMapJSON(v)
+	rw.WriteHeader(res)
 
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
 
@@ -260,7 +261,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	//if rs.Config.StoreInterval == time.Duration(0) {
-	rs.SaveMetric(v)
+	if res == http.StatusOK {
+		rs.SaveMetric(v)
+	}
 	//}
 }
 
