@@ -215,12 +215,14 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	if strings.Contains(contentEncoding, "gzip") {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
+			fmt.Println("$$$$$$$$$$$$$$$$$ 1", err, bytBody)
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 			return
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
+			fmt.Println("$$$$$$$$$$$$$$$$$ 2", err, bytBody)
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
@@ -233,8 +235,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	v := encoding.Metrics{}
 	//err := json.NewDecoder(rq.Body).Decode(&v)
 	err := json.NewDecoder(bodyJSON).Decode(&v)
-
 	if err != nil {
+		fmt.Println("$$$$$$$$$$$$$$$$$ 3", err, bodyJSON, &v)
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
@@ -277,12 +279,14 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		fmt.Println("----------- метрика с агента gzip (value)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
+			fmt.Println("$$$$$$$$$$$$$$$$$ 4", err, bodyJSON)
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 			return
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
+			fmt.Println("$$$$$$$$$$$$$$$$$ 5", err, bodyJSON)
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
@@ -296,6 +300,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	v := encoding.Metrics{}
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
+		fmt.Println("$$$$$$$$$$$$$$$$$ 6", err, bodyJSON, &v)
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
@@ -355,6 +360,7 @@ func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 	ctx := context.Background()
 	pool, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
 	if err != nil {
+		fmt.Println("$$$$$$$$$$$$$$$$$ 7", err)
 		rw.WriteHeader(http.StatusInternalServerError)
 	}
 	defer pool.Close(ctx)
@@ -453,7 +459,6 @@ func (rs *RepStore) SaveMetric() {
 		//if _, err := db.Exec(ctx, "DELETE FROM metrics.store;"); err != nil {
 		//	fmt.Println("############# ошибка удаления", err.Error())
 		//}
-
 		for _, val := range arr {
 
 			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
