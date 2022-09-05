@@ -308,7 +308,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 
-		fmt.Println("========", 1, metName)
+		fmt.Println("========", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn)
+
 		for key, val := range rs.MutexRepo {
 			fmt.Println("========", key, val)
 		}
