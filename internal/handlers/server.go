@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type MetricType int
@@ -260,11 +261,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	//if rs.Config.StoreInterval == time.Duration(0) {
-	if res == http.StatusOK {
-		rs.SaveMetric(v)
+	if rs.Config.StoreInterval == time.Duration(0) {
+		if res == http.StatusOK {
+			rs.SaveMetric(v)
+		}
 	}
-	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -423,15 +424,15 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 		arr = append(arr, metric)
 	}
 
-	if rs.Config.StoreFile != "" {
-		arrJSON, err := json.Marshal(arr)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-			fmt.Println(err.Error())
-		}
-	}
+	//if rs.Config.StoreFile != "" {
+	//	arrJSON, err := json.Marshal(arr)
+	//	if err != nil {
+	//		fmt.Println(err.Error())
+	//	}
+	//	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+	//		fmt.Println(err.Error())
+	//	}
+	//}
 
 	if rs.Config.DatabaseDsn != "" {
 		ctx := context.Background()
@@ -439,6 +440,7 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 		db, err := pgx.Connect(ctx, rs.Config.DatabaseDsn)
 		if err != nil {
 			fmt.Println(err.Error())
+			return
 		}
 		defer db.Close(ctx)
 
@@ -503,13 +505,13 @@ func (rs *RepStore) LoadStoreMetricsFile() {
 
 func (rs *RepStore) LoadStoreMetrics() {
 
-	fmt.Println("@@@@@@@@@@@@@@@@@@", rs.Config.DatabaseDsn, rs.Config.StoreFile)
+	//fmt.Println("@@@@@@@@@@@@@@@@@@", rs.Config.DatabaseDsn, rs.Config.StoreFile)
 	if rs.Config.DatabaseDsn != "" {
-		fmt.Println("@@@@@@@@@@@@@@@@@@ DB")
+		//	fmt.Println("@@@@@@@@@@@@@@@@@@ DB")
 		rs.LoadStoreMetricsDB()
-	} else {
-		fmt.Println("@@@@@@@@@@@@@@@@@@ FILE")
-		rs.LoadStoreMetricsFile()
+		//} else {
+		//	fmt.Println("@@@@@@@@@@@@@@@@@@ FILE")
+		//	rs.LoadStoreMetricsFile()
 	}
 }
 

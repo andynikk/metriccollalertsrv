@@ -16,18 +16,18 @@ func NewClient(ctx context.Context, dsn string) (*pgx.Conn, error) {
 		return nil, errors.New("пустой путь к базе")
 	}
 
-	pool, err := pgx.Connect(ctx, dsn)
+	db, err := pgx.Connect(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	CreateTable(pool)
-	return pool, nil
+	CreateTable(db)
+	return db, nil
 }
 
-func SetMetric2DB(ctx context.Context, pool *pgx.Conn, data encoding.Metrics) error {
+func SetMetric2DB(ctx context.Context, db *pgx.Conn, data encoding.Metrics) error {
 
-	rows, err := pool.Query(ctx, constants.QuerySelectWithWhere, data.ID, data.MType)
+	rows, err := db.Query(ctx, constants.QuerySelectWithWhere, data.ID, data.MType)
 	if err != nil {
 		//fmt.Println(constants.QuerySelectWithWhere, data.ID, data.MType)
 		return errors.New("ошибка выборки данных в БД")
@@ -49,11 +49,11 @@ func SetMetric2DB(ctx context.Context, pool *pgx.Conn, data encoding.Metrics) er
 	}
 
 	if insert {
-		if _, err := pool.Exec(ctx, constants.QueryInsert, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+		if _, err := db.Exec(ctx, constants.QueryInsert, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 			return errors.New("ошибка добавления данных в БД")
 		}
 	} else {
-		if _, err := pool.Exec(ctx, constants.QueryUpdate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+		if _, err := db.Exec(ctx, constants.QueryUpdate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 			return errors.New("ошибка обновления данных в БД")
 		}
 	}
@@ -65,10 +65,9 @@ func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, err
 
 	var arrMatrics []encoding.Metrics
 
-	//poolRow, err := db.Query(ctx, constants.QuerySelect)
 	poolRow, err := db.Query(ctx, constants.QuerySelect)
 	if err != nil {
-		fmt.Println("@@@@@@@@@@@@@@@@@@", 1, constants.QuerySelect)
+		fmt.Println("@@@@@@@@@@@@@@@@@@", 1)
 		return nil, errors.New("ошибка чтения БД")
 	}
 	for poolRow.Next() {
