@@ -164,6 +164,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		return http.StatusBadRequest
 	}
 
+	fmt.Println("*********", v.ID, v.MType, v.Value, v.Delta)
 	rs.MutexRepo[v.ID].Set(v)
 	return http.StatusOK
 }
@@ -304,7 +305,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		fmt.Println("========", 1)
+		fmt.Println("========", 1, metName)
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
