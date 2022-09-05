@@ -514,10 +514,10 @@ func (rs *RepStore) LoadStoreMetrics() {
 	//fmt.Println("@@@@@@@@@@@@@@@@@@", rs.Config.DatabaseDsn, rs.Config.StoreFile)
 	//if rs.Config.DatabaseDsn != "" {
 	//	fmt.Println("@@@@@@@@@@@@@@@@@@ DB")
-	//rs.LoadStoreMetricsDB()
+	rs.LoadStoreMetricsDB()
 	//} else {
 	//	fmt.Println("@@@@@@@@@@@@@@@@@@ FILE")
-	rs.LoadStoreMetricsFile()
+	//rs.LoadStoreMetricsFile()
 	//}
 }
 
