@@ -307,7 +307,12 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
+
 		fmt.Println("========", 1, metName)
+		for key, val := range rs.MutexRepo {
+			fmt.Println("========", key, val)
+		}
+
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
