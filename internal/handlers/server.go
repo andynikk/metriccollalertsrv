@@ -438,7 +438,7 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 		for _, val := range arr {
 
 			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
-				fmt.Println(err.Error())
+				fmt.Println(err.Error(), val.ID, val.MType, val.Value, val.Delta)
 				continue
 			}
 
