@@ -158,9 +158,9 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
 	hmacEqual := hmac.Equal(heshServer, heshAgent)
 
-	fmt.Println("-----", v.Hash, heshServer)
+	fmt.Println("-----", v.Hash, heshVal)
 	if v.Hash != "" && !hmacEqual {
-		fmt.Println("++++", v.Hash, heshServer)
+		fmt.Println("++++", v.Hash, heshVal)
 		return http.StatusBadRequest
 	}
 

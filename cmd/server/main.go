@@ -33,9 +33,9 @@ func main() {
 
 	rs := handlers.NewRepStore()
 
-	if rs.Config.Restore {
-		rs.LoadStoreMetrics()
-	}
+	//if rs.Config.Restore {
+	//	rs.LoadStoreMetrics()
+	//}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go BackupData(rs, ctx, cancel)
