@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v4"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -410,17 +411,17 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 
 func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 
-	//if rs.Config.StoreFile == "" && rs.Config.DatabaseDsn == "" {
-	//	return
-	//}
-	//
+	if rs.Config.StoreFile == "" && rs.Config.DatabaseDsn == "" {
+		return
+	}
+
 	var arr []encoding.Metrics
 	if metric.ID == "" && metric.MType == "" {
 		arr = JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
 	} else {
 		arr = append(arr, metric)
 	}
-	//
+
 	if rs.Config.StoreFile != "" {
 		arrJSON, err := json.Marshal(arr)
 		if err != nil {
@@ -430,25 +431,25 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 			fmt.Println(err.Error())
 		}
 	}
-	//
-	//if rs.Config.DatabaseDsn != "" {
-	//	ctx := context.Background()
-	//
-	//	db, err := pgx.Connect(ctx, rs.Config.DatabaseDsn)
-	//	if err != nil {
-	//		fmt.Println(err.Error())
-	//	}
-	//	defer db.Close(ctx)
-	//
-	//	for _, val := range arr {
-	//
-	//		if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
-	//			fmt.Println(err.Error(), val.ID, val.MType, val.Value, val.Delta)
-	//			continue
-	//		}
-	//
-	//	}
-	//}
+
+	if rs.Config.DatabaseDsn != "" {
+		ctx := context.Background()
+
+		db, err := pgx.Connect(ctx, rs.Config.DatabaseDsn)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		defer db.Close(ctx)
+
+		for _, val := range arr {
+
+			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
+				fmt.Println("@@@@@@@@@@@@@@@@@@", err.Error(), val.ID, val.MType, val.Value, val.Delta)
+				continue
+			}
+
+		}
+	}
 }
 
 func (rs *RepStore) LoadStoreMetricsDB() {
@@ -501,12 +502,14 @@ func (rs *RepStore) LoadStoreMetricsFile() {
 
 func (rs *RepStore) LoadStoreMetrics() {
 
-	fmt.Println("*****************", rs.Config.DatabaseDsn, rs.Config.StoreFile)
-	//if rs.Config.DatabaseDsn != "" {
-	//	rs.LoadStoreMetricsDB()
-	//} else {
-	rs.LoadStoreMetricsFile()
-	//}
+	fmt.Println("@@@@@@@@@@@@@@@@@@", rs.Config.DatabaseDsn, rs.Config.StoreFile)
+	if rs.Config.DatabaseDsn != "" {
+		fmt.Println("@@@@@@@@@@@@@@@@@@ DB")
+		rs.LoadStoreMetricsDB()
+	} else {
+		fmt.Println("@@@@@@@@@@@@@@@@@@ FILE")
+		rs.LoadStoreMetricsFile()
+	}
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
