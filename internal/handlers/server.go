@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 )
 
 type MetricType int
@@ -261,11 +260,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	if rs.Config.StoreInterval == time.Duration(0) {
-		if res == http.StatusOK {
-			rs.SaveMetric(v)
-		}
+	//if rs.Config.StoreInterval == time.Duration(0) {
+	if res == http.StatusOK {
+		rs.SaveMetric(v)
 	}
+	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -310,9 +309,9 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 		fmt.Println("========", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn)
 
-		for key, val := range rs.MutexRepo {
-			fmt.Println("========", key, val)
-		}
+		//for key, val := range rs.MutexRepo {
+		//	fmt.Println("========", key, val)
+		//}
 
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
