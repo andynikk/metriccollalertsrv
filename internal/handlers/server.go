@@ -430,15 +430,15 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 		arr = append(arr, metric)
 	}
 
-	//if rs.Config.StoreFile != "" {
-	//	arrJSON, err := json.Marshal(arr)
-	//	if err != nil {
-	//		fmt.Println(err.Error())
-	//	}
-	//	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-	//		fmt.Println(err.Error())
-	//	}
-	//}
+	if rs.Config.StoreFile != "" {
+		arrJSON, err := json.Marshal(arr)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
+			fmt.Println(err.Error())
+		}
+	}
 
 	if rs.Config.DatabaseDsn != "" {
 		ctx := context.Background()
@@ -512,13 +512,13 @@ func (rs *RepStore) LoadStoreMetricsFile() {
 func (rs *RepStore) LoadStoreMetrics() {
 
 	//fmt.Println("@@@@@@@@@@@@@@@@@@", rs.Config.DatabaseDsn, rs.Config.StoreFile)
-	if rs.Config.DatabaseDsn != "" {
-		//	fmt.Println("@@@@@@@@@@@@@@@@@@ DB")
-		rs.LoadStoreMetricsDB()
-		//} else {
-		//	fmt.Println("@@@@@@@@@@@@@@@@@@ FILE")
-		//	rs.LoadStoreMetricsFile()
-	}
+	//if rs.Config.DatabaseDsn != "" {
+	//	fmt.Println("@@@@@@@@@@@@@@@@@@ DB")
+	//rs.LoadStoreMetricsDB()
+	//} else {
+	//	fmt.Println("@@@@@@@@@@@@@@@@@@ FILE")
+	rs.LoadStoreMetricsFile()
+	//}
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
