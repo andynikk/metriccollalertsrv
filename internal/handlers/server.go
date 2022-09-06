@@ -159,13 +159,13 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
 	hmacEqual := hmac.Equal(heshServer, heshAgent)
 
-	constants.InfoLevel.Info().Msgf("--", v.Hash, heshVal)
+	constants.InfoLevel.Info().Msgf("-- %s - %s", v.Hash, heshVal)
 	if v.Hash != "" && !hmacEqual {
-		constants.InfoLevel.Info().Msgf("++", v.Hash, heshVal)
+		constants.InfoLevel.Info().Msgf("++ %s - %s", v.Hash, heshVal)
 		return http.StatusBadRequest
 	}
 
-	constants.InfoLevel.Info().Msgf("**", v.ID, v.MType, v.Value, v.Delta)
+	constants.InfoLevel.Info().Msgf("** %s %s %f %d", v.ID, v.MType, v.Value, v.Delta)
 	rs.MutexRepo[v.ID].Set(v)
 	return http.StatusOK
 
@@ -180,7 +180,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		constants.InfoLevel.Info().Msgf("==", 3)
+		constants.InfoLevel.Info().Msgf("== %d", 3)
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
@@ -217,14 +217,14 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	if strings.Contains(contentEncoding, "gzip") {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
-			constants.InfoLevel.Info().Msgf("$$ 1", err, bytBody)
+			constants.InfoLevel.Info().Msgf("$$ 1 %s", err.Error())
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 			return
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
-			constants.InfoLevel.Info().Msgf("$$ 2", err, bytBody)
+			constants.InfoLevel.Info().Msgf("$$ 2 %s", err.Error())
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
@@ -238,7 +238,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	//err := json.NewDecoder(rq.Body).Decode(&v)
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
-		constants.InfoLevel.Info().Msgf("$$ 3", err, bodyJSON, &v)
+		constants.InfoLevel.Info().Msgf("$$ 3 %s", err.Error())
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
@@ -336,7 +336,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	if strings.Contains(contentEncoding, "gzip") {
-		constants.InfoLevel.Info().Msgf("-- метрика с агента gzip (value)")
+		constants.InfoLevel.Info().Msg("-- метрика с агента gzip (value)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
 			constants.InfoLevel.Error().Err(err)
@@ -371,7 +371,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 
-		constants.InfoLevel.Info().Msgf("========", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn)
+		constants.InfoLevel.Info().Msgf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn)
 
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
@@ -518,7 +518,7 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 
 			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
 				constants.InfoLevel.Error().Err(err)
-				constants.InfoLevel.Info().Msgf("@@", err.Error(), val.ID, val.MType, val.Value, val.Delta)
+				constants.InfoLevel.Info().Msgf("@@ %s %s %s %d %f %d", err.Error(), val.ID, val.MType, val.Value, val.Delta)
 				continue
 			}
 

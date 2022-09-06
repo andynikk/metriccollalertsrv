@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"errors"
+
 	"github.com/jackc/pgx/v4"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
@@ -66,7 +67,7 @@ func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, err
 
 	poolRow, err := db.Query(ctx, constants.QuerySelect)
 	if err != nil {
-		constants.InfoLevel.Info().Msgf("@@", 1)
+		constants.InfoLevel.Info().Msgf("@@ %d", 1)
 		return nil, errors.New("ошибка чтения БД")
 	}
 	for poolRow.Next() {
