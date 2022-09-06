@@ -282,6 +282,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 	if strings.Contains(contentEncoding, "gzip") {
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%% 1")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
 			fmt.Println("$$$$$$$$$$$$$$$$$ 1-1", err, bytBody)
@@ -298,42 +299,49 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 
 		bodyJSON = bytes.NewReader(arrBody)
 	} else {
+		fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%% 2")
 		bodyJSON = rq.Body
 	}
 
+	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%% 3")
 	respByte, err := ioutil.ReadAll(bodyJSON)
 	if err != nil {
 		fmt.Println("$$$$$$$$$$$$$$$$$ 2-1", err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
+	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%% 4")
 	var metricsJSON []encoding.Metrics
 	if err := json.Unmarshal(respByte, &metricsJSON); err != nil {
 		fmt.Println("$$$$$$$$$$$$$$$$$ 2-1", err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
+	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%% 5")
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
 	var sch int64
 	for _, val := range metricsJSON {
-		rw.Header().Add("Content-Encoding", "gzip")
-		rw.Header().Add("Content-Type", "application/json")
-		res := rs.SetValueInMapJSON(val)
-		rw.WriteHeader(res)
+		//rw.Header().Add("Content-Encoding", "gzip")
+		//rw.Header().Add("Content-Type", "application/json")
+		//res := rs.SetValueInMapJSON(val)
+		//rw.WriteHeader(res)
+		//
+		//mt := rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
+		//
+		//metricsJSON, err := mt.MarshalMetrica()
+		//if err != nil {
+		//	fmt.Println(err.Error())
+		//	continue
+		//}
+		//
+		//if _, err := rw.Write(metricsJSON); err != nil {
+		//	fmt.Println(err.Error())
+		//	continue
+		//}
 
-		mt := rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
-
-		metricsJSON, err := mt.MarshalMetrica()
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
-
-		if _, err := rw.Write(metricsJSON); err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
+		rs.SetValueInMapJSON(val)
+		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
 		sch++
 	}
 
