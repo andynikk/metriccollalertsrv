@@ -274,7 +274,13 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 
 	var bodyJSON io.Reader
 	var arrBody []byte
+
 	contentEncoding := rq.Header.Get("Content-Encoding")
+	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+	fmt.Println(contentEncoding)
+	fmt.Println(rq.Body)
+	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+
 	if strings.Contains(contentEncoding, "gzip") {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
@@ -530,10 +536,6 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 			fmt.Println(err.Error())
 		}
 
-		//fmt.Println("############# Удаление")
-		//if _, err := db.Exec(ctx, "DELETE FROM metrics.store;"); err != nil {
-		//	fmt.Println("############# ошибка удаления", err.Error())
-		//}
 		for _, val := range arr {
 
 			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
@@ -542,14 +544,6 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 			}
 
 		}
-		//mts, err := postgresql.GetMetricFromDB(ctx, db)
-		//if err != nil {
-		//	fmt.Println(err.Error())
-		//	return
-		//}
-		//for key, val := range mts {
-		//	fmt.Println("############# - ", key, val)
-		//}
 
 		tx.Commit(ctx)
 	}
