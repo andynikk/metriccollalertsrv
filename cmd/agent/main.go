@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
 
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
@@ -71,8 +72,8 @@ func (a *agent) Post2Server(arrMterica *[]byte) error {
 	addressPost := fmt.Sprintf("http://%s/updates", a.Cfg.Address)
 	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*arrMterica))
 	if err != nil {
-		fmt.Println(err.Error())
-		return errors.New("-------ошибка отправки данных на сервер (1)")
+		constants.InfoLevel.Error().Err(err)
+		return errors.New("-- ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
@@ -81,8 +82,8 @@ func (a *agent) Post2Server(arrMterica *[]byte) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err.Error())
-		return errors.New("-------ошибка отправки данных на сервер (2)")
+		constants.InfoLevel.Error().Err(err)
+		return errors.New("-- ошибка отправки данных на сервер (2)")
 	}
 	defer resp.Body.Close()
 
@@ -92,10 +93,9 @@ func (a *agent) Post2Server(arrMterica *[]byte) error {
 func (a *agent) MakeRequest() {
 
 	var allMterics []interface{}
+
 	for key, val := range a.MetricsGauge {
 		valFloat64 := float64(val)
-
-		//для gauge — hash(fmt.Sprintf("%s:gauge:%f", id, value), key).
 
 		msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
 		heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
@@ -114,20 +114,19 @@ func (a *agent) MakeRequest() {
 
 	arrMterics, err := json.MarshalIndent(allMterics, "", " ")
 	if err != nil {
-		fmt.Println(err.Error())
+		constants.InfoLevel.Error().Err(err)
 		return
 	}
 
 	gziparrMterica, err := compression.Compress(arrMterics)
 	if err != nil {
-		fmt.Println(err.Error())
+		constants.InfoLevel.Error().Err(err)
 		return
 	}
 	if err := a.Post2Server(&gziparrMterica); err != nil {
-		fmt.Println(err.Error())
+		constants.InfoLevel.Error().Err(err)
 		return
 	}
-
 }
 
 func main() {

@@ -3,8 +3,6 @@ package postgresql
 import (
 	"context"
 	"errors"
-	"fmt"
-
 	"github.com/jackc/pgx/v4"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
@@ -29,7 +27,6 @@ func SetMetric2DB(ctx context.Context, db *pgx.Conn, data encoding.Metrics) erro
 
 	rows, err := db.Query(ctx, constants.QuerySelectWithWhere, data.ID, data.MType)
 	if err != nil {
-		//fmt.Println(constants.QuerySelectWithWhere, data.ID, data.MType)
 		return errors.New("ошибка выборки данных в БД")
 	}
 
@@ -50,7 +47,8 @@ func SetMetric2DB(ctx context.Context, db *pgx.Conn, data encoding.Metrics) erro
 
 	if insert {
 		if _, err := db.Exec(ctx, constants.QueryInsert, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-			fmt.Println("@@@@@@@@@@@@@@@@@@ ошибка добавления данных в БД", data.ID, data.MType, dataValue, dataDelta, "", err)
+			constants.InfoLevel.Info().Msgf("@@ ошибка добавления данных в БД", data.ID, data.MType, dataValue,
+				dataDelta, "", err)
 			return errors.New(err.Error())
 		}
 	} else {
@@ -68,7 +66,7 @@ func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, err
 
 	poolRow, err := db.Query(ctx, constants.QuerySelect)
 	if err != nil {
-		fmt.Println("@@@@@@@@@@@@@@@@@@", 1)
+		constants.InfoLevel.Info().Msgf("@@", 1)
 		return nil, errors.New("ошибка чтения БД")
 	}
 	for poolRow.Next() {
@@ -76,7 +74,7 @@ func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, err
 
 		err = poolRow.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
 		if err != nil {
-			fmt.Println("@@@@@@@@@@@@@@@@@@", 2, &nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
+			constants.InfoLevel.Info().Msgf("@@", 2, &nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
 			continue
 			//return nil, errors.New("ошибка получения данных БД")
 		}
@@ -90,7 +88,7 @@ func CreateTable(pool *pgx.Conn) {
 
 	querySchema := `CREATE SCHEMA IF NOT EXISTS metrics`
 	if _, err := pool.Exec(context.Background(), querySchema); err != nil {
-		fmt.Println(err.Error())
+		constants.InfoLevel.Error().Err(err)
 		return
 	}
 
@@ -109,6 +107,6 @@ func CreateTable(pool *pgx.Conn) {
 						OWNER to postgres;`
 
 	if _, err := pool.Exec(context.Background(), queryTable); err != nil {
-		fmt.Println(err.Error())
+		constants.InfoLevel.Error().Err(err)
 	}
 }
