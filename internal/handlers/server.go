@@ -168,6 +168,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 	constants.InfoLevel.Info().Msgf("**", v.ID, v.MType, v.Value, v.Delta)
 	rs.MutexRepo[v.ID].Set(v)
 	return http.StatusOK
+
 }
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
