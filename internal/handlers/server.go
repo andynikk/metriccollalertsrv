@@ -165,7 +165,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		return http.StatusBadRequest
 	}
 
-	constants.InfoLevel.Info().Msgf("** %s %s %f %d", v.ID, v.MType, v.Value, v.Delta)
+	constants.InfoLevel.Info().Msgf("** %s %s %g %d", v.ID, v.MType, v.Value, v.Delta)
 	rs.MutexRepo[v.ID].Set(v)
 	return http.StatusOK
 
@@ -518,7 +518,7 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 
 			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
 				constants.InfoLevel.Error().Err(err)
-				constants.InfoLevel.Info().Msgf("@@ %s %s %s %d %f %d", err.Error(), val.ID, val.MType, val.Value, val.Delta)
+				constants.InfoLevel.Info().Msgf("@@ %s %s %s %e %d", err.Error(), val.ID, val.MType, val.Value, val.Delta)
 				continue
 			}
 
