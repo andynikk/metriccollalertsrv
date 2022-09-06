@@ -518,7 +518,7 @@ func (rs *RepStore) SaveMetric(metric encoding.Metrics) {
 
 			if err := postgresql.SetMetric2DB(ctx, db, val); err != nil {
 				constants.InfoLevel.Error().Err(err)
-				constants.InfoLevel.Info().Msgf("@@ %s %s %s %e %d", err.Error(), val.ID, val.MType, val.Value, val.Delta)
+				constants.InfoLevel.Info().Msgf("@@ %s %s %s %s %d", err.Error(), val.ID, val.MType, val.Value, val.Delta)
 				continue
 			}
 
@@ -574,14 +574,14 @@ func (rs *RepStore) LoadStoreMetricsFile() {
 
 func (rs *RepStore) LoadStoreMetrics() {
 
-	//constants.InfoLevel.Info().Msgf("@@", rs.Config.DatabaseDsn, rs.Config.StoreFile)
-	//if rs.Config.DatabaseDsn != "" {
-	//	constants.InfoLevel.Info().Msgf("@@ DB")
-	rs.LoadStoreMetricsDB()
-	//} else {
-	//	constants.InfoLevel.Info().Msgf("@@ FILE")
-	//rs.LoadStoreMetricsFile()
-	//}
+	constants.InfoLevel.Info().Msgf("@@", rs.Config.DatabaseDsn, rs.Config.StoreFile)
+	if rs.Config.DatabaseDsn != "" {
+		constants.InfoLevel.Info().Msg("@@ DB")
+		rs.LoadStoreMetricsDB()
+	} else {
+		constants.InfoLevel.Info().Msg("@@ FILE")
+		rs.LoadStoreMetricsFile()
+	}
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
