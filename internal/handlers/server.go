@@ -283,7 +283,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 			return
 		}
 
-		arrBody, err := compression.Decompress(bytBody)
+		arrBody, err = compression.Decompress(bytBody)
 		if err != nil {
 			fmt.Println("$$$$$$$$$$$$$$$$$ 2-1", err, bytBody)
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
@@ -295,27 +295,23 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		bodyJSON = rq.Body
 	}
 
-	var v []encoding.Metrics
-
-	_, err := bodyJSON.Read(arrBody)
+	respByte, err := ioutil.ReadAll(bodyJSON)
 	if err != nil {
-		return
+		fmt.Println("$$$$$$$$$$$$$$$$$ 2-1", err)
+		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
-	newDecoder := json.NewDecoder(bodyJSON)
-	//if err := json.Unmarshal(arrBody, v); err != nil {
-	//	fmt.Println("$$$$$$$$$$$$$$$$$ 3-1", err, bodyJSON, &v)
-	//}
-	if err := newDecoder.Decode(&v); err != nil {
-		fmt.Println("$$$$$$$$$$$$$$$$$ 3-1", err, bodyJSON, &v)
-		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
+	var metricsJSON []encoding.Metrics
+	if err := json.Unmarshal(respByte, &metricsJSON); err != nil {
+		fmt.Println("$$$$$$$$$$$$$$$$$ 2-1", err)
+		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
+
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
 	var sch int64
-	for _, val := range v {
-
-		//rw.Header().Add("Content-Encoding", "gzip")
+	for _, val := range metricsJSON {
+		rw.Header().Add("Content-Encoding", "gzip")
 		rw.Header().Add("Content-Type", "application/json")
 		res := rs.SetValueInMapJSON(val)
 		rw.WriteHeader(res)
@@ -339,8 +335,8 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	if sch != 0 {
 		var mt encoding.Metrics
 		rs.SaveMetric(mt)
+		//}
 	}
-	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {

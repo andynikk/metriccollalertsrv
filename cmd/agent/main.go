@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
@@ -90,8 +91,7 @@ func (a *agent) Post2Server(arrMterica *[]byte) error {
 
 func (a *agent) MakeRequest() {
 
-	var allMterics []byte
-
+	var allMterics []interface{}
 	for key, val := range a.MetricsGauge {
 		valFloat64 := float64(val)
 
@@ -101,15 +101,7 @@ func (a *agent) MakeRequest() {
 		heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
 
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-		arrMterica, err := metrica.MarshalMetrica()
-		if err != nil {
-			fmt.Println(err.Error())
-			continue
-		}
-		for _, val := range arrMterica {
-			allMterics = append(allMterics, val)
-		}
-
+		allMterics = append(allMterics, metrica)
 	}
 
 	cPollCount := repository.Counter(a.PollCount)
@@ -118,16 +110,15 @@ func (a *agent) MakeRequest() {
 	heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
 
 	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
-	arrMterica, err := metrica.MarshalMetrica()
+	allMterics = append(allMterics, metrica)
+
+	arrMterics, err := json.MarshalIndent(allMterics, "", " ")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-	for _, val := range arrMterica {
-		allMterics = append(allMterics, val)
-	}
 
-	gziparrMterica, err := compression.Compress(allMterics)
+	gziparrMterica, err := compression.Compress(arrMterics)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

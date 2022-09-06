@@ -13,10 +13,9 @@ type Metrics struct {
 }
 
 func (m Metrics) MarshalMetrica() (val []byte, err error) {
-	var arrJSON, errMarshal = json.Marshal(m)
-	if errMarshal != nil {
-		var bt []byte
-		return bt, errMarshal
+	arrJSON, err := json.MarshalIndent(m, "", " ")
+	if err != nil {
+		return nil, err
 	}
 
 	return arrJSON, nil
