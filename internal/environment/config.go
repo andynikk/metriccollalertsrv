@@ -35,12 +35,13 @@ type ServerConfigENV struct {
 }
 
 type ServerConfig struct {
-	StoreInterval time.Duration
-	StoreFile     string
-	Restore       bool
-	Address       string
-	Key           string
-	DatabaseDsn   string
+	StoreInterval      time.Duration
+	StoreFile          string
+	Restore            bool
+	Address            string
+	Key                string
+	DatabaseDsn        string
+	TypeMetricsStorage constants.TypeMetricsStorage
 }
 
 func SetConfigAgent() AgentConfig {
@@ -153,12 +154,20 @@ func SetConfigServer() ServerConfig {
 	}
 	//databaseDsn := "postgresql://postgres:101650@localhost:5433/yapracticum"
 
+	typeMetricsStorage := 0
+	if databaseDsn != "" {
+		typeMetricsStorage = 1
+	} else {
+		typeMetricsStorage = 2
+	}
+
 	return ServerConfig{
-		StoreInterval: storeIntervalMetrics,
-		StoreFile:     storeFileMetrics,
-		Restore:       restoreMetric,
-		Address:       addressServ,
-		Key:           keyHash,
-		DatabaseDsn:   databaseDsn,
+		StoreInterval:      storeIntervalMetrics,
+		StoreFile:          storeFileMetrics,
+		Restore:            restoreMetric,
+		Address:            addressServ,
+		Key:                keyHash,
+		DatabaseDsn:        databaseDsn,
+		TypeMetricsStorage: constants.TypeMetricsStorage(typeMetricsStorage),
 	}
 }

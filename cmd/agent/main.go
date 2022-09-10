@@ -15,6 +15,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
+	"github.com/andynikk/metriccollalertsrv/internal/logger"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -25,6 +26,7 @@ type agent struct {
 	MetricsGauge MetricsGauge
 	PollCount    int64
 	Cfg          environment.AgentConfig
+	Logger       logger.Logger
 }
 
 func (a *agent) fillMetric(mem *runtime.MemStats) {
@@ -73,7 +75,9 @@ func (a *agent) Post2Server(allMterics *[]byte) error {
 	addressPost := fmt.Sprintf("http://%s/updates", a.Cfg.Address)
 	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*allMterics))
 	if err != nil {
-		constants.InfoLevel.Error().Err(err)
+
+		a.Logger.ErrorLog(err)
+
 		return errors.New("-- ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -83,7 +87,7 @@ func (a *agent) Post2Server(allMterics *[]byte) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		constants.InfoLevel.Error().Err(err)
+		a.Logger.ErrorLog(err)
 		return errors.New("-- ошибка отправки данных на сервер (2)")
 	}
 	defer resp.Body.Close()
@@ -108,10 +112,8 @@ func prepareMetrics(allMetrics *emtyArrMetrics) ([]byte, error) {
 func (a *agent) MakeRequest() {
 
 	allMetrics := make(emtyArrMetrics, 0)
+	chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
 
-	butch := 10
-
-	sch := 0
 	for key, val := range a.MetricsGauge {
 		valFloat64 := float64(val)
 
@@ -119,35 +121,43 @@ func (a *agent) MakeRequest() {
 		heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
 
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-		allMetrics = append(allMetrics, metrica)
-		sch++
-		if sch == butch {
-			sch = 0
-			if len(allMetrics) != 0 {
-				gziparrMterica, err := prepareMetrics(&allMetrics)
-				if err != nil {
-					constants.InfoLevel.Error().Err(err)
+		chanMatrics <- metrica
+
+		if cap(chanMatrics) != 0 && len(chanMatrics) == cap(chanMatrics) {
+			for mt := range chanMatrics {
+				allMetrics = append(allMetrics, mt)
+				if len(chanMatrics) == 0 {
+					break
 				}
-				if err := a.Post2Server(&gziparrMterica); err != nil {
-					constants.InfoLevel.Error().Err(err)
-				}
-				allMetrics = make(emtyArrMetrics, 0)
 			}
+			gziParrMterics, err := prepareMetrics(&allMetrics)
+			if err != nil {
+				a.Logger.ErrorLog(err)
+			}
+			if err := a.Post2Server(&gziParrMterics); err != nil {
+				a.Logger.ErrorLog(err)
+			}
+			allMetrics = make(emtyArrMetrics, 0)
 		}
 	}
 
 	cPollCount := repository.Counter(a.PollCount)
 	msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.PollCount)
 	heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
-	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
-	allMetrics = append(allMetrics, metrica)
+	chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
+	for mt := range chanMatrics {
+		allMetrics = append(allMetrics, mt)
+		if len(chanMatrics) == 0 {
+			break
+		}
+	}
 
 	gziparrMetrics, err := prepareMetrics(&allMetrics)
 	if err != nil {
-		constants.InfoLevel.Error().Err(err)
+		a.Logger.ErrorLog(err)
 	}
 	if err := a.Post2Server(&gziparrMetrics); err != nil {
-		constants.InfoLevel.Error().Err(err)
+		a.Logger.ErrorLog(err)
 	}
 }
 
@@ -157,6 +167,8 @@ func main() {
 		Cfg:          environment.SetConfigAgent(),
 		MetricsGauge: make(MetricsGauge),
 		PollCount:    0,
+
+		Logger: logger.Logger{Log: constants.Logger},
 	}
 
 	updateTicker := time.NewTicker(agent.Cfg.PollInterval)

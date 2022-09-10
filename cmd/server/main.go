@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
@@ -20,8 +19,7 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 	for {
 		select {
 		case <-saveTicker.C:
-			var mt encoding.Metrics
-			rs.SaveMetric(mt)
+			rs.SaveMetric()
 		case <-ctx.Done():
 			cancel()
 			return
@@ -29,12 +27,22 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 	}
 }
 
+func Shutdown(rs *handlers.RepStore) {
+	rs.SaveMetric()
+	rs.Logger.InfoLog("server stopped")
+}
+
 func main() {
 
 	rs := handlers.NewRepStore()
 
 	if rs.Config.Restore {
-		rs.LoadStoreMetrics()
+		switch rs.Config.TypeMetricsStorage {
+		case constants.MetricsStorageDb:
+			rs.LoadStoreMetricsFromDB()
+		case constants.MetricsStorageFile:
+			rs.LoadStoreMetricsFromFile()
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -46,7 +54,7 @@ func main() {
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
-			constants.InfoLevel.Info().Msgf("%+v\n", err)
+			constants.Logger.Error().Err(err)
 			return
 		}
 	}()
@@ -54,8 +62,6 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	var mt encoding.Metrics
-	rs.SaveMetric(mt)
-	//log.Panicln("server stopped")
+	Shutdown(rs)
 
 }
