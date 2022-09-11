@@ -1,16 +1,13 @@
 package constants
 
 import (
-	"os"
-
-	"github.com/rs/zerolog"
+	"github.com/andynikk/metriccollalertsrv/internal/logger"
 )
 
 type TypeMetricsStorage int
 
 const (
-	MetricsStorageNot TypeMetricsStorage = iota
-	MetricsStorageDB
+	MetricsStorageDB TypeMetricsStorage = iota
 	MetricsStorageFile
 
 	AddressServer       = "localhost:8080"
@@ -64,7 +61,8 @@ const (
 )
 
 func (tmc TypeMetricsStorage) String() string {
-	return [...]string{"not", "db", "file"}[tmc]
+	return [...]string{"db", "file"}[tmc]
 }
 
-var Logger = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
+//var Logger = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
+var Logger logger.Logger

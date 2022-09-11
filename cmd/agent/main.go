@@ -15,7 +15,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/logger"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -26,7 +25,6 @@ type agent struct {
 	MetricsGauge MetricsGauge
 	PollCount    int64
 	Cfg          environment.AgentConfig
-	Logger       logger.Logger
 }
 
 func (a *agent) fillMetric(mem *runtime.MemStats) {
@@ -76,7 +74,7 @@ func (a *agent) Post2Server(allMterics *[]byte) error {
 	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*allMterics))
 	if err != nil {
 
-		a.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 
 		return errors.New("-- ошибка отправки данных на сервер (1)")
 	}
@@ -87,7 +85,7 @@ func (a *agent) Post2Server(allMterics *[]byte) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		a.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		return errors.New("-- ошибка отправки данных на сервер (2)")
 	}
 	defer resp.Body.Close()
@@ -132,10 +130,10 @@ func (a *agent) MakeRequest() {
 			}
 			gziParrMterics, err := prepareMetrics(&allMetrics)
 			if err != nil {
-				a.Logger.ErrorLog(err)
+				constants.Logger.ErrorLog(err)
 			}
 			if err := a.Post2Server(&gziParrMterics); err != nil {
-				a.Logger.ErrorLog(err)
+				constants.Logger.ErrorLog(err)
 			}
 			allMetrics = make(emtyArrMetrics, 0)
 		}
@@ -154,10 +152,10 @@ func (a *agent) MakeRequest() {
 
 	gziparrMetrics, err := prepareMetrics(&allMetrics)
 	if err != nil {
-		a.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 	}
 	if err := a.Post2Server(&gziparrMetrics); err != nil {
-		a.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 	}
 }
 
@@ -167,8 +165,6 @@ func main() {
 		Cfg:          environment.SetConfigAgent(),
 		MetricsGauge: make(MetricsGauge),
 		PollCount:    0,
-
-		Logger: logger.Logger{Log: constants.Logger},
 	}
 
 	updateTicker := time.NewTicker(agent.Cfg.PollInterval)

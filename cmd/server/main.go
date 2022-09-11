@@ -2,25 +2,42 @@ package main
 
 import (
 	"context"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
+
+func LoadData(rs *handlers.RepStore) {
+	for _, val := range rs.Config.TypeMetricsStorage {
+		arrMatric, err := val.GetMetric()
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return
+		}
+
+		rs.MX.Lock()
+		defer rs.MX.Unlock()
+
+		for _, val := range arrMatric {
+			rs.SetValueInMapJSON(val)
+		}
+	}
+}
 
 func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.CancelFunc) {
 
 	saveTicker := time.NewTicker(rs.Config.StoreInterval)
-
 	for {
 		select {
 		case <-saveTicker.C:
-			rs.PrepareDataBU()
-			rs.SaveMetric()
+			for _, val := range rs.Config.TypeMetricsStorage {
+				val.WriteMetric(rs.PrepareDataBU())
+			}
 		case <-ctx.Done():
 			cancel()
 			return
@@ -29,23 +46,19 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 }
 
 func Shutdown(rs *handlers.RepStore) {
-	rs.PrepareDataBU()
-	rs.SaveMetric()
-	rs.Logger.InfoLog("server stopped")
+	for _, val := range rs.Config.TypeMetricsStorage {
+		val.WriteMetric(rs.PrepareDataBU())
+	}
+	constants.Logger.InfoLog("server stopped")
 }
 
 func main() {
 
 	rs := handlers.NewRepStore()
 	if rs.Config.Restore {
-		switch rs.Config.TypeMetricsStorage {
-		case constants.MetricsStorageDB:
-			rs.LoadStoreMetricsFromDB()
-		case constants.MetricsStorageFile:
-			rs.LoadStoreMetricsFromFile()
-		}
+		LoadData(rs)
 	}
-	ctx, cancel := context.WithCancel(rs.Ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	go BackupData(rs, ctx, cancel)
 
 	go func() {
@@ -54,7 +67,7 @@ func main() {
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
-			constants.Logger.Error().Err(err)
+			constants.Logger.ErrorLog(err)
 			return
 		}
 	}()

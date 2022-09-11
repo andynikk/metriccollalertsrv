@@ -2,13 +2,16 @@ package environment
 
 import (
 	"flag"
+
 	"log"
 	"os"
 	"time"
 
 	"github.com/caarlos0/env/v6"
+	"github.com/rs/zerolog"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type AgentConfigENV struct {
@@ -41,7 +44,7 @@ type ServerConfig struct {
 	Address            string
 	Key                string
 	DatabaseDsn        string
-	TypeMetricsStorage constants.TypeMetricsStorage
+	TypeMetricsStorage repository.MapTypeStore
 }
 
 func SetConfigAgent() AgentConfig {
@@ -140,12 +143,17 @@ func SetConfigServer() ServerConfig {
 		databaseDsn = *keyDatabaseDsn
 	}
 
-	typeMetricsStorage := constants.MetricsStorageNot
+	MapTypeStore := make(repository.MapTypeStore)
+
 	if databaseDsn != "" {
-		typeMetricsStorage = constants.MetricsStorageDB
+		typeDB := repository.TypeStoreDataDB{}
+		MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
 	} else if storeFileMetrics != "" {
-		typeMetricsStorage = constants.MetricsStorageFile
+		typeFile := repository.TypeStoreDataFile{}
+		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 	}
+
+	constants.Logger.Log = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
 
 	return ServerConfig{
 		StoreInterval:      storeIntervalMetrics,
@@ -154,6 +162,6 @@ func SetConfigServer() ServerConfig {
 		Address:            addressServ,
 		Key:                keyHash,
 		DatabaseDsn:        databaseDsn,
-		TypeMetricsStorage: typeMetricsStorage,
+		TypeMetricsStorage: MapTypeStore,
 	}
 }

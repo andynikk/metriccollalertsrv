@@ -15,14 +15,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v4"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/logger"
 	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
@@ -49,14 +47,10 @@ func (et MetricError) String() string {
 }
 
 type RepStore struct {
-	storedData encoding.ArrMetrics
-	db         *pgx.Conn
-	Ctx        context.Context
-	Logger     logger.Logger
-	Config     environment.ServerConfig
-	Router     chi.Router
-	MX         sync.Mutex
-	MutexRepo  repository.MapMetrics
+	Config    environment.ServerConfig
+	Router    chi.Router
+	MX        sync.Mutex
+	MutexRepo repository.MapMetrics
 }
 
 func NewRepStore() *RepStore {
@@ -91,18 +85,23 @@ func (rs *RepStore) New() {
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	rs.Config = environment.SetConfigServer()
-	rs.Logger.Log = constants.Logger
-	rs.Ctx = context.Background()
 
-	if rs.Config.TypeMetricsStorage == constants.MetricsStorageDB {
-		db, err := postgresql.NewClient(rs.Ctx, rs.Config.DatabaseDsn)
+	mapTypeStore := rs.Config.TypeMetricsStorage
+	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
+		ctx := context.Background()
+		db, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
 		if err != nil {
-			rs.Logger.ErrorLog(err)
+			constants.Logger.ErrorLog(err)
 		}
-		rs.db = db
-		rs.CreateTable()
-	}
 
+		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{DB: db, Ctx: ctx}
+		mapTypeStore[constants.MetricsStorageDB.String()].CreateTable()
+		//rs.Config.TypeMetricsStorage = mapTypeStore
+	}
+	if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
+		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataFile{StoreFile: rs.Config.StoreFile}
+		//rs.Config.TypeMetricsStorage = mapTypeStore
+	}
 }
 
 func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) int {
@@ -178,13 +177,13 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
 	hmacEqual := hmac.Equal(heshServer, heshAgent)
 
-	rs.Logger.InfoLog(fmt.Sprintf("-- %s - %s", v.Hash, heshVal))
+	constants.Logger.InfoLog(fmt.Sprintf("-- %s - %s", v.Hash, heshVal))
 
 	if v.Hash != "" && !hmacEqual {
-		rs.Logger.InfoLog(fmt.Sprintf("++ %s - %s", v.Hash, heshVal))
+		constants.Logger.InfoLog(fmt.Sprintf("++ %s - %s", v.Hash, heshVal))
 		return http.StatusBadRequest
 	}
-	rs.Logger.InfoLog(fmt.Sprintf("** %s %s %v %d", v.ID, v.MType, v.Value, v.Delta))
+	constants.Logger.InfoLog(fmt.Sprintf("** %s %s %v %d", v.ID, v.MType, v.Value, v.Delta))
 
 	rs.MutexRepo[v.ID].Set(v)
 	return http.StatusOK
@@ -200,7 +199,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	defer rs.MX.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		rs.Logger.InfoLog(fmt.Sprintf("== %d", 3))
+		constants.Logger.InfoLog(fmt.Sprintf("== %d", 3))
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
@@ -209,7 +208,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	strMetric := rs.MutexRepo[metName].String()
 	_, err := io.WriteString(rw, strMetric)
 	if err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		return
 	}
 
@@ -238,14 +237,14 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	if strings.Contains(contentEncoding, "gzip") {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
-			rs.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
+			constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 			return
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
-			rs.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
+			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
@@ -256,7 +255,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	v := encoding.Metrics{}
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
-		rs.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
@@ -271,18 +270,22 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		return
 	}
 	if _, err := rw.Write(metricsJSON); err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		return
 	}
 
 	if res == http.StatusOK {
-		rs.storedData = append(rs.storedData, mt)
-		defer rs.storedData.Clear()
-		rs.SaveMetric()
+		var arrMetrics encoding.ArrMetrics
+		arrMetrics = append(arrMetrics, mt)
+
+		for _, val := range rs.Config.TypeMetricsStorage {
+			val.WriteMetric(arrMetrics)
+		}
+
 	}
 }
 
@@ -297,14 +300,14 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	if strings.Contains(contentEncoding, "gzip") {
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
-			rs.Logger.ErrorLog(err)
+			constants.Logger.ErrorLog(err)
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 			return
 		}
 
 		arrBody, err = compression.Decompress(bytBody)
 		if err != nil {
-			rs.Logger.ErrorLog(err)
+			constants.Logger.ErrorLog(err)
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
@@ -314,27 +317,27 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 
 	respByte, err := ioutil.ReadAll(bodyJSON)
 	if err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	if err := json.Unmarshal(respByte, &rs.storedData); err != nil {
-		rs.Logger.ErrorLog(err)
+	var storedData encoding.ArrMetrics
+	if err := json.Unmarshal(respByte, &storedData); err != nil {
+		constants.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
-	defer rs.storedData.Clear()
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	for _, val := range rs.storedData {
-
+	for _, val := range storedData {
 		rs.SetValueInMapJSON(val)
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
-
 	}
 
-	rs.SaveMetric()
+	for _, val := range rs.Config.TypeMetricsStorage {
+		val.WriteMetric(storedData)
+	}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -345,17 +348,17 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	if strings.Contains(contentEncoding, "gzip") {
-		rs.Logger.InfoLog("-- метрика с агента gzip (value)")
+		constants.Logger.InfoLog("-- метрика с агента gzip (value)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
-			rs.Logger.ErrorLog(err)
+			constants.Logger.ErrorLog(err)
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 			return
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
-			rs.Logger.ErrorLog(err)
+			constants.Logger.ErrorLog(err)
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
@@ -366,7 +369,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	v := encoding.Metrics{}
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
 	}
@@ -378,7 +381,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 
-		rs.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
+		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
 
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
@@ -388,7 +391,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		return
 	}
 
@@ -397,7 +400,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	bytMterica = append(bytMterica, bt...)
 	compData, err := compression.Compress(bytMterica)
 	if err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 	}
 
 	var bodyBate []byte
@@ -410,17 +413,23 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	if _, err := rw.Write(bodyBate); err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		return
 	}
 }
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
-	defer rq.Body.Close()
-
-	if rs.db == nil {
-		rs.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
+	mapTypeStore := rs.Config.TypeMetricsStorage
+	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
+		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
+		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
@@ -434,7 +443,6 @@ func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
-	defer rq.Body.Close()
 	arrMetricsAndValue := textMetricsAndValue(rs.MutexRepo)
 
 	content := `<!DOCTYPE html>
@@ -460,7 +468,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
 	compData, err := compression.Compress(byteMterics)
 	if err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 	}
 
 	var bodyBate []byte
@@ -473,171 +481,20 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 
 	rw.Header().Add("Content-Type", "text/html")
 	if _, err := rw.Write(bodyBate); err != nil {
-		rs.Logger.ErrorLog(err)
+		constants.Logger.ErrorLog(err)
 		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) SaveMetric() {
-	defer rs.storedData.Clear()
+func (rs *RepStore) PrepareDataBU() encoding.ArrMetrics {
 
-	switch rs.Config.TypeMetricsStorage {
-	case constants.MetricsStorageDB:
-		rs.BackupDataDB()
-	case constants.MetricsStorageFile:
-		rs.BackupDataFile()
-	}
-}
-
-func (rs *RepStore) BackupDataDB() {
-
-	tx, err := rs.db.Begin(rs.Ctx)
-
-	if err != nil {
-		constants.Logger.Error().Err(err)
-	}
-	if err := rs.SetMetric2DB(); err != nil {
-		constants.Logger.Error().Err(err)
-	}
-
-	if err := tx.Commit(rs.Ctx); err != nil {
-		constants.Logger.Error().Err(err)
-	}
-}
-
-func (rs *RepStore) BackupDataFile() {
-	//arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
-
-	arrJSON, err := json.Marshal(rs.storedData)
-	if err != nil {
-		rs.Logger.ErrorLog(err)
-	}
-	if err := ioutil.WriteFile(rs.Config.StoreFile, arrJSON, 0777); err != nil {
-		rs.Logger.ErrorLog(err)
-	}
-}
-
-func (rs *RepStore) LoadStoreMetricsFromDB() {
-
-	arrMatric, err := rs.GetMetricFromDB()
-	if err != nil {
-		rs.Logger.ErrorLog(err)
-		return
-	}
-
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
-
-	for _, val := range arrMatric {
-		rs.SetValueInMapJSON(val)
-	}
-}
-
-func (rs *RepStore) LoadStoreMetricsFromFile() {
-
-	res, err := ioutil.ReadFile(rs.Config.StoreFile)
-	if err != nil {
-		rs.Logger.ErrorLog(err)
-		return
-	}
-	var arrMatric []encoding.Metrics
-	if err := json.Unmarshal(res, &arrMatric); err != nil {
-		rs.Logger.ErrorLog(err)
-		return
-	}
-
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
-
-	for _, val := range arrMatric {
-		rs.SetValueInMapJSON(val)
-	}
-}
-
-func (rs *RepStore) SetMetric2DB() error {
-
-	for _, data := range rs.storedData {
-		rows, err := rs.db.Query(rs.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
-		if err != nil {
-			return errors.New("ошибка выборки данных в БД")
-		}
-
-		dataValue := float64(0)
-		if data.Value != nil {
-			dataValue = *data.Value
-		}
-		dataDelta := int64(0)
-		if data.Delta != nil {
-			dataDelta = *data.Delta
-		}
-
-		insert := true
-		if rows.Next() {
-			insert = false
-		}
-		rows.Close()
-
-		if insert {
-			if _, err := rs.db.Exec(rs.Ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-				rs.Logger.ErrorLog(err)
-				return errors.New(err.Error())
-			}
-		} else {
-			if _, err := rs.db.Exec(rs.Ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-				rs.Logger.ErrorLog(err)
-				return errors.New("ошибка обновления данных в БД")
-			}
-		}
-	}
-	return nil
-}
-
-func (rs *RepStore) GetMetricFromDB() ([]encoding.Metrics, error) {
-
-	var arrMatrics []encoding.Metrics
-
-	poolRow, err := rs.db.Query(rs.Ctx, constants.QuerySelect)
-	if err != nil {
-		rs.Logger.ErrorLog(err)
-		return nil, errors.New("ошибка чтения БД")
-	}
-	defer poolRow.Close()
-
-	for poolRow.Next() {
-		var nst encoding.Metrics
-
-		err = poolRow.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
-		if err != nil {
-			rs.Logger.ErrorLog(err)
-			continue
-		}
-		arrMatrics = append(arrMatrics, nst)
-	}
-
-	return arrMatrics, nil
-}
-
-func (rs *RepStore) CreateTable() {
-
-	if _, err := rs.db.Exec(rs.Ctx, constants.QuerySchema); err != nil {
-		rs.Logger.ErrorLog(err)
-		return
-	}
-
-	if _, err := rs.db.Exec(rs.Ctx, constants.QueryTable); err != nil {
-		rs.Logger.ErrorLog(err)
-	}
-}
-
-func (rs *RepStore) PrepareDataBU() {
-
-	rs.storedData.Clear()
+	var storedData encoding.ArrMetrics
 	for key, val := range rs.MutexRepo {
-		rs.storedData = append(rs.storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
+		storedData = append(storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
 	}
-
+	return storedData
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
@@ -657,15 +514,3 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 
 	return msg
 }
-
-//func JSONMetricsAndValue(mm repository.MapMetrics, hashKey string) []encoding.Metrics {
-//
-//	var arr []encoding.Metrics
-//
-//	for key, val := range mm {
-//		jMetric := val.GetMetrics(val.Type(), key, hashKey)
-//		arr = append(arr, jMetric)
-//	}
-//
-//	return arr
-//}

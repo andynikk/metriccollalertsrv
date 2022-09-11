@@ -53,7 +53,7 @@ func (g *Gauge) SetFromText(metValue string) bool {
 
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
-		constants.Logger.Error().Err(errors.New("error convert type")).Msg("")
+		constants.Logger.ErrorLog(errors.New("error convert type"))
 
 		return false
 	}
@@ -74,7 +74,7 @@ func (c *Counter) SetFromText(metValue string) bool {
 
 	predVal, err := strconv.ParseInt(metValue, 10, 64)
 	if err != nil {
-		constants.Logger.Error().Err(errors.New("error convert type")).Msg("")
+		constants.Logger.ErrorLog(errors.New("error convert type"))
 
 		return false
 	}
