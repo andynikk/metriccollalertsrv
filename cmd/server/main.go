@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"net/http"
 	"os"
@@ -29,6 +28,7 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 }
 
 func Shutdown(rs *handlers.RepStore) {
+	rs.PrepareDataBU()
 	rs.SaveMetric()
 	rs.Logger.InfoLog("server stopped")
 }
@@ -37,7 +37,6 @@ func main() {
 
 	rs := handlers.NewRepStore()
 
-	fmt.Println("-*-*", 4, rs.Config.TypeMetricsStorage)
 	if rs.Config.Restore {
 		switch rs.Config.TypeMetricsStorage {
 		case constants.MetricsStorageDB:
@@ -46,16 +45,13 @@ func main() {
 			rs.LoadStoreMetricsFromFile()
 		}
 	}
-	fmt.Println("-*-*", 5, rs.Config.Address)
 	ctx, cancel := context.WithCancel(context.Background())
 	go BackupData(rs, ctx, cancel)
 
-	fmt.Println("-*-*", 6, rs.Config.Address)
 	go func() {
 		s := &http.Server{
 			Addr:    rs.Config.Address,
 			Handler: rs.Router}
-		fmt.Println("******", s.Addr)
 
 		if err := s.ListenAndServe(); err != nil {
 			constants.Logger.Error().Err(err)

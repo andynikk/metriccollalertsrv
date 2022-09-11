@@ -49,12 +49,13 @@ func (et MetricError) String() string {
 }
 
 type RepStore struct {
-	db        *pgx.Conn
-	Logger    logger.Logger
-	Config    environment.ServerConfig
-	Router    chi.Router
-	MX        sync.Mutex
-	MutexRepo repository.MapMetrics
+	storedData encoding.ArrMetrics
+	db         *pgx.Conn
+	Logger     logger.Logger
+	Config     environment.ServerConfig
+	Router     chi.Router
+	MX         sync.Mutex
+	MutexRepo  repository.MapMetrics
 }
 
 func NewRepStore() *RepStore {
@@ -276,6 +277,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	if res == http.StatusOK {
+		rs.storedData = append(rs.storedData, mt)
+		defer rs.storedData.Clear()
 		rs.SaveMetric()
 	}
 }
@@ -311,8 +314,9 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		rs.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
-	var metricsJSON []encoding.Metrics
-	if err := json.Unmarshal(respByte, &metricsJSON); err != nil {
+
+	defer rs.storedData.Clear()
+	if err := json.Unmarshal(respByte, &rs.storedData); err != nil {
 		rs.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
@@ -320,18 +324,14 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	var sch int64
-	for _, val := range metricsJSON {
+	for _, val := range rs.storedData {
 
 		rs.SetValueInMapJSON(val)
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
-		sch++
 
 	}
 
-	if sch != 0 {
-		rs.SaveMetric()
-	}
+	rs.SaveMetric()
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -478,6 +478,8 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 }
 
 func (rs *RepStore) SaveMetric() {
+	defer rs.storedData.Clear()
+
 	switch rs.Config.TypeMetricsStorage {
 	case constants.MetricsStorageDB:
 		rs.BackupDataDB()
@@ -489,7 +491,6 @@ func (rs *RepStore) SaveMetric() {
 func (rs *RepStore) BackupDataDB() {
 
 	ctx := context.Background()
-
 	tx, err := rs.db.Begin(ctx)
 
 	if err != nil {
@@ -502,12 +503,12 @@ func (rs *RepStore) BackupDataDB() {
 	if err := tx.Commit(ctx); err != nil {
 		constants.Logger.Error().Err(err)
 	}
-
 }
 
 func (rs *RepStore) BackupDataFile() {
-	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
-	arrJSON, err := json.Marshal(arr)
+	//arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
+
+	arrJSON, err := json.Marshal(rs.storedData)
 	if err != nil {
 		rs.Logger.ErrorLog(err)
 	}
@@ -556,8 +557,7 @@ func (rs *RepStore) LoadStoreMetricsFromFile() {
 
 func (rs *RepStore) SetMetric2DB(ctx context.Context) error {
 
-	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
-	for _, data := range arr {
+	for _, data := range rs.storedData {
 		rows, err := rs.db.Query(ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
 		if err != nil {
 			return errors.New("ошибка выборки данных в БД")
@@ -630,6 +630,15 @@ func (rs *RepStore) CreateTable() {
 	}
 }
 
+func (rs *RepStore) PrepareDataBU() {
+
+	rs.storedData.Clear()
+	for key, val := range rs.MutexRepo {
+		rs.storedData = append(rs.storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
+	}
+
+}
+
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
@@ -648,14 +657,14 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 	return msg
 }
 
-func JSONMetricsAndValue(mm repository.MapMetrics, hashKey string) []encoding.Metrics {
-
-	var arr []encoding.Metrics
-
-	for key, val := range mm {
-		jMetric := val.GetMetrics(val.Type(), key, hashKey)
-		arr = append(arr, jMetric)
-	}
-
-	return arr
-}
+//func JSONMetricsAndValue(mm repository.MapMetrics, hashKey string) []encoding.Metrics {
+//
+//	var arr []encoding.Metrics
+//
+//	for key, val := range mm {
+//		jMetric := val.GetMetrics(val.Type(), key, hashKey)
+//		arr = append(arr, jMetric)
+//	}
+//
+//	return arr
+//}

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 )
 
+type ArrMetrics []Metrics
+
 type Metrics struct {
 	ID    string   `json:"id"`              // имя метрики
 	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
@@ -19,4 +21,8 @@ func (m Metrics) MarshalMetrica() (val []byte, err error) {
 	}
 
 	return arrJSON, nil
+}
+
+func (am *ArrMetrics) Clear() {
+	*am = ArrMetrics{}
 }
