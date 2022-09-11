@@ -111,48 +111,35 @@ func SetConfigServer() ServerConfig {
 		log.Fatal(err)
 	}
 
-	addressServ := ""
-	if _, ok := os.LookupEnv("ADDRESS"); ok {
-		addressServ = cfgENV.Address
-	} else {
+	addressServ := cfgENV.Address
+	if _, ok := os.LookupEnv("ADDRESS"); !ok {
 		addressServ = *addressPtr
 	}
 
-	restoreMetric := false
-	if _, ok := os.LookupEnv("RESTORE"); ok {
-		restoreMetric = cfgENV.Restore
-	} else {
+	restoreMetric := cfgENV.Restore
+	if _, ok := os.LookupEnv("RESTORE"); !ok {
 		restoreMetric = *restorePtr
 	}
 
-	var storeIntervalMetrics time.Duration
-	if _, ok := os.LookupEnv("STORE_INTERVAL"); ok {
-		storeIntervalMetrics = cfgENV.StoreInterval
-	} else {
+	storeIntervalMetrics := cfgENV.StoreInterval
+	if _, ok := os.LookupEnv("STORE_INTERVAL"); !ok {
 		storeIntervalMetrics = *storeIntervalPtr
 	}
 
-	var storeFileMetrics string
-	if _, ok := os.LookupEnv("STORE_FILE"); ok {
-		storeFileMetrics = cfgENV.StoreFile
-	} else {
+	storeFileMetrics := cfgENV.StoreFile
+	if _, ok := os.LookupEnv("STORE_FILE"); !ok {
 		storeFileMetrics = *storeFilePtr
 	}
 
-	keyHash := ""
-	if _, ok := os.LookupEnv("KEY"); ok {
-		keyHash = cfgENV.Key
-	} else {
+	keyHash := cfgENV.Key
+	if _, ok := os.LookupEnv("KEY"); !ok {
 		keyHash = *keyFlag
 	}
 
-	databaseDsn := ""
-	if _, ok := os.LookupEnv("DATABASE_DSN"); ok {
-		databaseDsn = cfgENV.DatabaseDsn
-	} else {
+	databaseDsn := cfgENV.DatabaseDsn
+	if _, ok := os.LookupEnv("DATABASE_DSN"); !ok {
 		databaseDsn = *keyDatabaseDsn
 	}
-	//databaseDsn := "postgresql://postgres:101650@localhost:5433/yapracticum"
 
 	typeMetricsStorage := 0
 	if databaseDsn != "" {

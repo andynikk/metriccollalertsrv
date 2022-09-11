@@ -340,7 +340,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	if strings.Contains(contentEncoding, "gzip") {
-		rs.Logger.InfoLog(fmt.Sprintf("-- метрика с агента gzip (value)"))
+		rs.Logger.InfoLog("-- метрика с агента gzip (value)")
 		bytBody, err := ioutil.ReadAll(rq.Body)
 		if err != nil {
 			rs.Logger.ErrorLog(err)
@@ -505,10 +505,7 @@ func (rs *RepStore) BackupDataDB() {
 }
 
 func (rs *RepStore) BackupDataFile() {
-
-	var arr []encoding.Metrics
-	arr = JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
-
+	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
 	arrJSON, err := json.Marshal(arr)
 	if err != nil {
 		rs.Logger.ErrorLog(err)
@@ -600,12 +597,12 @@ func (rs *RepStore) GetMetricFromDB(ctx context.Context) ([]encoding.Metrics, er
 	var arrMatrics []encoding.Metrics
 
 	poolRow, err := rs.db.Query(ctx, constants.QuerySelect)
-	defer poolRow.Close()
-
 	if err != nil {
 		rs.Logger.ErrorLog(err)
 		return nil, errors.New("ошибка чтения БД")
 	}
+	defer poolRow.Close()
+
 	for poolRow.Next() {
 		var nst encoding.Metrics
 
