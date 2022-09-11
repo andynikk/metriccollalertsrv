@@ -19,6 +19,7 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 	for {
 		select {
 		case <-saveTicker.C:
+			rs.PrepareDataBU()
 			rs.SaveMetric()
 		case <-ctx.Done():
 			cancel()
@@ -36,7 +37,6 @@ func Shutdown(rs *handlers.RepStore) {
 func main() {
 
 	rs := handlers.NewRepStore()
-
 	if rs.Config.Restore {
 		switch rs.Config.TypeMetricsStorage {
 		case constants.MetricsStorageDB:
@@ -45,7 +45,7 @@ func main() {
 			rs.LoadStoreMetricsFromFile()
 		}
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(rs.Ctx)
 	go BackupData(rs, ctx, cancel)
 
 	go func() {

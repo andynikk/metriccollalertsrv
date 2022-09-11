@@ -9,7 +9,7 @@ type Logger struct {
 }
 
 func (l *Logger) ErrorLog(err error) {
-	l.Log.Error().Err(err)
+	l.Log.Error().Err(err).Msg("")
 }
 
 func (l *Logger) InfoLog(infoString string) {

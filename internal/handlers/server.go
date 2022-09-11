@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -24,6 +23,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/logger"
+	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -49,8 +49,9 @@ func (et MetricError) String() string {
 }
 
 type RepStore struct {
-	storedData encoding.ArrMetrics
+	storedData *encoding.ArrMetrics
 	db         *pgx.Conn
+	Ctx        context.Context
 	Logger     logger.Logger
 	Config     environment.ServerConfig
 	Router     chi.Router
@@ -86,13 +87,15 @@ func (rs *RepStore) New() {
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
+	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	rs.Config = environment.SetConfigServer()
 	rs.Logger.Log = constants.Logger
+	rs.Ctx = context.Background()
 
 	if rs.Config.TypeMetricsStorage == constants.MetricsStorageDB {
-		db, err := postgresql.NewClient(context.Background(), rs.Config.DatabaseDsn)
+		db, err := postgresql.NewClient(rs.Ctx, rs.Config.DatabaseDsn)
 		if err != nil {
 			rs.Logger.ErrorLog(err)
 		}
@@ -277,7 +280,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	if res == http.StatusOK {
-		rs.storedData = append(rs.storedData, mt)
+		*rs.storedData = append(*rs.storedData, mt)
 		defer rs.storedData.Clear()
 		rs.SaveMetric()
 	}
@@ -315,16 +318,16 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	defer rs.storedData.Clear()
 	if err := json.Unmarshal(respByte, &rs.storedData); err != nil {
 		rs.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
+	defer rs.storedData.Clear()
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	for _, val := range rs.storedData {
+	for _, val := range *rs.storedData {
 
 		rs.SetValueInMapJSON(val)
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
@@ -490,17 +493,16 @@ func (rs *RepStore) SaveMetric() {
 
 func (rs *RepStore) BackupDataDB() {
 
-	ctx := context.Background()
-	tx, err := rs.db.Begin(ctx)
+	tx, err := rs.db.Begin(rs.Ctx)
 
 	if err != nil {
 		constants.Logger.Error().Err(err)
 	}
-	if err := rs.SetMetric2DB(ctx); err != nil {
+	if err := rs.SetMetric2DB(); err != nil {
 		constants.Logger.Error().Err(err)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err := tx.Commit(rs.Ctx); err != nil {
 		constants.Logger.Error().Err(err)
 	}
 }
@@ -519,8 +521,7 @@ func (rs *RepStore) BackupDataFile() {
 
 func (rs *RepStore) LoadStoreMetricsFromDB() {
 
-	ctx := context.Background()
-	arrMatric, err := rs.GetMetricFromDB(ctx)
+	arrMatric, err := rs.GetMetricFromDB()
 	if err != nil {
 		rs.Logger.ErrorLog(err)
 		return
@@ -555,10 +556,10 @@ func (rs *RepStore) LoadStoreMetricsFromFile() {
 	}
 }
 
-func (rs *RepStore) SetMetric2DB(ctx context.Context) error {
+func (rs *RepStore) SetMetric2DB() error {
 
-	for _, data := range rs.storedData {
-		rows, err := rs.db.Query(ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
+	for _, data := range *rs.storedData {
+		rows, err := rs.db.Query(rs.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
 		if err != nil {
 			return errors.New("ошибка выборки данных в БД")
 		}
@@ -579,12 +580,12 @@ func (rs *RepStore) SetMetric2DB(ctx context.Context) error {
 		rows.Close()
 
 		if insert {
-			if _, err := rs.db.Exec(ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+			if _, err := rs.db.Exec(rs.Ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 				rs.Logger.ErrorLog(err)
 				return errors.New(err.Error())
 			}
 		} else {
-			if _, err := rs.db.Exec(ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+			if _, err := rs.db.Exec(rs.Ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 				rs.Logger.ErrorLog(err)
 				return errors.New("ошибка обновления данных в БД")
 			}
@@ -593,11 +594,11 @@ func (rs *RepStore) SetMetric2DB(ctx context.Context) error {
 	return nil
 }
 
-func (rs *RepStore) GetMetricFromDB(ctx context.Context) ([]encoding.Metrics, error) {
+func (rs *RepStore) GetMetricFromDB() ([]encoding.Metrics, error) {
 
 	var arrMatrics []encoding.Metrics
 
-	poolRow, err := rs.db.Query(ctx, constants.QuerySelect)
+	poolRow, err := rs.db.Query(rs.Ctx, constants.QuerySelect)
 	if err != nil {
 		rs.Logger.ErrorLog(err)
 		return nil, errors.New("ошибка чтения БД")
@@ -620,12 +621,12 @@ func (rs *RepStore) GetMetricFromDB(ctx context.Context) ([]encoding.Metrics, er
 
 func (rs *RepStore) CreateTable() {
 
-	if _, err := rs.db.Exec(context.Background(), constants.QuerySchema); err != nil {
+	if _, err := rs.db.Exec(rs.Ctx, constants.QuerySchema); err != nil {
 		rs.Logger.ErrorLog(err)
 		return
 	}
 
-	if _, err := rs.db.Exec(context.Background(), constants.QueryTable); err != nil {
+	if _, err := rs.db.Exec(rs.Ctx, constants.QueryTable); err != nil {
 		rs.Logger.ErrorLog(err)
 	}
 }
@@ -634,7 +635,7 @@ func (rs *RepStore) PrepareDataBU() {
 
 	rs.storedData.Clear()
 	for key, val := range rs.MutexRepo {
-		rs.storedData = append(rs.storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
+		*rs.storedData = append(*rs.storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
 	}
 
 }

@@ -14,7 +14,7 @@ type Metrics struct {
 	Hash  string   `json:"hash,omitempty"`  // значение хеш-функции
 }
 
-func (m Metrics) MarshalMetrica() (val []byte, err error) {
+func (m *Metrics) MarshalMetrica() (val []byte, err error) {
 	arrJSON, err := json.MarshalIndent(m, "", " ")
 	if err != nil {
 		return nil, err
