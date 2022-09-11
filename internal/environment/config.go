@@ -144,7 +144,7 @@ func SetConfigServer() ServerConfig {
 	typeMetricsStorage := 0
 	if databaseDsn != "" {
 		typeMetricsStorage = 1
-	} else {
+	} else if storeFileMetrics != "" {
 		typeMetricsStorage = 2
 	}
 

@@ -9,7 +9,8 @@ import (
 type TypeMetricsStorage int
 
 const (
-	MetricsStorageDb = iota
+	MetricsStorageNot TypeMetricsStorage = iota
+	MetricsStorageDb
 	MetricsStorageFile
 
 	AddressServer       = "localhost:8080"

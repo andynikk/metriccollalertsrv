@@ -476,11 +476,10 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 }
 
 func (rs *RepStore) SaveMetric() {
-	typeMetricsStorage := rs.Config.TypeMetricsStorage
-	if typeMetricsStorage == constants.MetricsStorageDb {
+	switch rs.Config.TypeMetricsStorage {
+	case constants.MetricsStorageDb:
 		rs.BackupDataDB()
-	}
-	if typeMetricsStorage == constants.MetricsStorageFile {
+	case constants.MetricsStorageFile:
 		rs.BackupDataFile()
 	}
 }
