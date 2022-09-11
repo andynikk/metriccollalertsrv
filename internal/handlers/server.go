@@ -81,12 +81,12 @@ func (rs *RepStore) New() {
 	rs.Router.Get("/", rs.HandlerGetAllMetrics)
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
-	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
-	rs.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
-	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
-	rs.Router.Get("/ping", rs.HandlerPingDB)
+	//rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
+	//rs.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
+	//rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
+	//rs.Router.Get("/ping", rs.HandlerPingDB)
 
-	rs.Config = environment.SetConfigServer()
+	//rs.Config = environment.SetConfigServer()
 	//rs.Logger.Log = constants.Logger
 
 	//db, err := postgresql.NewClient(context.Background(), rs.Config.DatabaseDsn)
