@@ -35,8 +35,9 @@ func Shutdown(rs *handlers.RepStore) {
 
 func main() {
 
+	fmt.Println("******", 1)
 	rs := handlers.NewRepStore()
-
+	fmt.Println("******", 2)
 	if rs.Config.Restore {
 		switch rs.Config.TypeMetricsStorage {
 		case constants.MetricsStorageDb:
@@ -45,7 +46,7 @@ func main() {
 			rs.LoadStoreMetricsFromFile()
 		}
 	}
-
+	fmt.Println("******", 3)
 	ctx, cancel := context.WithCancel(context.Background())
 	go BackupData(rs, ctx, cancel)
 
