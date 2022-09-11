@@ -23,7 +23,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/logger"
-	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -88,14 +87,14 @@ func (rs *RepStore) New() {
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	rs.Config = environment.SetConfigServer()
-	rs.Logger.Log = constants.Logger
+	//rs.Logger.Log = constants.Logger
 
-	db, err := postgresql.NewClient(context.Background(), rs.Config.DatabaseDsn)
-	if err != nil {
-		rs.Logger.ErrorLog(err)
-	}
-	rs.db = db
-	rs.CreateTable()
+	//db, err := postgresql.NewClient(context.Background(), rs.Config.DatabaseDsn)
+	//if err != nil {
+	//	rs.Logger.ErrorLog(err)
+	//}
+	//rs.db = db
+	//rs.CreateTable()
 
 }
 

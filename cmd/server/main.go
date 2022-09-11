@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
@@ -46,9 +43,9 @@ func main() {
 	//		rs.LoadStoreMetricsFromFile()
 	//	}
 	//}
-	fmt.Println("-*-*", 5, rs.Config.Address)
-	ctx, cancel := context.WithCancel(context.Background())
-	go BackupData(rs, ctx, cancel)
+	//fmt.Println("-*-*", 5, rs.Config.Address)
+	//ctx, cancel := context.WithCancel(context.Background())
+	//go BackupData(rs, ctx, cancel)
 
 	fmt.Println("-*-*", 6, rs.Config.Address)
 	go func() {
@@ -64,9 +61,9 @@ func main() {
 		}
 	}()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	<-stop
-	Shutdown(rs)
+	//stop := make(chan os.Signal, 1)
+	//signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	//<-stop
+	//Shutdown(rs)
 
 }

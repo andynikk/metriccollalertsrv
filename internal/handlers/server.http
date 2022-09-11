@@ -25,3 +25,7 @@ Content-Type: application/json
 ### GET request with a header
 GET http://localhost:8080/
 Accept: html/text
+
+### Send POST request with json body
+POST http://localhost:8080/update/counter/testCounter/100
+Content-Type: text/plain
