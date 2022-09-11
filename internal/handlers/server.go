@@ -49,7 +49,7 @@ func (et MetricError) String() string {
 }
 
 type RepStore struct {
-	storedData *encoding.ArrMetrics
+	storedData encoding.ArrMetrics
 	db         *pgx.Conn
 	Ctx        context.Context
 	Logger     logger.Logger
@@ -280,7 +280,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	if res == http.StatusOK {
-		*rs.storedData = append(*rs.storedData, mt)
+		rs.storedData = append(rs.storedData, mt)
 		defer rs.storedData.Clear()
 		rs.SaveMetric()
 	}
@@ -327,7 +327,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
 
-	for _, val := range *rs.storedData {
+	for _, val := range rs.storedData {
 
 		rs.SetValueInMapJSON(val)
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
@@ -558,7 +558,7 @@ func (rs *RepStore) LoadStoreMetricsFromFile() {
 
 func (rs *RepStore) SetMetric2DB() error {
 
-	for _, data := range *rs.storedData {
+	for _, data := range rs.storedData {
 		rows, err := rs.db.Query(rs.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
 		if err != nil {
 			return errors.New("ошибка выборки данных в БД")
@@ -635,7 +635,7 @@ func (rs *RepStore) PrepareDataBU() {
 
 	rs.storedData.Clear()
 	for key, val := range rs.MutexRepo {
-		*rs.storedData = append(*rs.storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
+		rs.storedData = append(rs.storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
 	}
 
 }
