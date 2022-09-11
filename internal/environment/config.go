@@ -97,28 +97,29 @@ func SetConfigAgent() AgentConfig {
 
 func SetConfigServer() ServerConfig {
 
+	fmt.Println("-*-*-", 1)
 	addressPtr := flag.String("a", constants.AddressServer, "имя сервера")
 	restorePtr := flag.Bool("r", constants.Restore, "восстанавливать значения при старте")
 	storeIntervalPtr := flag.Duration("i", constants.StoreInterval, "интервал автосохранения (сек.)")
 	storeFilePtr := flag.String("f", constants.StoreFile, "путь к файлу метрик")
 	keyFlag := flag.String("k", "", "ключ хеша")
 	keyDatabaseDsn := flag.String("d", "", "строка соединения с базой")
-
+	fmt.Println("-*-*-", 2)
 	flag.Parse()
-
+	fmt.Println("-*-*-", 3)
 	var cfgENV ServerConfigENV
 	err := env.Parse(&cfgENV)
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	fmt.Println("-*-*-", 4)
 	addressServ := cfgENV.Address
 	fmt.Println("-*-*", 1, addressServ)
 	if _, ok := os.LookupEnv("ADDRESS"); !ok {
 		addressServ = *addressPtr
 		fmt.Println("-*-*", 2, addressServ)
 	}
-
+	fmt.Println("-*-*-", 5)
 	restoreMetric := cfgENV.Restore
 	if _, ok := os.LookupEnv("RESTORE"); !ok {
 		restoreMetric = *restorePtr
@@ -133,7 +134,7 @@ func SetConfigServer() ServerConfig {
 	if _, ok := os.LookupEnv("STORE_FILE"); !ok {
 		storeFileMetrics = *storeFilePtr
 	}
-
+	fmt.Println("-*-*-", 6)
 	keyHash := cfgENV.Key
 	if _, ok := os.LookupEnv("KEY"); !ok {
 		keyHash = *keyFlag
@@ -143,14 +144,14 @@ func SetConfigServer() ServerConfig {
 	if _, ok := os.LookupEnv("DATABASE_DSN"); !ok {
 		databaseDsn = *keyDatabaseDsn
 	}
-
+	fmt.Println("-*-*-", 7)
 	typeMetricsStorage := constants.MetricsStorageNot
 	if databaseDsn != "" {
 		typeMetricsStorage = constants.MetricsStorageDB
 	} else if storeFileMetrics != "" {
 		typeMetricsStorage = constants.MetricsStorageFile
 	}
-
+	fmt.Println("-*-*-", 8)
 	fmt.Println("-*-*", 3, addressServ)
 	return ServerConfig{
 		StoreInterval:      storeIntervalMetrics,
