@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -48,10 +49,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go BackupData(rs, ctx, cancel)
 
+	fmt.Println("******", rs.Config.Address)
 	go func() {
 		s := &http.Server{
 			Addr:    rs.Config.Address,
 			Handler: rs.Router}
+		fmt.Println("******", s.Addr)
 
 		if err := s.ListenAndServe(); err != nil {
 			constants.Logger.Error().Err(err)
