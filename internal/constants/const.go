@@ -9,7 +9,7 @@ import (
 type TypeMetricsStorage int
 
 const (
-	MetricsStorageDb TypeMetricsStorage = iota
+	MetricsStorageDb = iota
 	MetricsStorageFile
 )
 

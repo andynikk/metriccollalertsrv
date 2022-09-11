@@ -2,6 +2,7 @@ package environment
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -112,8 +113,10 @@ func SetConfigServer() ServerConfig {
 	}
 
 	addressServ := cfgENV.Address
+	fmt.Println("-*-*", 1, addressServ)
 	if _, ok := os.LookupEnv("ADDRESS"); !ok {
 		addressServ = *addressPtr
+		fmt.Println("-*-*", 2, addressServ)
 	}
 
 	restoreMetric := cfgENV.Restore
@@ -148,6 +151,7 @@ func SetConfigServer() ServerConfig {
 		typeMetricsStorage = 2
 	}
 
+	fmt.Println("-*-*", 3, addressServ)
 	return ServerConfig{
 		StoreInterval:      storeIntervalMetrics,
 		StoreFile:          storeFileMetrics,

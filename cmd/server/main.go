@@ -35,25 +35,26 @@ func Shutdown(rs *handlers.RepStore) {
 
 func main() {
 
-	fmt.Println("******", 1)
 	rs := handlers.NewRepStore()
-	fmt.Println("******", 2)
-	if rs.Config.Restore {
-		switch rs.Config.TypeMetricsStorage {
-		case constants.MetricsStorageDb:
-			rs.LoadStoreMetricsFromDB()
-		case constants.MetricsStorageFile:
-			rs.LoadStoreMetricsFromFile()
-		}
-	}
-	fmt.Println("******", 3)
+
+	fmt.Println("-*-*", 4, rs.Config.TypeMetricsStorage)
+	//if rs.Config.Restore {
+	//	switch rs.Config.TypeMetricsStorage {
+	//	case constants.MetricsStorageDb:
+	//		rs.LoadStoreMetricsFromDB()
+	//	case constants.MetricsStorageFile:
+	//		rs.LoadStoreMetricsFromFile()
+	//	}
+	//}
+	fmt.Println("-*-*", 5, rs.Config.Address)
 	ctx, cancel := context.WithCancel(context.Background())
 	go BackupData(rs, ctx, cancel)
 
-	fmt.Println("******", rs.Config.Address)
+	fmt.Println("-*-*", 6, rs.Config.Address)
 	go func() {
 		s := &http.Server{
-			Addr:    rs.Config.Address,
+			///Addr:    rs.Config.Address,
+			Addr:    "localhost:8080",
 			Handler: rs.Router}
 		fmt.Println("******", s.Addr)
 
