@@ -144,11 +144,11 @@ func SetConfigServer() ServerConfig {
 		databaseDsn = *keyDatabaseDsn
 	}
 
-	typeMetricsStorage := 0
+	typeMetricsStorage := constants.MetricsStorageNot
 	if databaseDsn != "" {
-		typeMetricsStorage = 1
+		typeMetricsStorage = constants.MetricsStorageDB
 	} else if storeFileMetrics != "" {
-		typeMetricsStorage = 2
+		typeMetricsStorage = constants.MetricsStorageFile
 	}
 
 	fmt.Println("-*-*", 3, addressServ)
@@ -159,6 +159,6 @@ func SetConfigServer() ServerConfig {
 		Address:            addressServ,
 		Key:                keyHash,
 		DatabaseDsn:        databaseDsn,
-		TypeMetricsStorage: constants.TypeMetricsStorage(typeMetricsStorage),
+		TypeMetricsStorage: typeMetricsStorage,
 	}
 }

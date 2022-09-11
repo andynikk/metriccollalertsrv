@@ -9,11 +9,10 @@ import (
 type TypeMetricsStorage int
 
 const (
-	MetricsStorageDb = iota
+	MetricsStorageNot TypeMetricsStorage = iota
+	MetricsStorageDB
 	MetricsStorageFile
-)
 
-const (
 	AddressServer       = "localhost:8080"
 	ReportInterval      = 10
 	PollInterval        = 2

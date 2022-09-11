@@ -37,7 +37,7 @@ func main() {
 	fmt.Println("-*-*", 4, rs.Config.TypeMetricsStorage)
 	//if rs.Config.Restore {
 	//	switch rs.Config.TypeMetricsStorage {
-	//	case constants.MetricsStorageDb:
+	//	case constants.MetricsStorageDB:
 	//		rs.LoadStoreMetricsFromDB()
 	//	case constants.MetricsStorageFile:
 	//		rs.LoadStoreMetricsFromFile()
