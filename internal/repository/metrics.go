@@ -35,7 +35,7 @@ type StoreMetrics struct {
 	MapTypeStore  MapTypeStore
 	StoreInterval time.Duration
 	HashKey       string
-	MX            *sync.Mutex
+	MX            sync.Mutex
 	Repo          MapMetrics
 }
 
