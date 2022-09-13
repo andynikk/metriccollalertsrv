@@ -1,53 +1,22 @@
 package main
 
 import (
-	"context"
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/handlers"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
-func LoadData(rs *handlers.RepStore) {
-	for _, val := range rs.Config.TypeMetricsStorage {
-		arrMatric, err := val.GetMetric()
-		if err != nil {
-			constants.Logger.ErrorLog(err)
-			return
-		}
-
-		rs.MX.Lock()
-		defer rs.MX.Unlock()
-
-		for _, val := range arrMatric {
-			rs.SetValueInMapJSON(val)
-		}
-	}
+type server struct {
+	Storege repository.StoreMetrics `json:"storege"`
 }
 
-func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.CancelFunc) {
-
-	saveTicker := time.NewTicker(rs.Config.StoreInterval)
-	for {
-		select {
-		case <-saveTicker.C:
-			for _, val := range rs.Config.TypeMetricsStorage {
-				val.WriteMetric(rs.PrepareDataBU())
-			}
-		case <-ctx.Done():
-			cancel()
-			return
-		}
-	}
-}
-
-func Shutdown(rs *handlers.RepStore) {
-	for _, val := range rs.Config.TypeMetricsStorage {
-		val.WriteMetric(rs.PrepareDataBU())
+func Shutdown(sm *repository.StoreMetrics) {
+	for _, val := range sm.MapTypeStore {
+		val.WriteMetric(sm.PrepareDataBU())
 	}
 	constants.Logger.InfoLog("server stopped")
 }
@@ -55,11 +24,23 @@ func Shutdown(rs *handlers.RepStore) {
 func main() {
 
 	rs := handlers.NewRepStore()
-	if rs.Config.Restore {
-		LoadData(rs)
+	server := server{
+		Storege: repository.StoreMetrics{
+			MapTypeStore:  rs.MutexRepo.MapTypeStore,
+			HashKey:       rs.MutexRepo.HashKey,
+			StoreInterval: rs.MutexRepo.StoreInterval,
+			MX:            rs.MutexRepo.MX,
+			Repo:          rs.MutexRepo.Repo,
+		},
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	go BackupData(rs, ctx, cancel)
+
+	if rs.Config.Restore {
+		server.Storege.RestoreData()
+	}
+
+	//ctx, cancel := context.WithCancel(context.Background())
+	//go server.Storege.BackupData(ctx, cancel)
+	go server.Storege.BackupData()
 
 	go func() {
 		s := &http.Server{
@@ -75,6 +56,6 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	Shutdown(rs)
+	Shutdown(&server.Storege)
 
 }

@@ -83,6 +83,10 @@ func (stb *TypeStoreDataDB) CreateTable() {
 	}
 }
 
+func (stb *TypeStoreDataDB) RestoreData(mm *MapMetrics) {
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (f *TypeStoreDataFile) WriteMetric(storedData encoding.ArrMetrics) {

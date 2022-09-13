@@ -2,7 +2,6 @@ package environment
 
 import (
 	"flag"
-
 	"log"
 	"os"
 	"time"
@@ -38,13 +37,17 @@ type ServerConfigENV struct {
 }
 
 type ServerConfig struct {
-	StoreInterval      time.Duration
-	StoreFile          string
-	Restore            bool
-	Address            string
-	Key                string
-	DatabaseDsn        string
-	TypeMetricsStorage repository.MapTypeStore
+	StoreFile   string
+	Restore     bool
+	Address     string
+	DatabaseDsn string
+}
+
+type DataConfig struct {
+	ServerConfig  ServerConfig
+	MapTypeStore  repository.MapTypeStore
+	HashKey       string
+	StoreInterval time.Duration
 }
 
 func SetConfigAgent() AgentConfig {
@@ -97,7 +100,7 @@ func SetConfigAgent() AgentConfig {
 
 }
 
-func SetConfigServer() ServerConfig {
+func SetConfigServer(tempConfig *DataConfig, serverConfig *ServerConfig) {
 
 	addressPtr := flag.String("a", constants.AddressServer, "имя сервера")
 	restorePtr := flag.Bool("r", constants.Restore, "восстанавливать значения при старте")
@@ -143,25 +146,31 @@ func SetConfigServer() ServerConfig {
 		databaseDsn = *keyDatabaseDsn
 	}
 
-	MapTypeStore := make(repository.MapTypeStore)
-
+	tempConfig.MapTypeStore = make(repository.MapTypeStore)
 	if databaseDsn != "" {
 		typeDB := repository.TypeStoreDataDB{}
-		MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
+		tempConfig.MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
 	} else if storeFileMetrics != "" {
 		typeFile := repository.TypeStoreDataFile{}
-		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
+		tempConfig.MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 	}
 
 	constants.Logger.Log = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
 
-	return ServerConfig{
-		StoreInterval:      storeIntervalMetrics,
-		StoreFile:          storeFileMetrics,
-		Restore:            restoreMetric,
-		Address:            addressServ,
-		Key:                keyHash,
-		DatabaseDsn:        databaseDsn,
-		TypeMetricsStorage: MapTypeStore,
-	}
+	serverConfig.StoreFile = storeFileMetrics
+	serverConfig.Restore = restoreMetric
+	serverConfig.Address = addressServ
+	serverConfig.DatabaseDsn = databaseDsn
+
+	tempConfig.HashKey = keyHash
+	tempConfig.StoreInterval = storeIntervalMetrics
+
+	//serverConfig.StoreInterval =storeIntervalMetrics
+	//serverConfig.StoreFile =storeFileMetrics
+	//serverConfig.Restore =restoreMetric
+	//serverConfig.Address =addressServ
+	//serverConfig.Key =keyHash
+	//serverConfig.DatabaseDsn =databaseDsn
+
+	return
 }
