@@ -131,8 +131,6 @@ func (c *Counter) Type() string {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-//func (sm *StoreMetrics) BackupData(ctx context.Context, cancelFunc context.CancelFunc) {
-
 func (sm *StoreMetrics) BackupData() {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
@@ -167,8 +165,8 @@ func (sm *StoreMetrics) RestoreData() {
 			continue
 		}
 
-		//sm.MX.Lock()
-		//defer sm.MX.Unlock()
+		sm.MX.Lock()
+		defer sm.MX.Unlock()
 
 		for _, val := range arrMetrics {
 			sm.SetValueInMapJSON(val)
@@ -219,8 +217,8 @@ func (sm *StoreMetrics) SetValueInMapJSON(v encoding.Metrics) int {
 	constants.Logger.InfoLog(fmt.Sprintf("** %s %s %v %d", v.ID, v.MType, v.Value, v.Delta))
 
 	sm.Repo[v.ID].Set(v)
-	return http.StatusOK
 
+	return http.StatusOK
 }
 
 func (sm *StoreMetrics) SetValueInMap(metType string, metName string, metValue string) int {

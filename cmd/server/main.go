@@ -11,7 +11,7 @@ import (
 )
 
 type server struct {
-	storege repository.StoreMetrics
+	storege handlers.RepStore
 }
 
 func Shutdown(sm *repository.StoreMetrics) {
@@ -23,21 +23,22 @@ func Shutdown(sm *repository.StoreMetrics) {
 
 func main() {
 
-	rs := new(handlers.RepStore)
+	//rs := new(handlers.RepStore)
 	server := new(server)
 
-	handlers.NewRepStore(rs, &server.storege)
+	handlers.NewRepStore(&server.storege)
 
-	if rs.Config.Restore {
-		server.storege.RestoreData()
+	if server.storege.Config.Restore {
+		server.storege.MutexRepo.RestoreData()
 	}
 
-	go server.storege.BackupData()
+	//go server.storege.BackupData()
+	go server.storege.MutexRepo.RestoreData()
 
 	go func() {
 		s := &http.Server{
-			Addr:    rs.Config.Address,
-			Handler: rs.Router}
+			Addr:    server.storege.Config.Address,
+			Handler: server.storege.Router}
 
 		if err := s.ListenAndServe(); err != nil {
 			constants.Logger.ErrorLog(err)
@@ -48,6 +49,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	Shutdown(&server.storege)
+	//Shutdown(&server.storege)
+	Shutdown(server.storege.MutexRepo)
 
 }

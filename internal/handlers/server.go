@@ -37,11 +37,8 @@ type RepStore struct {
 	MutexRepo *repository.StoreMetrics
 }
 
-func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
+func NewRepStore(rs *RepStore) {
 
-	//rs.MutexRepo.Repo = make(repository.MapMetrics)
-	//Repo := make(repository.MapMetrics)
-	//rs.MutexRepo.Repo = *
 	rs.Router = chi.NewRouter()
 
 	rs.Router.Use(middleware.RequestID)
@@ -58,7 +55,6 @@ func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
-	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
@@ -85,17 +81,6 @@ func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
 	rs.MutexRepo.MapTypeStore = mapTypeStore
 	rs.MutexRepo.HashKey = dataConfig.HashKey
 	rs.MutexRepo.StoreInterval = dataConfig.StoreInterval
-
-	//Repo = make(repository.MapMetrics)
-	//rs.MutexRepo.MapTypeStore = mapTypeStore
-	//rs.MutexRepo.HashKey = dataConfig.HashKey
-	//rs.MutexRepo.StoreInterval = dataConfig.StoreInterval
-	//rs.MutexRepo.Repo =
-
-	storege.Repo = make(repository.MapMetrics)
-	storege.MapTypeStore = mapTypeStore
-	storege.HashKey = dataConfig.HashKey
-	storege.StoreInterval = dataConfig.StoreInterval
 }
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
@@ -324,6 +309,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		constants.Logger.ErrorLog(err)
 		return
 	}
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
