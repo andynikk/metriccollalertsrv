@@ -11,7 +11,7 @@ import (
 )
 
 type server struct {
-	storege repository.StoreMetrics `json:"storege"`
+	storege repository.StoreMetrics
 }
 
 func Shutdown(sm *repository.StoreMetrics) {

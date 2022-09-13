@@ -57,8 +57,14 @@ func TestFuncServer(t *testing.T) {
 				r := chi.NewRouter()
 				ts := httptest.NewServer(r)
 
-				mm := new(repository.StoreMetrics)
-				rp := handlers.RepStore{MutexRepo: *mm, Router: nil}
+				//sm := new(repository.StoreMetrics)
+				sm := repository.StoreMetrics{
+					Repo:          repository.MapMetrics{},
+					MapTypeStore:  repository.MapTypeStore{},
+					HashKey:       "",
+					StoreInterval: 0,
+				}
+				rp := handlers.RepStore{MutexRepo: sm, Router: nil}
 				r.Post("/update/{metType}/{metName}/{metValue}", rp.HandlerSetMetricaPOST)
 
 				defer ts.Close()
