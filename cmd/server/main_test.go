@@ -64,7 +64,7 @@ func TestFuncServer(t *testing.T) {
 					HashKey:       "",
 					StoreInterval: 0,
 				}
-				rp := handlers.RepStore{MutexRepo: sm, Router: nil}
+				rp := handlers.RepStore{MutexRepo: &sm, Router: nil}
 				r.Post("/update/{metType}/{metName}/{metValue}", rp.HandlerSetMetricaPOST)
 
 				defer ts.Close()
