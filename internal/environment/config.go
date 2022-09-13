@@ -100,7 +100,7 @@ func SetConfigAgent() AgentConfig {
 
 }
 
-func SetConfigServer(tempConfig *DataConfig, serverConfig *ServerConfig) {
+func SetConfigServer(tempConfig DataConfig, serverConfig ServerConfig) {
 
 	addressPtr := flag.String("a", constants.AddressServer, "имя сервера")
 	restorePtr := flag.Bool("r", constants.Restore, "восстанавливать значения при старте")
@@ -171,6 +171,4 @@ func SetConfigServer(tempConfig *DataConfig, serverConfig *ServerConfig) {
 	//serverConfig.Address =addressServ
 	//serverConfig.Key =keyHash
 	//serverConfig.DatabaseDsn =databaseDsn
-
-	return
 }
