@@ -11,7 +11,7 @@ import (
 )
 
 type server struct {
-	Storege repository.StoreMetrics `json:"storege"`
+	storege repository.StoreMetrics `json:"storege"`
 }
 
 func Shutdown(sm *repository.StoreMetrics) {
@@ -23,24 +23,16 @@ func Shutdown(sm *repository.StoreMetrics) {
 
 func main() {
 
-	rs := handlers.NewRepStore()
-	server := server{
-		Storege: repository.StoreMetrics{
-			MapTypeStore:  rs.MutexRepo.MapTypeStore,
-			HashKey:       rs.MutexRepo.HashKey,
-			StoreInterval: rs.MutexRepo.StoreInterval,
-			MX:            rs.MutexRepo.MX,
-			Repo:          rs.MutexRepo.Repo,
-		},
-	}
+	rs := new(handlers.RepStore)
+	server := new(server)
+
+	handlers.NewRepStore(rs, &server.storege)
 
 	if rs.Config.Restore {
-		server.Storege.RestoreData()
+		server.storege.RestoreData()
 	}
 
-	//ctx, cancel := context.WithCancel(context.Background())
-	//go server.Storege.BackupData(ctx, cancel)
-	go server.Storege.BackupData()
+	go server.storege.BackupData()
 
 	go func() {
 		s := &http.Server{
@@ -56,6 +48,6 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	Shutdown(&server.Storege)
+	Shutdown(&server.storege)
 
 }
