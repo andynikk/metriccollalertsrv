@@ -100,7 +100,7 @@ func SetConfigAgent() AgentConfig {
 
 }
 
-func SetConfigServer(dataConfig *DataConfig, serverConfig *ServerConfig) {
+func SetConfigServer(tempConfig *DataConfig, serverConfig ServerConfig) {
 
 	addressPtr := flag.String("a", constants.AddressServer, "имя сервера")
 	restorePtr := flag.Bool("r", constants.Restore, "восстанавливать значения при старте")
@@ -146,29 +146,29 @@ func SetConfigServer(dataConfig *DataConfig, serverConfig *ServerConfig) {
 		databaseDsn = *keyDatabaseDsn
 	}
 
-	dataConfig.MapTypeStore = make(repository.MapTypeStore)
+	tempConfig.MapTypeStore = make(repository.MapTypeStore)
 	if databaseDsn != "" {
 		typeDB := repository.TypeStoreDataDB{}
-		dataConfig.MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
+		tempConfig.MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
 	} else if storeFileMetrics != "" {
 		typeFile := repository.TypeStoreDataFile{}
-		dataConfig.MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
+		tempConfig.MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 	}
 
 	constants.Logger.Log = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
 
-	//serverConfig = new(ServerConfig)
-	//serverConfig = &ServerConfig{
-	//	StoreFile:   storeFileMetrics,
-	//	Restore:     restoreMetric,
-	//	Address:     addressServ,
-	//	DatabaseDsn: databaseDsn,
-	//}
 	serverConfig.StoreFile = storeFileMetrics
 	serverConfig.Restore = restoreMetric
 	serverConfig.Address = addressServ
 	serverConfig.DatabaseDsn = databaseDsn
 
-	dataConfig.HashKey = keyHash
-	dataConfig.StoreInterval = storeIntervalMetrics
+	tempConfig.HashKey = keyHash
+	tempConfig.StoreInterval = storeIntervalMetrics
+
+	//serverConfig.StoreInterval =storeIntervalMetrics
+	//serverConfig.StoreFile =storeFileMetrics
+	//serverConfig.Restore =restoreMetric
+	//serverConfig.Address =addressServ
+	//serverConfig.Key =keyHash
+	//serverConfig.DatabaseDsn =databaseDsn
 }

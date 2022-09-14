@@ -32,11 +32,11 @@ const (
 type MapMetrics = map[string]Metric
 
 type StoreMetrics struct {
-	StoreInterval time.Duration `json:"store_interval,omitempty"`
-	HashKey       string        `json:"hash_key,omitempty"`
-	MapTypeStore  MapTypeStore  `json:"map_type_store,omitempty"`
-	MX            sync.Mutex    `json:"mx"`
-	Repo          MapMetrics    `json:"repo,omitempty"`
+	MapTypeStore  MapTypeStore
+	StoreInterval time.Duration
+	HashKey       string
+	MX            sync.Mutex
+	Repo          MapMetrics
 }
 
 type Metric interface {
@@ -167,8 +167,8 @@ func (sm *StoreMetrics) RestoreData() {
 			continue
 		}
 
-		//sm.MX.Lock()
-		//defer sm.MX.Unlock()
+		sm.MX.Lock()
+		defer sm.MX.Unlock()
 
 		for _, val := range arrMetrics {
 			sm.SetValueInMapJSON(val)

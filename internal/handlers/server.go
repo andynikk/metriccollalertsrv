@@ -6,18 +6,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
+
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/environment"
+	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricError int
@@ -37,8 +38,17 @@ type RepStore struct {
 	MutexRepo repository.StoreMetrics
 }
 
-func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
+func NewRepStore() *RepStore {
 
+	rp := new(RepStore)
+	rp.New()
+
+	return rp
+}
+
+func (rs *RepStore) New() {
+
+	//rs.MutexRepo = make(repository.StoreMetrics)
 	rs.MutexRepo.Repo = make(repository.MapMetrics)
 
 	rs.Router = chi.NewRouter()
@@ -62,7 +72,7 @@ func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	dataConfig := new(environment.DataConfig)
-	environment.SetConfigServer(dataConfig, &rs.Config)
+	environment.SetConfigServer(dataConfig, rs.Config)
 
 	mapTypeStore := dataConfig.MapTypeStore
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
@@ -78,16 +88,9 @@ func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
 	if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
 		mapTypeStore[constants.MetricsStorageFile.String()] = &repository.TypeStoreDataFile{StoreFile: rs.Config.StoreFile}
 	}
-
-	rs.MutexRepo.Repo = make(repository.MapMetrics)
 	rs.MutexRepo.MapTypeStore = mapTypeStore
 	rs.MutexRepo.HashKey = dataConfig.HashKey
 	rs.MutexRepo.StoreInterval = dataConfig.StoreInterval
-
-	storege.Repo = make(repository.MapMetrics)
-	storege.MapTypeStore = mapTypeStore
-	storege.HashKey = dataConfig.HashKey
-	storege.StoreInterval = dataConfig.StoreInterval
 }
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
