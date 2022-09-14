@@ -72,7 +72,7 @@ func (rs *RepStore) New() {
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	dataConfig := new(environment.DataConfig)
-	environment.SetConfigServer(dataConfig, rs.Config)
+	environment.SetConfigServer(dataConfig, &rs.Config)
 
 	mapTypeStore := dataConfig.MapTypeStore
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
