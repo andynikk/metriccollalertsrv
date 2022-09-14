@@ -64,5 +64,4 @@ func (tmc TypeMetricsStorage) String() string {
 	return [...]string{"db", "file"}[tmc]
 }
 
-//var Logger = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
 var Logger logger.Logger

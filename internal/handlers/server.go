@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -53,15 +54,7 @@ type RepStore struct {
 	MutexRepo repository.MapMetrics
 }
 
-func NewRepStore() *RepStore {
-
-	rp := new(RepStore)
-	rp.New()
-
-	return rp
-}
-
-func (rs *RepStore) New() {
+func NewRepStore(rs *RepStore) {
 
 	rs.MutexRepo = make(repository.MapMetrics)
 	rs.Router = chi.NewRouter()
@@ -96,11 +89,9 @@ func (rs *RepStore) New() {
 
 		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{DB: db, Ctx: ctx}
 		mapTypeStore[constants.MetricsStorageDB.String()].CreateTable()
-		//rs.Config.TypeMetricsStorage = mapTypeStore
 	}
 	if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
 		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataFile{StoreFile: rs.Config.StoreFile}
-		//rs.Config.TypeMetricsStorage = mapTypeStore
 	}
 }
 
@@ -282,6 +273,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		var arrMetrics encoding.ArrMetrics
 		arrMetrics = append(arrMetrics, mt)
 
+		//rs.MX.Lock()
+		//defer rs.MX.Unlock()
+
 		for _, val := range rs.Config.TypeMetricsStorage {
 			val.WriteMetric(arrMetrics)
 		}
@@ -419,6 +413,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 }
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
+	defer rq.Body.Close()
 	mapTypeStore := rs.Config.TypeMetricsStorage
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
@@ -495,6 +490,44 @@ func (rs *RepStore) PrepareDataBU() encoding.ArrMetrics {
 		storedData = append(storedData, val.GetMetrics(val.Type(), key, rs.Config.Key))
 	}
 	return storedData
+}
+
+func (rs *RepStore) RestoreData() {
+	for _, val := range rs.Config.TypeMetricsStorage {
+		arrMetrics, err := val.GetMetric()
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			continue
+		}
+
+		rs.MX.Lock()
+		defer rs.MX.Unlock()
+
+		for _, val := range arrMetrics {
+			rs.SetValueInMapJSON(val)
+		}
+	}
+}
+
+func (rs *RepStore) BackupData() {
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	saveTicker := time.NewTicker(rs.Config.StoreInterval)
+	for {
+		select {
+		case <-saveTicker.C:
+
+			rs.MX.Lock()
+			for _, val := range rs.Config.TypeMetricsStorage {
+				val.WriteMetric(rs.PrepareDataBU())
+			}
+			rs.MX.Unlock()
+
+		case <-ctx.Done():
+			cancelFunc()
+			return
+		}
+	}
 }
 
 func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {

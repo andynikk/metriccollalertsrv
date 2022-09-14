@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"os"
-
-	"github.com/jackc/pgx/v4"
-
+	"fmt"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/jackc/pgx/v4"
+	"io/ioutil"
+	"os"
 )
 
 type TypeStoreDataDB struct {
@@ -28,25 +27,28 @@ type TypeStoreData interface {
 	GetMetric() ([]encoding.Metrics, error)
 	CreateTable()
 	ConnDB() *pgx.Conn
+	SetMetric2DB(storedData encoding.ArrMetrics) error
 }
 
-func (stb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
-	tx, err := stb.DB.Begin(stb.Ctx)
+func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
+	tx, err := sdb.DB.Begin(sdb.Ctx)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 	}
-	if err := SetMetric2DB(stb.DB, stb.Ctx, storedData); err != nil {
+
+	if err := sdb.SetMetric2DB(storedData); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
-	if err := tx.Commit(stb.Ctx); err != nil {
+
+	if err := tx.Commit(sdb.Ctx); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 }
 
-func (stb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
+func (sdb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 	var arrMatrics []encoding.Metrics
 
-	poolRow, err := stb.DB.Query(stb.Ctx, constants.QuerySelect)
+	poolRow, err := sdb.DB.Query(sdb.Ctx, constants.QuerySelect)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return nil, errors.New("ошибка чтения БД")
@@ -67,20 +69,58 @@ func (stb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatrics, nil
 }
 
-func (stb *TypeStoreDataDB) ConnDB() *pgx.Conn {
-	return stb.DB
+func (sdb *TypeStoreDataDB) ConnDB() *pgx.Conn {
+	return sdb.DB
 }
 
-func (stb *TypeStoreDataDB) CreateTable() {
+func (sdb *TypeStoreDataDB) CreateTable() {
 
-	if _, err := stb.DB.Exec(stb.Ctx, constants.QuerySchema); err != nil {
+	if _, err := sdb.DB.Exec(sdb.Ctx, constants.QuerySchema); err != nil {
 		constants.Logger.ErrorLog(err)
 		return
 	}
 
-	if _, err := stb.DB.Exec(stb.Ctx, constants.QueryTable); err != nil {
+	if _, err := sdb.DB.Exec(sdb.Ctx, constants.QueryTable); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
+}
+
+func (sdb *TypeStoreDataDB) SetMetric2DB(storedData encoding.ArrMetrics) error {
+
+	for _, data := range storedData {
+		rows, err := sdb.DB.Query(sdb.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
+		if err != nil {
+			return errors.New("ошибка выборки данных в БД")
+		}
+
+		dataValue := float64(0)
+		if data.Value != nil {
+			dataValue = *data.Value
+		}
+		dataDelta := int64(0)
+		if data.Delta != nil {
+			dataDelta = *data.Delta
+		}
+
+		insert := true
+		if rows.Next() {
+			insert = false
+		}
+		rows.Close()
+
+		if insert {
+			if _, err := sdb.DB.Exec(sdb.Ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+				constants.Logger.ErrorLog(err)
+				return errors.New(err.Error())
+			}
+		} else {
+			if _, err := sdb.DB.Exec(sdb.Ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+				constants.Logger.ErrorLog(err)
+				return errors.New("ошибка обновления данных в БД")
+			}
+		}
+	}
+	return nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -121,42 +161,9 @@ func (f *TypeStoreDataFile) CreateTable() {
 
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func SetMetric2DB(db *pgx.Conn, ctx context.Context, storedData encoding.ArrMetrics) error {
-
-	for _, data := range storedData {
-		rows, err := db.Query(ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
-		if err != nil {
-			return errors.New("ошибка выборки данных в БД")
-		}
-
-		dataValue := float64(0)
-		if data.Value != nil {
-			dataValue = *data.Value
-		}
-		dataDelta := int64(0)
-		if data.Delta != nil {
-			dataDelta = *data.Delta
-		}
-
-		insert := true
-		if rows.Next() {
-			insert = false
-		}
-		rows.Close()
-
-		if insert {
-			if _, err := db.Exec(ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-				constants.Logger.ErrorLog(err)
-				return errors.New(err.Error())
-			}
-		} else {
-			if _, err := db.Exec(ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-				constants.Logger.ErrorLog(err)
-				return errors.New("ошибка обновления данных в БД")
-			}
-		}
+func (f *TypeStoreDataFile) SetMetric2DB(storedData encoding.ArrMetrics) error {
+	for _, val := range storedData {
+		constants.Logger.InfoLog(fmt.Sprintf("очень странно, но этого сообщения не должно быть", val.ID))
 	}
 	return nil
 }
