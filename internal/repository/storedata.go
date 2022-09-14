@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/jackc/pgx/v4"
 	"io/ioutil"
 	"os"
+
+	"github.com/jackc/pgx/v4"
+
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 )
 
 type TypeStoreDataDB struct {
@@ -163,7 +165,7 @@ func (f *TypeStoreDataFile) CreateTable() {
 
 func (f *TypeStoreDataFile) SetMetric2DB(storedData encoding.ArrMetrics) error {
 	for _, val := range storedData {
-		constants.Logger.InfoLog(fmt.Sprintf("очень странно, но этого сообщения не должно быть", val.ID))
+		constants.Logger.InfoLog(fmt.Sprintf("очень странно, но этого сообщения не должно быть %s", val.ID))
 	}
 	return nil
 }

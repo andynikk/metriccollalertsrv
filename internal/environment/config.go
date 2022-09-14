@@ -2,7 +2,6 @@ package environment
 
 import (
 	"flag"
-
 	"log"
 	"os"
 	"time"
