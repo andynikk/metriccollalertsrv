@@ -34,14 +34,13 @@ func (et MetricError) String() string {
 type RepStore struct {
 	Config    environment.ServerConfig
 	Router    chi.Router
-	MutexRepo *repository.StoreMetrics
+	MutexRepo repository.StoreMetrics
 }
 
 func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
 
-	//rs.MutexRepo.Repo = make(repository.MapMetrics)
-	//Repo := make(repository.MapMetrics)
-	//rs.MutexRepo.Repo = *
+	rs.MutexRepo.Repo = make(repository.MapMetrics)
+
 	rs.Router = chi.NewRouter()
 
 	rs.Router.Use(middleware.RequestID)
@@ -80,17 +79,10 @@ func NewRepStore(rs *RepStore, storege *repository.StoreMetrics) {
 		mapTypeStore[constants.MetricsStorageFile.String()] = &repository.TypeStoreDataFile{StoreFile: rs.Config.StoreFile}
 	}
 
-	rs.MutexRepo = new(repository.StoreMetrics)
 	rs.MutexRepo.Repo = make(repository.MapMetrics)
 	rs.MutexRepo.MapTypeStore = mapTypeStore
 	rs.MutexRepo.HashKey = dataConfig.HashKey
 	rs.MutexRepo.StoreInterval = dataConfig.StoreInterval
-
-	//Repo = make(repository.MapMetrics)
-	//rs.MutexRepo.MapTypeStore = mapTypeStore
-	//rs.MutexRepo.HashKey = dataConfig.HashKey
-	//rs.MutexRepo.StoreInterval = dataConfig.StoreInterval
-	//rs.MutexRepo.Repo =
 
 	storege.Repo = make(repository.MapMetrics)
 	storege.MapTypeStore = mapTypeStore
