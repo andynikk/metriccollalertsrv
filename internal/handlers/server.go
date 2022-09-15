@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"encoding/json"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -120,19 +122,39 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 
 func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
+	var heshVal string
+
 	switch v.MType {
 	case GaugeMetric.String():
+		var valValue float64
+		valValue = *v.Value
+
+		msg := fmt.Sprintf("%s:gauge:%f", v.ID, valValue)
+		heshVal = cryptohash.HeshSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valG := repository.Gauge(0)
 			rs.MutexRepo[v.ID] = &valG
 		}
 	case CounterMetric.String():
+		var valDelta int64
+		valDelta = *v.Delta
+
+		msg := fmt.Sprintf("%s:counter:%d", v.ID, valDelta)
+		heshVal = cryptohash.HeshSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valC := repository.Counter(0)
 			rs.MutexRepo[v.ID] = &valC
 		}
 	default:
 		return http.StatusNotImplemented
+	}
+
+	heshAgent := []byte(v.Hash)
+	heshServer := []byte(heshVal)
+
+	hmacEqual := hmac.Equal(heshServer, heshAgent)
+	if !hmacEqual {
+		return http.StatusBadRequest
 	}
 
 	rs.MutexRepo[v.ID].Set(v)
@@ -217,7 +239,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	rw.Header().Add("Content-Type", "application/json")
 	rw.WriteHeader(rs.SetValueInMapJSON(v))
 
-	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID)
+	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
+
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -278,7 +301,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	mt := rs.MutexRepo[metName].GetMetrics(metType, metName)
+	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		//fmt.Println("Метрика не получена:", v.MType, v.ID)
@@ -369,7 +392,7 @@ func (rs *RepStore) SaveMetric2File() {
 		return
 	}
 
-	arr := JSONMetricsAndValue(rs.MutexRepo)
+	arr := JSONMetricsAndValue(rs.MutexRepo, rs.Config.Key)
 	arrJSON, err := json.Marshal(arr)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -422,12 +445,12 @@ func textMetricsAndValue(mm repository.MapMetrics) []string {
 	return msg
 }
 
-func JSONMetricsAndValue(mm repository.MapMetrics) []encoding.Metrics {
+func JSONMetricsAndValue(mm repository.MapMetrics, hashKey string) []encoding.Metrics {
 
 	var arr []encoding.Metrics
 
 	for key, val := range mm {
-		jMetric := val.GetMetrics(val.Type(), key)
+		jMetric := val.GetMetrics(val.Type(), key, hashKey)
 		arr = append(arr, jMetric)
 	}
 
