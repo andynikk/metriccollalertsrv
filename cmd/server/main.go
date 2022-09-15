@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"net/http"
 	"os"
@@ -46,7 +46,7 @@ func main() {
 			Handler: rs.Router}
 
 		if err := s.ListenAndServe(); err != nil {
-			fmt.Printf("%+v\n", err)
+			constants.InfoLevel.Info().Msgf("%+v\n", err)
 			return
 		}
 	}()

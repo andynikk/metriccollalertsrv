@@ -1,5 +1,11 @@
 package constants
 
+import (
+	"os"
+
+	"github.com/rs/zerolog"
+)
+
 const (
 	AddressServer  = "localhost:8080"
 	ReportInterval = 10
@@ -33,3 +39,5 @@ const (
 					FROM 
 						metrics.store`
 )
+
+var InfoLevel = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
