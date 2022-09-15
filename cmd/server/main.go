@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,7 +20,8 @@ func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.Cance
 	for {
 		select {
 		case <-saveTicker.C:
-			rs.SaveMetric2File()
+			var mt encoding.Metrics
+			rs.SaveMetric(mt)
 		case <-ctx.Done():
 			cancel()
 			return
@@ -52,7 +54,8 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	rs.SaveMetric2File()
+	var mt encoding.Metrics
+	rs.SaveMetric(mt)
 	//log.Panicln("server stopped")
 
 }

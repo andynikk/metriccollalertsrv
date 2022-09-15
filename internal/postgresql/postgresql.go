@@ -3,48 +3,112 @@ package postgresql
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"fmt"
 
+	"github.com/jackc/pgx/v4"
+
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/environment"
 )
 
-type PostgrePool struct {
-	Pool *pgxpool.Pool
-	Cfg  environment.ServerConfig
-	Ctx  context.Context
-	Data []encoding.Metrics
-}
-
-func NewClient(ctx context.Context, cfg environment.ServerConfig) (*pgxpool.Pool, error) {
-	dsn := cfg.DatabaseDsn
+func NewClient(ctx context.Context, dsn string) (*pgx.Conn, error) {
 	if dsn == "" {
 		return nil, errors.New("пустой путь к базе")
 	}
 
-	//ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	//defer cancel()
-
-	pool, err := pgxpool.Connect(ctx, dsn)
+	db, err := pgx.Connect(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}
-	return pool, nil
+
+	CreateTable(db)
+	return db, nil
 }
 
-func (p *PostgrePool) InsertMetric() bool {
+func SetMetric2DB(ctx context.Context, db *pgx.Conn, data encoding.Metrics) error {
 
-	query := `INSERT INTO metrics.table_1 ("ID", "MType", "Value", "Delta", "Hash") VALUES ($1, $2, $3, $4, $5) RETURNING "ID"`
+	rows, err := db.Query(ctx, constants.QuerySelectWithWhere, data.ID, data.MType)
+	if err != nil {
+		//fmt.Println(constants.QuerySelectWithWhere, data.ID, data.MType)
+		return errors.New("ошибка выборки данных в БД")
+	}
 
-	for _, val := range p.Data {
+	dataValue := float64(0)
+	if data.Value != nil {
+		dataValue = *data.Value
+	}
+	dataDelta := int64(0)
+	if data.Delta != nil {
+		dataDelta = *data.Delta
+	}
 
-		poolRow := p.Pool.QueryRow(p.Ctx, query, val.ID, val.MType, val.Value, val.Delta, val.Hash)
-		err := poolRow.Scan(&val.ID)
-		//pgError, ok := err.(*pgconn.PgError)
-		if err != nil {
-			return false
+	insert := true
+	if rows.Next() {
+		insert = false
+	}
+	rows.Close()
+
+	if insert {
+		if _, err := db.Exec(ctx, constants.QueryInsert, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+			fmt.Println("@@@@@@@@@@@@@@@@@@ ошибка добавления данных в БД", data.ID, data.MType, dataValue, dataDelta, "", err)
+			return errors.New(err.Error())
+		}
+	} else {
+		if _, err := db.Exec(ctx, constants.QueryUpdate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+			return errors.New("ошибка обновления данных в БД")
 		}
 	}
 
-	return true
+	return nil
+}
+
+func GetMetricFromDB(ctx context.Context, db *pgx.Conn) ([]encoding.Metrics, error) {
+
+	var arrMatrics []encoding.Metrics
+
+	poolRow, err := db.Query(ctx, constants.QuerySelect)
+	if err != nil {
+		fmt.Println("@@@@@@@@@@@@@@@@@@", 1)
+		return nil, errors.New("ошибка чтения БД")
+	}
+	for poolRow.Next() {
+		var nst encoding.Metrics
+
+		err = poolRow.Scan(&nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
+		if err != nil {
+			fmt.Println("@@@@@@@@@@@@@@@@@@", 2, &nst.ID, &nst.MType, &nst.Value, &nst.Delta, &nst.Hash)
+			continue
+			//return nil, errors.New("ошибка получения данных БД")
+		}
+		arrMatrics = append(arrMatrics, nst)
+	}
+
+	return arrMatrics, nil
+}
+
+func CreateTable(pool *pgx.Conn) {
+
+	querySchema := `CREATE SCHEMA IF NOT EXISTS metrics`
+	if _, err := pool.Exec(context.Background(), querySchema); err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	queryTable := `CREATE TABLE IF NOT EXISTS metrics.store
+					(
+						"ID" character varying COLLATE pg_catalog."default",
+						"MType" character varying COLLATE pg_catalog."default",
+						"Value" double precision NOT NULL DEFAULT 0,
+						"Delta" bigint NOT NULL DEFAULT 0,
+						"Hash" character varying COLLATE pg_catalog."default"
+					)
+					
+					TABLESPACE pg_default;
+					
+					ALTER TABLE IF EXISTS metrics.store
+						OWNER to postgres;`
+
+	if _, err := pool.Exec(context.Background(), queryTable); err != nil {
+		fmt.Println(err.Error())
+	}
 }
