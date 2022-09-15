@@ -19,6 +19,7 @@ import (
 )
 
 type MetricsGauge map[string]repository.Gauge
+type emtyArrMetrics []encoding.Metrics
 
 type agent struct {
 	MetricsGauge MetricsGauge
@@ -67,12 +68,14 @@ func (a *agent) metrixScan() {
 	a.fillMetric(&mem)
 }
 
-func (a *agent) Post2Server(arrMterica *[]byte) error {
+func (a *agent) Post2Server(allMterics *[]byte) error {
 
 	addressPost := fmt.Sprintf("http://%s/updates", a.Cfg.Address)
-	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*arrMterica))
+	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*allMterics))
 	if err != nil {
-		constants.InfoLevel.Error().Err(err)
+
+		constants.Logger.ErrorLog(err)
+
 		return errors.New("-- ошибка отправки данных на сервер (1)")
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -82,7 +85,7 @@ func (a *agent) Post2Server(arrMterica *[]byte) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		constants.InfoLevel.Error().Err(err)
+		constants.Logger.ErrorLog(err)
 		return errors.New("-- ошибка отправки данных на сервер (2)")
 	}
 	defer resp.Body.Close()
@@ -90,9 +93,24 @@ func (a *agent) Post2Server(arrMterica *[]byte) error {
 	return nil
 }
 
+func prepareMetrics(allMetrics *emtyArrMetrics) ([]byte, error) {
+
+	arrMetrics, err := json.MarshalIndent(&allMetrics, "", " ")
+	if err != nil {
+		return nil, err
+	}
+
+	gziparrMetrics, err := compression.Compress(arrMetrics)
+	if err != nil {
+		return nil, err
+	}
+	return gziparrMetrics, nil
+}
+
 func (a *agent) MakeRequest() {
 
-	var allMterics []interface{}
+	allMetrics := make(emtyArrMetrics, 0)
+	chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
 
 	for key, val := range a.MetricsGauge {
 		valFloat64 := float64(val)
@@ -101,31 +119,43 @@ func (a *agent) MakeRequest() {
 		heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
 
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-		allMterics = append(allMterics, metrica)
+		chanMatrics <- metrica
+
+		if cap(chanMatrics) != 0 && len(chanMatrics) == cap(chanMatrics) {
+			for mt := range chanMatrics {
+				allMetrics = append(allMetrics, mt)
+				if len(chanMatrics) == 0 {
+					break
+				}
+			}
+			gziParrMterics, err := prepareMetrics(&allMetrics)
+			if err != nil {
+				constants.Logger.ErrorLog(err)
+			}
+			if err := a.Post2Server(&gziParrMterics); err != nil {
+				constants.Logger.ErrorLog(err)
+			}
+			allMetrics = make(emtyArrMetrics, 0)
+		}
 	}
 
 	cPollCount := repository.Counter(a.PollCount)
-
 	msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.PollCount)
 	heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
-
-	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
-	allMterics = append(allMterics, metrica)
-
-	arrMterics, err := json.MarshalIndent(allMterics, "", " ")
-	if err != nil {
-		constants.InfoLevel.Error().Err(err)
-		return
+	chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
+	for mt := range chanMatrics {
+		allMetrics = append(allMetrics, mt)
+		if len(chanMatrics) == 0 {
+			break
+		}
 	}
 
-	gziparrMterica, err := compression.Compress(arrMterics)
+	gziparrMetrics, err := prepareMetrics(&allMetrics)
 	if err != nil {
-		constants.InfoLevel.Error().Err(err)
-		return
+		constants.Logger.ErrorLog(err)
 	}
-	if err := a.Post2Server(&gziparrMterica); err != nil {
-		constants.InfoLevel.Error().Err(err)
-		return
+	if err := a.Post2Server(&gziparrMetrics); err != nil {
+		constants.Logger.ErrorLog(err)
 	}
 }
 

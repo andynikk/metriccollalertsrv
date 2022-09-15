@@ -18,10 +18,14 @@ Content-Type: application/json
 {
   "id": "PollCount",
   "type": "counter",
-  "delta": 123,
-  "hash": "1acb52da5252030283d8b097c557a49fe4f5ba896537767bff60fbe7298f2325"
+  "delta": 6634086670,
+  "hash": ""
 }
 
 ### GET request with a header
 GET http://localhost:8080/
 Accept: html/text
+
+### Send POST request with json body
+POST http://localhost:8080/update/counter/testCounter/100
+Content-Type: text/plain

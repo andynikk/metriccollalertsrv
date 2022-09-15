@@ -1,11 +1,12 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"strconv"
 
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 )
 
@@ -52,7 +53,8 @@ func (g *Gauge) SetFromText(metValue string) bool {
 
 	predVal, err := strconv.ParseFloat(metValue, 64)
 	if err != nil {
-		constants.InfoLevel.Info().Msgf("error convert type")
+		constants.Logger.ErrorLog(errors.New("error convert type"))
+
 		return false
 	}
 	*g = Gauge(predVal)
@@ -72,7 +74,8 @@ func (c *Counter) SetFromText(metValue string) bool {
 
 	predVal, err := strconv.ParseInt(metValue, 10, 64)
 	if err != nil {
-		constants.InfoLevel.Info().Msgf("error convert type")
+		constants.Logger.ErrorLog(errors.New("error convert type"))
+
 		return false
 	}
 	*c = *c + Counter(predVal)

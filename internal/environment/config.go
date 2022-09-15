@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/caarlos0/env/v6"
+	"github.com/rs/zerolog"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type AgentConfigENV struct {
@@ -35,12 +37,13 @@ type ServerConfigENV struct {
 }
 
 type ServerConfig struct {
-	StoreInterval time.Duration
-	StoreFile     string
-	Restore       bool
-	Address       string
-	Key           string
-	DatabaseDsn   string
+	StoreInterval      time.Duration
+	StoreFile          string
+	Restore            bool
+	Address            string
+	Key                string
+	DatabaseDsn        string
+	TypeMetricsStorage repository.MapTypeStore
 }
 
 func SetConfigAgent() AgentConfig {
@@ -101,7 +104,6 @@ func SetConfigServer() ServerConfig {
 	storeFilePtr := flag.String("f", constants.StoreFile, "путь к файлу метрик")
 	keyFlag := flag.String("k", "", "ключ хеша")
 	keyDatabaseDsn := flag.String("d", "", "строка соединения с базой")
-
 	flag.Parse()
 
 	var cfgENV ServerConfigENV
@@ -110,55 +112,55 @@ func SetConfigServer() ServerConfig {
 		log.Fatal(err)
 	}
 
-	addressServ := ""
-	if _, ok := os.LookupEnv("ADDRESS"); ok {
-		addressServ = cfgENV.Address
-	} else {
+	addressServ := cfgENV.Address
+	if _, ok := os.LookupEnv("ADDRESS"); !ok {
 		addressServ = *addressPtr
 	}
 
-	restoreMetric := false
-	if _, ok := os.LookupEnv("RESTORE"); ok {
-		restoreMetric = cfgENV.Restore
-	} else {
+	restoreMetric := cfgENV.Restore
+	if _, ok := os.LookupEnv("RESTORE"); !ok {
 		restoreMetric = *restorePtr
 	}
 
-	var storeIntervalMetrics time.Duration
-	if _, ok := os.LookupEnv("STORE_INTERVAL"); ok {
-		storeIntervalMetrics = cfgENV.StoreInterval
-	} else {
+	storeIntervalMetrics := cfgENV.StoreInterval
+	if _, ok := os.LookupEnv("STORE_INTERVAL"); !ok {
 		storeIntervalMetrics = *storeIntervalPtr
 	}
 
-	var storeFileMetrics string
-	if _, ok := os.LookupEnv("STORE_FILE"); ok {
-		storeFileMetrics = cfgENV.StoreFile
-	} else {
+	storeFileMetrics := cfgENV.StoreFile
+	if _, ok := os.LookupEnv("STORE_FILE"); !ok {
 		storeFileMetrics = *storeFilePtr
 	}
 
-	keyHash := ""
-	if _, ok := os.LookupEnv("KEY"); ok {
-		keyHash = cfgENV.Key
-	} else {
+	keyHash := cfgENV.Key
+	if _, ok := os.LookupEnv("KEY"); !ok {
 		keyHash = *keyFlag
 	}
 
-	databaseDsn := ""
-	if _, ok := os.LookupEnv("DATABASE_DSN"); ok {
-		databaseDsn = cfgENV.DatabaseDsn
-	} else {
+	databaseDsn := cfgENV.DatabaseDsn
+	if _, ok := os.LookupEnv("DATABASE_DSN"); !ok {
 		databaseDsn = *keyDatabaseDsn
 	}
-	//databaseDsn := "postgresql://postgres:101650@localhost:5433/yapracticum"
+
+	MapTypeStore := make(repository.MapTypeStore)
+
+	if databaseDsn != "" {
+		typeDB := repository.TypeStoreDataDB{}
+		MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
+	} else if storeFileMetrics != "" {
+		typeFile := repository.TypeStoreDataFile{}
+		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
+	}
+
+	constants.Logger.Log = zerolog.New(os.Stdout).Level(zerolog.InfoLevel)
 
 	return ServerConfig{
-		StoreInterval: storeIntervalMetrics,
-		StoreFile:     storeFileMetrics,
-		Restore:       restoreMetric,
-		Address:       addressServ,
-		Key:           keyHash,
-		DatabaseDsn:   databaseDsn,
+		StoreInterval:      storeIntervalMetrics,
+		StoreFile:          storeFileMetrics,
+		Restore:            restoreMetric,
+		Address:            addressServ,
+		Key:                keyHash,
+		DatabaseDsn:        databaseDsn,
+		TypeMetricsStorage: MapTypeStore,
 	}
 }

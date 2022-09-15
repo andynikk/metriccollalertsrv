@@ -1,52 +1,47 @@
 package main
 
 import (
-	"context"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
-func BackupData(rs *handlers.RepStore, ctx context.Context, cancel context.CancelFunc) {
+type server struct {
+	storege handlers.RepStore
+}
 
-	saveTicker := time.NewTicker(rs.Config.StoreInterval)
+func Shutdown(rs *handlers.RepStore) {
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
 
-	for {
-		select {
-		case <-saveTicker.C:
-			var mt encoding.Metrics
-			rs.SaveMetric(mt)
-		case <-ctx.Done():
-			cancel()
-			return
-		}
+	for _, val := range rs.Config.TypeMetricsStorage {
+		val.WriteMetric(rs.PrepareDataBU())
 	}
+	constants.Logger.InfoLog("server stopped")
 }
 
 func main() {
 
-	rs := handlers.NewRepStore()
+	server := new(server)
+	handlers.NewRepStore(&server.storege)
 
-	if rs.Config.Restore {
-		rs.LoadStoreMetrics()
+	if server.storege.Config.Restore {
+		server.storege.RestoreData()
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go BackupData(rs, ctx, cancel)
+	go server.storege.BackupData()
 
 	go func() {
 		s := &http.Server{
-			Addr:    rs.Config.Address,
-			Handler: rs.Router}
+			Addr:    server.storege.Config.Address,
+			Handler: server.storege.Router}
 
 		if err := s.ListenAndServe(); err != nil {
-			constants.InfoLevel.Info().Msgf("%+v\n", err)
+			constants.Logger.ErrorLog(err)
 			return
 		}
 	}()
@@ -54,8 +49,6 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	var mt encoding.Metrics
-	rs.SaveMetric(mt)
-	//log.Panicln("server stopped")
+	Shutdown(&server.storege)
 
 }
