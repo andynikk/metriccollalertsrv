@@ -3,8 +3,8 @@ POST http://localhost:8080/value
 Content-Type: application/json
 
 {
-  "id": "PollCount",
-  "type": "counter"
+  "id": "FreeMemory",
+  "type": "gauge"
 }
 
 ### Send POST request with json body
