@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"math/rand"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
@@ -22,12 +25,16 @@ type MetricsGauge map[string]repository.Gauge
 type emtyArrMetrics []encoding.Metrics
 
 type agent struct {
-	MetricsGauge MetricsGauge
 	PollCount    int64
 	Cfg          environment.AgentConfig
+	MX           sync.Mutex
+	MetricsGauge MetricsGauge
 }
 
 func (a *agent) fillMetric(mem *runtime.MemStats) {
+
+	a.MX.Lock()
+	defer a.MX.Unlock()
 
 	a.MetricsGauge["Alloc"] = repository.Gauge(mem.Alloc)
 	a.MetricsGauge["BuckHashSys"] = repository.Gauge(mem.BuckHashSys)
@@ -62,10 +69,29 @@ func (a *agent) fillMetric(mem *runtime.MemStats) {
 
 }
 
+func (a *agent) metrixOtherScan() {
+
+	a.MX.Lock()
+	defer a.MX.Unlock()
+
+	swapMemory, err := mem.SwapMemory()
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+	}
+	a.MetricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
+	a.MetricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free)
+
+	cpuUtilization, _ := cpu.Percent(1*time.Second, false)
+	for _, val := range cpuUtilization {
+		a.MetricsGauge["CPUutilization1"] = repository.Gauge(val)
+		break
+	}
+}
+
 func (a *agent) metrixScan() {
-	var mem runtime.MemStats
-	runtime.ReadMemStats(&mem)
-	a.fillMetric(&mem)
+	var mems runtime.MemStats
+	runtime.ReadMemStats(&mems)
+	a.fillMetric(&mems)
 }
 
 func (a *agent) Post2Server(allMterics *[]byte) error {
@@ -168,12 +194,15 @@ func main() {
 	}
 
 	updateTicker := time.NewTicker(agent.Cfg.PollInterval)
+	updateOtherTicker := time.NewTicker(agent.Cfg.PollInterval)
 	reportTicker := time.NewTicker(agent.Cfg.ReportInterval)
 
 	for {
 		select {
 		case <-updateTicker.C:
 			agent.metrixScan()
+		case <-updateOtherTicker.C:
+			agent.metrixOtherScan()
 		case <-reportTicker.C:
 			agent.MakeRequest()
 		}
