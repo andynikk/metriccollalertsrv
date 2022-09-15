@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -54,6 +53,6 @@ func main() {
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
 	rs.SaveMetric2File()
-	log.Panicln("server stopped")
+	//log.Panicln("server stopped")
 
 }
