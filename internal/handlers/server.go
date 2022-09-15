@@ -74,7 +74,7 @@ func NewRepStore(rs *RepStore) {
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
-	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
+	rs.Router.Post("/value/", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	rs.Config = environment.SetConfigServer()
