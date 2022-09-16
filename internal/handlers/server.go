@@ -422,8 +422,10 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 
 	ctx := context.Background()
-	cnn := rs.Config.TypeMetricsStorage[constants.MetricsStorageDB.String()]
-	db := cnn.ConnDB()
+	db, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+	}
 	rows, err := db.Query(ctx, constants.QuerySelectWithWhereTemplate, "FreeMemory", "gauge")
 	if err != nil {
 		constants.Logger.ErrorLog(err)
