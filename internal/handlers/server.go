@@ -189,6 +189,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
+	fmt.Println("------- HandlerGetValue", metType, metName)
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
@@ -349,6 +350,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	var bodyJSON io.Reader
 	bodyJSON = rq.Body
 
+	fmt.Println("------- HandlerGetValue", 1)
+
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	if strings.Contains(contentEncoding, "gzip") {
@@ -379,6 +382,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 	metType := v.MType
 	metName := v.ID
+	fmt.Println("------- HandlerGetValue", metType, metName)
 
 	rs.MX.Lock()
 	defer rs.MX.Unlock()
