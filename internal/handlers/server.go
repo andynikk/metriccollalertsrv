@@ -66,7 +66,7 @@ func NewRepStore(rs *RepStore) {
 	rs.Router.Use(middleware.StripSlashes)
 
 	rs.Router.HandleFunc("/", rs.HandleFunc)
-	rs.Router.NotFound(HandlerNotFound)
+	rs.Router.NotFound(rs.HandlerNotFound)
 
 	rs.Router.Get("/", rs.HandlerGetAllMetrics)
 	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
@@ -436,9 +436,21 @@ func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
+func TextMetricsAndValue(mm *repository.MapMetrics) []string {
+	const msgFormat = "%s = %s"
+
+	var msg []string
+
+	for key, val := range *mm {
+		msg = append(msg, fmt.Sprintf(msgFormat, key, val.String()))
+	}
+
+	return msg
+}
+
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
-	arrMetricsAndValue := textMetricsAndValue(rs.MutexRepo)
+	arrMetricsAndValue := TextMetricsAndValue(&rs.MutexRepo)
 
 	content := `<!DOCTYPE html>
 				<html>
@@ -530,20 +542,8 @@ func (rs *RepStore) BackupData() {
 	}
 }
 
-func HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
+func (rs *RepStore) HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 
-}
-
-func textMetricsAndValue(mm repository.MapMetrics) []string {
-	const msgFormat = "%s = %s"
-
-	var msg []string
-
-	for key, val := range mm {
-		msg = append(msg, fmt.Sprintf(msgFormat, key, val.String()))
-	}
-
-	return msg
 }

@@ -47,6 +47,20 @@ type agent struct {
 	data     data
 }
 
+func (eam *emtyArrMetrics) prepareMetrics() ([]byte, error) {
+	arrMetrics, err := json.MarshalIndent(eam, "", " ")
+	if err != nil {
+		return nil, err
+	}
+
+	gziparrMetrics, err := compression.Compress(arrMetrics)
+	if err != nil {
+		return nil, err
+	}
+
+	return gziparrMetrics, nil
+}
+
 func (a *agent) fillMetric(mems *runtime.MemStats) {
 
 	a.data.mx.Lock()
@@ -138,10 +152,10 @@ func (a *agent) metrixScan(in <-chan os.Signal) {
 	}
 }
 
-func (a *agent) Post2Server(allMterics *[]byte) error {
+func (a *agent) Post2Server(allMterics []byte) error {
 
 	addressPost := fmt.Sprintf("http://%s/updates", a.cfg.Address)
-	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*allMterics))
+	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(allMterics))
 	if err != nil {
 
 		constants.Logger.ErrorLog(err)
@@ -164,11 +178,11 @@ func (a *agent) Post2Server(allMterics *[]byte) error {
 }
 
 func (a *agent) goPost2Server(allMetrics emtyArrMetrics) {
-	gziparrMetrics, err := goPrepareMetrics(allMetrics)
+	gziparrMetrics, err := allMetrics.prepareMetrics()
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 	}
-	if err := a.Post2Server(&gziparrMetrics); err != nil {
+	if err := a.Post2Server(gziparrMetrics); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 }
@@ -187,32 +201,19 @@ func prepareMetrics(allMetrics *emtyArrMetrics) ([]byte, error) {
 	return gziparrMetrics, nil
 }
 
-func goPrepareMetrics(allMetrics emtyArrMetrics) ([]byte, error) {
-
-	arrMetrics, err := json.MarshalIndent(allMetrics, "", " ")
-	if err != nil {
-		return nil, err
-	}
-
-	gziparrMetrics, err := compression.Compress(arrMetrics)
-	if err != nil {
-		return nil, err
-	}
-
-	return gziparrMetrics, nil
-}
-
 func (a *agent) MakeRequest(in <-chan os.Signal) {
 
 	reportTicker := time.NewTicker(a.cfg.ReportInterval)
+	allMetrics := make(emtyArrMetrics, 0)
+
+	chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
 
 	for {
 		select {
 		case <-reportTicker.C:
 
-			allMetrics := make(emtyArrMetrics, constants.ButchSize)
-			//chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
-			i := 0
+			//allMetrics := make(emtyArrMetrics, constants.ButchSize)
+			//i := 0
 			tempMetricsGauge := &a.data.metricsGauge
 			for key, val := range *tempMetricsGauge {
 				valFloat64 := float64(val)
@@ -221,41 +222,65 @@ func (a *agent) MakeRequest(in <-chan os.Signal) {
 				heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
 
 				metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-				allMetrics[i] = metrica
+				chanMatrics <- metrica
 
-				i++
-				if i == constants.ButchSize {
-					go a.goPost2Server(allMetrics)
-					allMetrics = make(emtyArrMetrics, constants.ButchSize)
-					i = 0
+				if cap(chanMatrics) != 0 && len(chanMatrics) == cap(chanMatrics) {
+					for mt := range chanMatrics {
+						allMetrics = append(allMetrics, mt)
+						if len(chanMatrics) == 0 {
+							break
+						}
+					}
+					gziParrMterics, err := prepareMetrics(&allMetrics)
+					if err != nil {
+						constants.Logger.ErrorLog(err)
+					}
+					if err := a.Post2Server(gziParrMterics); err != nil {
+						constants.Logger.ErrorLog(err)
+					}
+					allMetrics = make(emtyArrMetrics, 0)
 				}
+
+				cPollCount := repository.Counter(a.data.pollCount)
+				msg = fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
+				heshVal = cryptohash.HeshSHA256(msg, a.cfg.Key)
+				chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
+				for mt := range chanMatrics {
+					allMetrics = append(allMetrics, mt)
+					if len(chanMatrics) == 0 {
+						break
+					}
+				}
+				gziparrMetrics, err := allMetrics.prepareMetrics()
+				if err != nil {
+					constants.Logger.ErrorLog(err)
+				}
+				if err := a.Post2Server(gziparrMetrics); err != nil {
+					constants.Logger.ErrorLog(err)
+				}
+				//
+				//	msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
+				//	heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
+				//
+				//	metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
+				//	allMetrics[i] = metrica
+				//
+				//	i++
+				//	if i == constants.ButchSize {
+				//		go a.goPost2Server(allMetrics)
+				//		allMetrics = make(emtyArrMetrics, constants.ButchSize)
+				//		i = 0
+				//	}
+				//}
+
+				//cPollCount := repository.Counter(a.data.pollCount)
+				//msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
+				//heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
+				//
+				//metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
+				//allMetrics[i+1] = metrica
+				//go a.goPost2Server(allMetrics)
 			}
-
-			cPollCount := repository.Counter(a.data.pollCount)
-			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
-			heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
-
-			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
-			//allMetrics = append(allMetrics, metrica)
-			allMetrics[i+1] = metrica
-			go a.goPost2Server(allMetrics)
-
-			//chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
-			//for mt := range chanMatrics {
-			//	allMetrics = append(allMetrics, mt)
-			//	if len(chanMatrics) == 0 {
-			//		break
-			//	}
-			//}
-			//
-			//gziparrMetrics, err := prepareMetrics(&allMetrics)
-			//if err != nil {
-			//	constants.Logger.ErrorLog(err)
-			//}
-			//if err := a.Post2Server(&gziparrMetrics); err != nil {
-			//	constants.Logger.ErrorLog(err)
-			//}
-
 		case <-in: //<-a.goRutine.ctx.Done():
 			a.goRutine.cnf()
 			a.goRutine.wg.Done() //
