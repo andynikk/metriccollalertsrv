@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,17 +25,23 @@ import (
 type MetricsGauge map[string]repository.Gauge
 type emtyArrMetrics []encoding.Metrics
 
+type Contecst struct {
+	Ctx context.Context
+	CnF context.CancelFunc
+	WG  sync.WaitGroup
+}
+
 type agent struct {
 	PollCount    int64
 	Cfg          environment.AgentConfig
-	MX           sync.Mutex
+	Contecst     Contecst
+	MX           sync.RWMutex
 	MetricsGauge MetricsGauge
 }
 
 func (a *agent) fillMetric(mems *runtime.MemStats) {
 
 	a.MX.Lock()
-	defer a.MX.Unlock()
 
 	a.MetricsGauge["Alloc"] = repository.Gauge(mems.Alloc)
 	a.MetricsGauge["BuckHashSys"] = repository.Gauge(mems.BuckHashSys)
@@ -67,31 +74,62 @@ func (a *agent) fillMetric(mems *runtime.MemStats) {
 
 	a.PollCount = a.PollCount + 1
 
+	a.MX.Unlock()
+
 }
 
 func (a *agent) metrixOtherScan() {
 
-	a.MX.Lock()
-	defer a.MX.Unlock()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	saveTicker := time.NewTicker(a.Cfg.PollInterval)
+	for {
+		select {
+		case <-saveTicker.C:
+			cpuUtilization, _ := cpu.Percent(2*time.Second, false)
+			swapMemory, err := mem.SwapMemory()
+			if err != nil {
+				constants.Logger.ErrorLog(err)
+			}
+			CPUutilization1 := repository.Gauge(0)
+			for _, val := range cpuUtilization {
+				CPUutilization1 = repository.Gauge(val)
+				break
+			}
+			a.MX.Lock()
 
-	swapMemory, err := mem.SwapMemory()
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	a.MetricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
-	a.MetricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free)
+			a.MetricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
+			a.MetricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free)
+			a.MetricsGauge["CPUutilization1"] = CPUutilization1
 
-	cpuUtilization, _ := cpu.Percent(1*time.Second, false)
-	for _, val := range cpuUtilization {
-		a.MetricsGauge["CPUutilization1"] = repository.Gauge(val)
-		break
+			a.MX.Unlock()
+
+		case <-ctx.Done():
+			cancelFunc()
+			a.Contecst.WG.Done()
+			return
+		}
 	}
 }
 
 func (a *agent) metrixScan() {
-	var mems runtime.MemStats
-	runtime.ReadMemStats(&mems)
-	a.fillMetric(&mems)
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	saveTicker := time.NewTicker(a.Cfg.PollInterval)
+
+	for {
+		select {
+		case <-saveTicker.C:
+
+			var mems runtime.MemStats
+			runtime.ReadMemStats(&mems)
+			a.fillMetric(&mems)
+
+		case <-ctx.Done():
+			a.Contecst.WG.Done()
+			cancelFunc()
+			return
+		}
+	}
 }
 
 func (a *agent) Post2Server(allMterics *[]byte) error {
@@ -135,53 +173,67 @@ func prepareMetrics(allMetrics *emtyArrMetrics) ([]byte, error) {
 
 func (a *agent) MakeRequest() {
 
-	allMetrics := make(emtyArrMetrics, 0)
-	chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	reportTicker := time.NewTicker(a.Cfg.ReportInterval)
 
-	for key, val := range a.MetricsGauge {
-		valFloat64 := float64(val)
+	for {
+		select {
+		case <-reportTicker.C:
 
-		msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
-		heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
+			allMetrics := make(emtyArrMetrics, 0)
+			chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
 
-		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-		chanMatrics <- metrica
+			for key, val := range a.MetricsGauge {
+				valFloat64 := float64(val)
 
-		if cap(chanMatrics) != 0 && len(chanMatrics) == cap(chanMatrics) {
+				msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
+				heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
+
+				metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
+				chanMatrics <- metrica
+
+				if cap(chanMatrics) != 0 && len(chanMatrics) == cap(chanMatrics) {
+					for mt := range chanMatrics {
+						allMetrics = append(allMetrics, mt)
+						if len(chanMatrics) == 0 {
+							break
+						}
+					}
+					gziParrMterics, err := prepareMetrics(&allMetrics)
+					if err != nil {
+						constants.Logger.ErrorLog(err)
+					}
+					if err := a.Post2Server(&gziParrMterics); err != nil {
+						constants.Logger.ErrorLog(err)
+					}
+					allMetrics = make(emtyArrMetrics, 0)
+				}
+			}
+
+			cPollCount := repository.Counter(a.PollCount)
+			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.PollCount)
+			heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
+			chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
 			for mt := range chanMatrics {
 				allMetrics = append(allMetrics, mt)
 				if len(chanMatrics) == 0 {
 					break
 				}
 			}
-			gziParrMterics, err := prepareMetrics(&allMetrics)
+
+			gziparrMetrics, err := prepareMetrics(&allMetrics)
 			if err != nil {
 				constants.Logger.ErrorLog(err)
 			}
-			if err := a.Post2Server(&gziParrMterics); err != nil {
+			if err := a.Post2Server(&gziparrMetrics); err != nil {
 				constants.Logger.ErrorLog(err)
 			}
-			allMetrics = make(emtyArrMetrics, 0)
-		}
-	}
 
-	cPollCount := repository.Counter(a.PollCount)
-	msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.PollCount)
-	heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
-	chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
-	for mt := range chanMatrics {
-		allMetrics = append(allMetrics, mt)
-		if len(chanMatrics) == 0 {
-			break
+		case <-ctx.Done():
+			a.Contecst.WG.Done()
+			cancelFunc()
+			return
 		}
-	}
-
-	gziparrMetrics, err := prepareMetrics(&allMetrics)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	if err := a.Post2Server(&gziparrMetrics); err != nil {
-		constants.Logger.ErrorLog(err)
 	}
 }
 
@@ -193,19 +245,19 @@ func main() {
 		PollCount:    0,
 	}
 
-	updateTicker := time.NewTicker(agent.Cfg.PollInterval)
-	updateOtherTicker := time.NewTicker(agent.Cfg.PollInterval)
-	reportTicker := time.NewTicker(agent.Cfg.ReportInterval)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	agentCtx := new(Contecst)
+	agentCtx.Ctx = ctx
+	agentCtx.CnF = cancelFunc
 
-	for {
-		select {
-		case <-updateTicker.C:
-			agent.metrixScan()
-		case <-updateOtherTicker.C:
-			agent.metrixOtherScan()
-		case <-reportTicker.C:
-			agent.MakeRequest()
-		}
-	}
+	go agent.metrixScan()
+	agentCtx.WG.Add(1)
 
+	go agent.metrixOtherScan()
+	agentCtx.WG.Add(1)
+
+	go agent.MakeRequest()
+	agentCtx.WG.Add(1)
+
+	agentCtx.WG.Wait()
 }
