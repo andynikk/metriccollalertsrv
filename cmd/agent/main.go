@@ -6,13 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
 	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
 	"runtime"
 	"sync"
+	"syscall"
 	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
@@ -25,63 +29,66 @@ import (
 type MetricsGauge map[string]repository.Gauge
 type emtyArrMetrics []encoding.Metrics
 
-type Contecst struct {
-	Ctx context.Context
-	CnF context.CancelFunc
-	WG  sync.WaitGroup
+type goRutine struct {
+	ctx context.Context
+	cnf context.CancelFunc
+	wg  sync.WaitGroup
+}
+
+type data struct {
+	mx           sync.RWMutex
+	pollCount    int64
+	metricsGauge MetricsGauge
 }
 
 type agent struct {
-	PollCount    int64
-	Cfg          environment.AgentConfig
-	Contecst     Contecst
-	MX           sync.RWMutex
-	MetricsGauge MetricsGauge
+	cfg      environment.AgentConfig
+	goRutine goRutine
+	data     data
 }
 
 func (a *agent) fillMetric(mems *runtime.MemStats) {
 
-	a.MX.Lock()
+	a.data.mx.Lock()
 
-	a.MetricsGauge["Alloc"] = repository.Gauge(mems.Alloc)
-	a.MetricsGauge["BuckHashSys"] = repository.Gauge(mems.BuckHashSys)
-	a.MetricsGauge["Frees"] = repository.Gauge(mems.Frees)
-	a.MetricsGauge["GCCPUFraction"] = repository.Gauge(mems.GCCPUFraction)
-	a.MetricsGauge["GCSys"] = repository.Gauge(mems.GCSys)
-	a.MetricsGauge["HeapAlloc"] = repository.Gauge(mems.HeapAlloc)
-	a.MetricsGauge["HeapIdle"] = repository.Gauge(mems.HeapIdle)
-	a.MetricsGauge["HeapInuse"] = repository.Gauge(mems.HeapInuse)
-	a.MetricsGauge["HeapObjects"] = repository.Gauge(mems.HeapObjects)
-	a.MetricsGauge["HeapReleased"] = repository.Gauge(mems.HeapReleased)
-	a.MetricsGauge["HeapSys"] = repository.Gauge(mems.HeapSys)
-	a.MetricsGauge["LastGC"] = repository.Gauge(mems.LastGC)
-	a.MetricsGauge["Lookups"] = repository.Gauge(mems.Lookups)
-	a.MetricsGauge["MCacheInuse"] = repository.Gauge(mems.MCacheInuse)
-	a.MetricsGauge["MCacheSys"] = repository.Gauge(mems.MCacheSys)
-	a.MetricsGauge["MSpanInuse"] = repository.Gauge(mems.MSpanInuse)
-	a.MetricsGauge["MSpanSys"] = repository.Gauge(mems.MSpanSys)
-	a.MetricsGauge["Mallocs"] = repository.Gauge(mems.Mallocs)
-	a.MetricsGauge["NextGC"] = repository.Gauge(mems.NextGC)
-	a.MetricsGauge["NumForcedGC"] = repository.Gauge(mems.NumForcedGC)
-	a.MetricsGauge["NumGC"] = repository.Gauge(mems.NumGC)
-	a.MetricsGauge["OtherSys"] = repository.Gauge(mems.OtherSys)
-	a.MetricsGauge["PauseTotalNs"] = repository.Gauge(mems.PauseTotalNs)
-	a.MetricsGauge["StackInuse"] = repository.Gauge(mems.StackInuse)
-	a.MetricsGauge["StackSys"] = repository.Gauge(mems.StackSys)
-	a.MetricsGauge["Sys"] = repository.Gauge(mems.Sys)
-	a.MetricsGauge["TotalAlloc"] = repository.Gauge(mems.TotalAlloc)
-	a.MetricsGauge["RandomValue"] = repository.Gauge(rand.Float64())
+	a.data.metricsGauge["Alloc"] = repository.Gauge(mems.Alloc)
+	a.data.metricsGauge["BuckHashSys"] = repository.Gauge(mems.BuckHashSys)
+	a.data.metricsGauge["Frees"] = repository.Gauge(mems.Frees)
+	a.data.metricsGauge["GCCPUFraction"] = repository.Gauge(mems.GCCPUFraction)
+	a.data.metricsGauge["GCSys"] = repository.Gauge(mems.GCSys)
+	a.data.metricsGauge["HeapAlloc"] = repository.Gauge(mems.HeapAlloc)
+	a.data.metricsGauge["HeapIdle"] = repository.Gauge(mems.HeapIdle)
+	a.data.metricsGauge["HeapInuse"] = repository.Gauge(mems.HeapInuse)
+	a.data.metricsGauge["HeapObjects"] = repository.Gauge(mems.HeapObjects)
+	a.data.metricsGauge["HeapReleased"] = repository.Gauge(mems.HeapReleased)
+	a.data.metricsGauge["HeapSys"] = repository.Gauge(mems.HeapSys)
+	a.data.metricsGauge["LastGC"] = repository.Gauge(mems.LastGC)
+	a.data.metricsGauge["Lookups"] = repository.Gauge(mems.Lookups)
+	a.data.metricsGauge["MCacheInuse"] = repository.Gauge(mems.MCacheInuse)
+	a.data.metricsGauge["MCacheSys"] = repository.Gauge(mems.MCacheSys)
+	a.data.metricsGauge["MSpanInuse"] = repository.Gauge(mems.MSpanInuse)
+	a.data.metricsGauge["MSpanSys"] = repository.Gauge(mems.MSpanSys)
+	a.data.metricsGauge["Mallocs"] = repository.Gauge(mems.Mallocs)
+	a.data.metricsGauge["NextGC"] = repository.Gauge(mems.NextGC)
+	a.data.metricsGauge["NumForcedGC"] = repository.Gauge(mems.NumForcedGC)
+	a.data.metricsGauge["NumGC"] = repository.Gauge(mems.NumGC)
+	a.data.metricsGauge["OtherSys"] = repository.Gauge(mems.OtherSys)
+	a.data.metricsGauge["PauseTotalNs"] = repository.Gauge(mems.PauseTotalNs)
+	a.data.metricsGauge["StackInuse"] = repository.Gauge(mems.StackInuse)
+	a.data.metricsGauge["StackSys"] = repository.Gauge(mems.StackSys)
+	a.data.metricsGauge["Sys"] = repository.Gauge(mems.Sys)
+	a.data.metricsGauge["TotalAlloc"] = repository.Gauge(mems.TotalAlloc)
+	a.data.metricsGauge["RandomValue"] = repository.Gauge(rand.Float64())
 
-	a.PollCount = a.PollCount + 1
+	a.data.pollCount = a.data.pollCount + 1
 
-	a.MX.Unlock()
+	a.data.mx.Unlock()
 
 }
 
-func (a *agent) metrixOtherScan() {
+func (a *agent) metrixOtherScan(in <-chan os.Signal) {
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	saveTicker := time.NewTicker(a.Cfg.PollInterval)
+	saveTicker := time.NewTicker(a.cfg.PollInterval)
 	for {
 		select {
 		case <-saveTicker.C:
@@ -95,26 +102,25 @@ func (a *agent) metrixOtherScan() {
 				CPUutilization1 = repository.Gauge(val)
 				break
 			}
-			a.MX.Lock()
+			a.data.mx.Lock()
 
-			a.MetricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
-			a.MetricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free)
-			a.MetricsGauge["CPUutilization1"] = CPUutilization1
+			a.data.metricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
+			a.data.metricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free)
+			a.data.metricsGauge["CPUutilization1"] = CPUutilization1
 
-			a.MX.Unlock()
+			a.data.mx.Unlock()
 
-		case <-ctx.Done():
-			cancelFunc()
-			a.Contecst.WG.Done()
+		case <-in:
+			a.goRutine.cnf()
+			a.goRutine.wg.Done() //
 			return
 		}
 	}
 }
 
-func (a *agent) metrixScan() {
+func (a *agent) metrixScan(in <-chan os.Signal) {
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	saveTicker := time.NewTicker(a.Cfg.PollInterval)
+	saveTicker := time.NewTicker(a.cfg.PollInterval)
 
 	for {
 		select {
@@ -124,9 +130,9 @@ func (a *agent) metrixScan() {
 			runtime.ReadMemStats(&mems)
 			a.fillMetric(&mems)
 
-		case <-ctx.Done():
-			a.Contecst.WG.Done()
-			cancelFunc()
+		case <-in:
+			a.goRutine.cnf() //
+			a.goRutine.wg.Done()
 			return
 		}
 	}
@@ -134,7 +140,7 @@ func (a *agent) metrixScan() {
 
 func (a *agent) Post2Server(allMterics *[]byte) error {
 
-	addressPost := fmt.Sprintf("http://%s/updates", a.Cfg.Address)
+	addressPost := fmt.Sprintf("http://%s/updates", a.cfg.Address)
 	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(*allMterics))
 	if err != nil {
 
@@ -157,6 +163,16 @@ func (a *agent) Post2Server(allMterics *[]byte) error {
 	return nil
 }
 
+func (a *agent) goPost2Server(allMetrics emtyArrMetrics) {
+	gziparrMetrics, err := goPrepareMetrics(allMetrics)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+	}
+	if err := a.Post2Server(&gziparrMetrics); err != nil {
+		constants.Logger.ErrorLog(err)
+	}
+}
+
 func prepareMetrics(allMetrics *emtyArrMetrics) ([]byte, error) {
 
 	arrMetrics, err := json.MarshalIndent(&allMetrics, "", " ")
@@ -171,67 +187,78 @@ func prepareMetrics(allMetrics *emtyArrMetrics) ([]byte, error) {
 	return gziparrMetrics, nil
 }
 
-func (a *agent) MakeRequest() {
+func goPrepareMetrics(allMetrics emtyArrMetrics) ([]byte, error) {
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	reportTicker := time.NewTicker(a.Cfg.ReportInterval)
+	arrMetrics, err := json.MarshalIndent(allMetrics, "", " ")
+	if err != nil {
+		return nil, err
+	}
+
+	gziparrMetrics, err := compression.Compress(arrMetrics)
+	if err != nil {
+		return nil, err
+	}
+
+	return gziparrMetrics, nil
+}
+
+func (a *agent) MakeRequest(in <-chan os.Signal) {
+
+	reportTicker := time.NewTicker(a.cfg.ReportInterval)
 
 	for {
 		select {
 		case <-reportTicker.C:
 
-			allMetrics := make(emtyArrMetrics, 0)
-			chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
-
-			for key, val := range a.MetricsGauge {
+			allMetrics := make(emtyArrMetrics, constants.ButchSize)
+			//chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
+			i := 0
+			tempMetricsGauge := &a.data.metricsGauge
+			for key, val := range *tempMetricsGauge {
 				valFloat64 := float64(val)
 
 				msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
-				heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
+				heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
 
 				metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-				chanMatrics <- metrica
+				allMetrics[i] = metrica
 
-				if cap(chanMatrics) != 0 && len(chanMatrics) == cap(chanMatrics) {
-					for mt := range chanMatrics {
-						allMetrics = append(allMetrics, mt)
-						if len(chanMatrics) == 0 {
-							break
-						}
-					}
-					gziParrMterics, err := prepareMetrics(&allMetrics)
-					if err != nil {
-						constants.Logger.ErrorLog(err)
-					}
-					if err := a.Post2Server(&gziParrMterics); err != nil {
-						constants.Logger.ErrorLog(err)
-					}
-					allMetrics = make(emtyArrMetrics, 0)
+				i++
+				if i == constants.ButchSize {
+					go a.goPost2Server(allMetrics)
+					allMetrics = make(emtyArrMetrics, constants.ButchSize)
+					i = 0
 				}
 			}
 
-			cPollCount := repository.Counter(a.PollCount)
-			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.PollCount)
-			heshVal := cryptohash.HeshSHA256(msg, a.Cfg.Key)
-			chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.PollCount, Hash: heshVal}
-			for mt := range chanMatrics {
-				allMetrics = append(allMetrics, mt)
-				if len(chanMatrics) == 0 {
-					break
-				}
-			}
+			cPollCount := repository.Counter(a.data.pollCount)
+			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
+			heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
 
-			gziparrMetrics, err := prepareMetrics(&allMetrics)
-			if err != nil {
-				constants.Logger.ErrorLog(err)
-			}
-			if err := a.Post2Server(&gziparrMetrics); err != nil {
-				constants.Logger.ErrorLog(err)
-			}
+			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
+			//allMetrics = append(allMetrics, metrica)
+			allMetrics[i+1] = metrica
+			go a.goPost2Server(allMetrics)
 
-		case <-ctx.Done():
-			a.Contecst.WG.Done()
-			cancelFunc()
+			//chanMatrics <- encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
+			//for mt := range chanMatrics {
+			//	allMetrics = append(allMetrics, mt)
+			//	if len(chanMatrics) == 0 {
+			//		break
+			//	}
+			//}
+			//
+			//gziparrMetrics, err := prepareMetrics(&allMetrics)
+			//if err != nil {
+			//	constants.Logger.ErrorLog(err)
+			//}
+			//if err := a.Post2Server(&gziparrMetrics); err != nil {
+			//	constants.Logger.ErrorLog(err)
+			//}
+
+		case <-in: //<-a.goRutine.ctx.Done():
+			a.goRutine.cnf()
+			a.goRutine.wg.Done() //
 			return
 		}
 	}
@@ -239,25 +266,31 @@ func (a *agent) MakeRequest() {
 
 func main() {
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	agent := agent{
-		Cfg:          environment.SetConfigAgent(),
-		MetricsGauge: make(MetricsGauge),
-		PollCount:    0,
+		cfg: environment.SetConfigAgent(),
+		data: data{
+			pollCount:    0,
+			metricsGauge: make(MetricsGauge),
+		},
+		goRutine: goRutine{
+			ctx: ctx,
+			cnf: cancelFunc,
+		},
 	}
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	agentCtx := new(Contecst)
-	agentCtx.Ctx = ctx
-	agentCtx.CnF = cancelFunc
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
-	go agent.metrixScan()
-	agentCtx.WG.Add(1)
+	go agent.metrixScan(stop)
+	agent.goRutine.wg.Add(1)
 
-	go agent.metrixOtherScan()
-	agentCtx.WG.Add(1)
+	go agent.metrixOtherScan(stop)
+	agent.goRutine.wg.Add(1)
 
-	go agent.MakeRequest()
-	agentCtx.WG.Add(1)
+	go agent.MakeRequest(stop)
+	agent.goRutine.wg.Add(1)
 
-	agentCtx.WG.Wait()
+	agent.goRutine.wg.Wait()
+	close(stop)
 }
