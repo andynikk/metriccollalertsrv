@@ -100,12 +100,16 @@ func (a *agent) fillMetric(mems *runtime.MemStats) {
 
 }
 
-func (a *agent) metrixOtherScan(in <-chan os.Signal) {
+func (a *agent) metrixOtherScan() {
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	saveTicker := time.NewTicker(a.cfg.PollInterval)
 	for {
 		select {
 		case <-saveTicker.C:
+
+			fmt.Print("tack...\n")
+
 			cpuUtilization, _ := cpu.Percent(2*time.Second, false)
 			swapMemory, err := mem.SwapMemory()
 			if err != nil {
@@ -124,17 +128,38 @@ func (a *agent) metrixOtherScan(in <-chan os.Signal) {
 
 			a.data.mx.Unlock()
 
-		case <-in:
-			a.goRutine.cnf()
-			a.goRutine.wg.Done() //
+		case <-ctx.Done():
+			cancelFunc()
 			return
 		}
 	}
 }
 
-func (a *agent) metrixScan(in <-chan os.Signal) {
+func (a *agent) metrixScan() {
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	saveTicker := time.NewTicker(a.cfg.PollInterval)
+	for {
+		select {
+		case <-saveTicker.C:
+
+			fmt.Print("tick...\n")
+
+			var mems runtime.MemStats
+			runtime.ReadMemStats(&mems)
+			a.fillMetric(&mems)
+
+		case <-ctx.Done():
+			cancelFunc()
+			return
+		}
+	}
+}
+
+func (a *agent) old_metrixScan() {
 
 	saveTicker := time.NewTicker(a.cfg.PollInterval)
+	stop := make(chan bool, 1)
 
 	for {
 		select {
@@ -144,8 +169,7 @@ func (a *agent) metrixScan(in <-chan os.Signal) {
 			runtime.ReadMemStats(&mems)
 			a.fillMetric(&mems)
 
-		case <-in:
-			a.goRutine.cnf() //
+		case <-stop:
 			a.goRutine.wg.Done()
 			return
 		}
@@ -201,16 +225,18 @@ func prepareMetrics(allMetrics *emtyArrMetrics) ([]byte, error) {
 	return gziparrMetrics, nil
 }
 
-func (a *agent) MakeRequest(in <-chan os.Signal) {
+func (a *agent) MakeRequest() {
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	reportTicker := time.NewTicker(a.cfg.ReportInterval)
-	allMetrics := make(emtyArrMetrics, 0)
-
-	chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
 
 	for {
 		select {
 		case <-reportTicker.C:
+			fmt.Print("toe...\n")
+			allMetrics := make(emtyArrMetrics, 0)
+
+			chanMatrics := make(chan encoding.Metrics, constants.ButchSize)
 
 			//allMetrics := make(emtyArrMetrics, constants.ButchSize)
 			//i := 0
@@ -281,9 +307,9 @@ func (a *agent) MakeRequest(in <-chan os.Signal) {
 				//allMetrics[i+1] = metrica
 				//go a.goPost2Server(allMetrics)
 			}
-		case <-in: //<-a.goRutine.ctx.Done():
-			a.goRutine.cnf()
-			a.goRutine.wg.Done() //
+		case <-ctx.Done():
+			cancelFunc()
+			//a.goRutine.wg.Done() //
 			return
 		}
 	}
@@ -304,18 +330,28 @@ func main() {
 		},
 	}
 
+	//stop := make(chan os.Signal, 1)
+	//signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	go agent.metrixScan()
+	//agent.goRutine.wg.Add(1)
+
+	go agent.metrixOtherScan()
+	//agent.goRutine.wg.Add(1)
+	//
+	go agent.MakeRequest()
+	//agent.goRutine.wg.Add(1)
+
+	//agent.goRutine.wg.Wait()
+
+	//stop <- true
+
+	//stop := make(chan os.Signal, 1)
+	//signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	//<-stop
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	<-stop
 
-	go agent.metrixScan(stop)
-	agent.goRutine.wg.Add(1)
-
-	go agent.metrixOtherScan(stop)
-	agent.goRutine.wg.Add(1)
-
-	go agent.MakeRequest(stop)
-	agent.goRutine.wg.Add(1)
-
-	agent.goRutine.wg.Wait()
-	close(stop)
 }

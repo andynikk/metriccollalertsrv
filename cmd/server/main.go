@@ -30,7 +30,7 @@ func main() {
 	handlers.NewRepStore(&server.storege)
 
 	if server.storege.Config.Restore {
-		server.storege.RestoreData()
+		go server.storege.RestoreData()
 	}
 
 	go server.storege.BackupData()
