@@ -16,8 +16,9 @@ import (
 )
 
 type TypeStoreDataDB struct {
-	DB  *pgx.Conn
-	Ctx context.Context
+	DB    *pgx.Conn
+	Ctx   context.Context
+	DBDsn string
 }
 type TypeStoreDataFile struct {
 	StoreFile string
@@ -34,7 +35,7 @@ type TypeStoreData interface {
 }
 
 func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
-	db, err := postgresql.NewClient(sdb.Ctx, "postgresql://postgres:101650@localhost:5433/yapracticum")
+	db, err := postgresql.NewClient(sdb.Ctx, sdb.DBDsn)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 	}

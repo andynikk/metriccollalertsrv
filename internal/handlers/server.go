@@ -91,7 +91,7 @@ func NewRepStore(rs *RepStore) {
 			constants.Logger.ErrorLog(err)
 		}
 
-		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{DB: db, Ctx: ctx}
+		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{DB: db, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn}
 		mapTypeStore[constants.MetricsStorageDB.String()].CreateTable()
 	}
 	if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
