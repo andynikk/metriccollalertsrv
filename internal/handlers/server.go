@@ -39,6 +39,15 @@ type HTMLParam struct {
 	TextMetrics []string
 }
 
+type repMapMetrics repository.MapMetrics
+
+type RepStore struct {
+	Config    environment.ServerConfig
+	Router    chi.Router
+	MX        sync.Mutex
+	MutexRepo repMapMetrics
+}
+
 func (mt MetricType) String() string {
 	return [...]string{"gauge", "counter"}[mt]
 }
@@ -47,16 +56,9 @@ func (et MetricError) String() string {
 	return [...]string{"Not error", "Error convert", "Error get type"}[et]
 }
 
-type RepStore struct {
-	Config    environment.ServerConfig
-	Router    chi.Router
-	MX        sync.Mutex
-	MutexRepo repository.MapMetrics
-}
-
 func NewRepStore(rs *RepStore) {
 
-	rs.MutexRepo = make(repository.MapMetrics)
+	rs.MutexRepo = make(repMapMetrics)
 	rs.Router = chi.NewRouter()
 
 	rs.Router.Use(middleware.RequestID)
@@ -273,13 +275,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		var arrMetrics encoding.ArrMetrics
 		arrMetrics = append(arrMetrics, mt)
 
-		//rs.MX.Lock()
-		//defer rs.MX.Unlock()
-
+		rs.MX.Lock()
 		for _, val := range rs.Config.TypeMetricsStorage {
 			val.WriteMetric(arrMetrics)
 		}
-
+		rs.MX.Unlock()
 	}
 }
 
@@ -322,9 +322,10 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	}
 
 	rs.MX.Lock()
-	defer rs.MX.Unlock()
-
 	for _, val := range storedData {
+		if val.ID == "" {
+			continue
+		}
 		rs.SetValueInMapJSON(val)
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
 	}
@@ -332,6 +333,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	for _, val := range rs.Config.TypeMetricsStorage {
 		val.WriteMetric(storedData)
 	}
+	rs.MX.Unlock()
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -436,21 +438,9 @@ func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
-func TextMetricsAndValue(mm *repository.MapMetrics) []string {
-	const msgFormat = "%s = %s"
-
-	var msg []string
-
-	for key, val := range *mm {
-		msg = append(msg, fmt.Sprintf(msgFormat, key, val.String()))
-	}
-
-	return msg
-}
-
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
-	arrMetricsAndValue := TextMetricsAndValue(&rs.MutexRepo)
+	arrMetricsAndValue := rs.MutexRepo.TextMetricsAndValue()
 
 	content := `<!DOCTYPE html>
 				<html>
@@ -546,4 +536,16 @@ func (rs *RepStore) HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 
+}
+
+func (rmm *repMapMetrics) TextMetricsAndValue() []string {
+	const msgFormat = "%s = %s"
+
+	var msg []string
+
+	for key, val := range *rmm {
+		msg = append(msg, fmt.Sprintf(msgFormat, key, val.String()))
+	}
+
+	return msg
 }
