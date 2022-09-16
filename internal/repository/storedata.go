@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 	"io/ioutil"
 	"os"
 
@@ -33,16 +34,25 @@ type TypeStoreData interface {
 }
 
 func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
-	tx, err := sdb.DB.Begin(sdb.Ctx)
+	db, err := postgresql.NewClient(sdb.Ctx, "postgresql://postgres:101650@localhost:5433/yapracticum")
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+	}
+	dataBase := postgresql.DataBase{
+		DB:  *db,
+		Ctx: sdb.Ctx,
+	}
+
+	tx, err := dataBase.DB.Begin(sdb.Ctx)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 
-	if err := sdb.SetMetric2DB(storedData); err != nil {
+	if err := dataBase.SetMetric2DB(storedData); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 
-	if err := tx.Commit(sdb.Ctx); err != nil {
+	if err := tx.Commit(dataBase.Ctx); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 }
@@ -89,8 +99,12 @@ func (sdb *TypeStoreDataDB) CreateTable() {
 
 func (sdb *TypeStoreDataDB) SetMetric2DB(storedData encoding.ArrMetrics) error {
 
+	DB, err := postgresql.NewClient(sdb.Ctx, "postgresql://postgres:101650@localhost:5433/yapracticum")
+	if err != nil {
+		return errors.New("ошибка выборки данных в БД")
+	}
 	for _, data := range storedData {
-		rows, err := sdb.DB.Query(sdb.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
+		rows, err := DB.Query(sdb.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
 		if err != nil {
 			return errors.New("ошибка выборки данных в БД")
 		}
@@ -111,12 +125,12 @@ func (sdb *TypeStoreDataDB) SetMetric2DB(storedData encoding.ArrMetrics) error {
 		rows.Close()
 
 		if insert {
-			if _, err := sdb.DB.Exec(sdb.Ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+			if _, err := DB.Exec(sdb.Ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 				constants.Logger.ErrorLog(err)
 				return errors.New(err.Error())
 			}
 		} else {
-			if _, err := sdb.DB.Exec(sdb.Ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
+			if _, err := DB.Exec(sdb.Ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 				constants.Logger.ErrorLog(err)
 				return errors.New("ошибка обновления данных в БД")
 			}
