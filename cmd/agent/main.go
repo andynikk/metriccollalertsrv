@@ -195,7 +195,7 @@ func (a *agent) MakeRequest() {
 	for {
 		select {
 		case <-reportTicker.C:
-			allMetrics := make(emtyArrMetrics, constants.ButchSize)
+			allMetrics := make(emtyArrMetrics, 0)
 			i := 0
 			tempMetricsGauge := &a.data.metricsGauge
 			for key, val := range *tempMetricsGauge {
@@ -205,13 +205,13 @@ func (a *agent) MakeRequest() {
 				heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
 
 				metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-				allMetrics[i] = metrica
+				allMetrics = append(allMetrics, metrica)
 
 				i++
 				if i == constants.ButchSize {
 					go a.goPost2Server(allMetrics)
 
-					allMetrics = make(emtyArrMetrics, constants.ButchSize)
+					allMetrics = make(emtyArrMetrics, 0)
 					i = 0
 				}
 			}
@@ -221,7 +221,7 @@ func (a *agent) MakeRequest() {
 			heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
 
 			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
-			allMetrics[i+1] = metrica
+			allMetrics = append(allMetrics, metrica)
 
 			go a.goPost2Server(allMetrics)
 		case <-ctx.Done():
