@@ -224,7 +224,6 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	var bodyJSON io.Reader
-	constants.Logger.InfoLog(fmt.Sprintf("------------ UpdatE"))
 
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	bodyJSON = rq.Body
@@ -280,21 +279,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 			val.WriteMetric(arrMetrics)
 		}
 	}
-
-	ctx := context.Background()
-	cnn := rs.Config.TypeMetricsStorage[constants.MetricsStorageDB.String()]
-	db := cnn.ConnDB()
-	rows, err := db.Query(ctx, constants.QuerySelectWithWhereTemplate, "FreeMemory", "gauge")
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	if rows.Next() {
-		constants.Logger.InfoLog(fmt.Sprintf("---Метрика 'FreeMemory', 'gauge' найдена\n"))
-	} else {
-		constants.Logger.InfoLog(fmt.Sprintf("---Метрика 'FreeMemory', 'gauge' НЕ найдена\n"))
-	}
-	rows.Close()
-
 }
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -302,7 +286,6 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	var bodyJSON io.Reader
 	var arrBody []byte
 
-	constants.Logger.InfoLog(fmt.Sprintf("------------ UpdateS"))
 	contentEncoding := rq.Header.Get("Content-Encoding")
 
 	bodyJSON = rq.Body
@@ -336,7 +319,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	rs.MX.Lock()
+	//rs.MX.Lock()
 	for _, val := range storedData {
 		rs.SetValueInMapJSON(val)
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
@@ -345,21 +328,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 	for _, val := range rs.Config.TypeMetricsStorage {
 		val.WriteMetric(storedData)
 	}
-	rs.MX.Unlock()
-
-	ctx := context.Background()
-	cnn := rs.Config.TypeMetricsStorage[constants.MetricsStorageDB.String()]
-	db := cnn.ConnDB()
-	rows, err := db.Query(ctx, constants.QuerySelectWithWhereTemplate, "FreeMemory", "gauge")
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	if rows.Next() {
-		constants.Logger.InfoLog(fmt.Sprintf("---Метрика 'FreeMemory', 'gauge' найдена"))
-	} else {
-		constants.Logger.InfoLog(fmt.Sprintf("---Метрика 'FreeMemory', 'gauge' НЕ найдена"))
-	}
-	rows.Close()
+	//rs.MX.Unlock()
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -447,9 +416,9 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		constants.Logger.ErrorLog(err)
 	}
 	if rows.Next() {
-		constants.Logger.InfoLog(fmt.Sprintf("---Метрика 'FreeMemory', 'gauge' найдена (HandlerValueMetricaJSON)"))
+		constants.Logger.InfoLog("---Метрика 'FreeMemory', 'gauge' найдена")
 	} else {
-		constants.Logger.InfoLog(fmt.Sprintf("---Метрика 'FreeMemory', 'gauge' НЕ найдена (HandlerValueMetricaJSON)"))
+		constants.Logger.InfoLog("---Метрика 'FreeMemory', 'gauge' НЕ найдена")
 	}
 	rows.Close()
 }
