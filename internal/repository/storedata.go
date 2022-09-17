@@ -5,18 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"io/ioutil"
 	"os"
 
-	"github.com/jackc/pgx/v4"
-
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 )
 
 type TypeStoreDataDB struct {
-	DB    *pgx.Conn
+	DBC   postgresql.DBConnector
 	Ctx   context.Context
 	DBDsn string
 }
@@ -30,21 +29,13 @@ type TypeStoreData interface {
 	WriteMetric(storedData encoding.ArrMetrics)
 	GetMetric() ([]encoding.Metrics, error)
 	CreateTable()
-	ConnDB() *pgx.Conn
+	ConnDB() *pgxpool.Pool
 	SetMetric2DB(storedData encoding.ArrMetrics) error
 }
 
 func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
-	db, err := postgresql.NewClient(sdb.Ctx, sdb.DBDsn)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	dataBase := postgresql.DataBase{
-		DB:  *db,
-		Ctx: sdb.Ctx,
-	}
-
-	tx, err := dataBase.DB.Begin(sdb.Ctx)
+	dataBase := sdb.DBC
+	tx, err := dataBase.Pool.Begin(dataBase.Context.Ctx)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 	}
@@ -53,7 +44,7 @@ func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
 		constants.Logger.ErrorLog(err)
 	}
 
-	if err := tx.Commit(dataBase.Ctx); err != nil {
+	if err := tx.Commit(dataBase.Context.Ctx); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 }
@@ -61,7 +52,7 @@ func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
 func (sdb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 	var arrMatrics []encoding.Metrics
 
-	poolRow, err := sdb.DB.Query(sdb.Ctx, constants.QuerySelect)
+	poolRow, err := sdb.DBC.Pool.Query(sdb.Ctx, constants.QuerySelect)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return nil, errors.New("ошибка чтения БД")
@@ -82,18 +73,18 @@ func (sdb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatrics, nil
 }
 
-func (sdb *TypeStoreDataDB) ConnDB() *pgx.Conn {
-	return sdb.DB
+func (sdb *TypeStoreDataDB) ConnDB() *pgxpool.Pool {
+	return sdb.DBC.Pool
 }
 
 func (sdb *TypeStoreDataDB) CreateTable() {
 
-	if _, err := sdb.DB.Exec(sdb.Ctx, constants.QuerySchema); err != nil {
+	if _, err := sdb.DBC.Pool.Exec(sdb.Ctx, constants.QuerySchema); err != nil {
 		constants.Logger.ErrorLog(err)
 		return
 	}
 
-	if _, err := sdb.DB.Exec(sdb.Ctx, constants.QueryTable); err != nil {
+	if _, err := sdb.DBC.Pool.Exec(sdb.Ctx, constants.QueryTable); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 }
@@ -167,7 +158,7 @@ func (f *TypeStoreDataFile) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatric, nil
 }
 
-func (f *TypeStoreDataFile) ConnDB() *pgx.Conn {
+func (f *TypeStoreDataFile) ConnDB() *pgxpool.Pool {
 	return nil
 }
 

@@ -86,12 +86,22 @@ func NewRepStore(rs *RepStore) {
 	mapTypeStore := rs.Config.TypeMetricsStorage
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
 		ctx := context.Background()
-		db, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
+		//db, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
+		//if err != nil {
+		//	constants.Logger.ErrorLog(err)
+		//}
+
+		dbc, err := postgresql.PoolDB(rs.Config.DatabaseDsn)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 		}
 
-		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{DB: db, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn}
+		//mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{
+		//	DBC: *dbc, DB: db, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn,
+		//}
+		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{
+			DBC: *dbc, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn,
+		}
 		mapTypeStore[constants.MetricsStorageDB.String()].CreateTable()
 	}
 	if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
