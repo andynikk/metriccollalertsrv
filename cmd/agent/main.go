@@ -121,7 +121,7 @@ func (a *agent) metrixOtherScan() {
 			a.data.mx.Lock()
 
 			a.data.metricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
-			a.data.metricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free)
+			a.data.metricsGauge["FreeMemory"] = repository.Gauge(rand.Float64()) //repository.Gauge(swapMemory.Free)
 			a.data.metricsGauge["CPUutilization1"] = CPUutilization1
 
 			a.data.mx.Unlock()
