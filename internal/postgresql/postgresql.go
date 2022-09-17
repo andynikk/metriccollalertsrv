@@ -97,8 +97,9 @@ func (DataBase *DataBase) SetMetric2DB(storedData encoding.ArrMetrics) error {
 
 func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error {
 
-	conn, err := DataBase.Pool.Acquire(DataBase.Context.Ctx)
 	for _, data := range storedData {
+		conn, err := DataBase.Pool.Acquire(DataBase.Context.Ctx)
+
 		if err != nil {
 			return err
 		}
@@ -138,8 +139,7 @@ func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error 
 				return errors.New("ошибка обновления данных в БД")
 			}
 		}
+		conn.Release()
 	}
-
-	conn.Release()
 	return nil
 }
