@@ -434,22 +434,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		constants.Logger.ErrorLog(err)
 		return
 	}
-
-	ctx := context.Background()
-	db, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	rows, err := db.Query(ctx, constants.QuerySelectWithWhereTemplate, "FreeMemory", "gauge")
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	if rows.Next() {
-		constants.Logger.InfoLog("---Метрика 'FreeMemory', 'gauge' найдена")
-	} else {
-		constants.Logger.InfoLog("---Метрика 'FreeMemory', 'gauge' НЕ найдена")
-	}
-	rows.Close()
 }
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
