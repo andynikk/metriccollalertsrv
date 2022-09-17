@@ -192,11 +192,12 @@ func (a *agent) MakeRequest() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	reportTicker := time.NewTicker(a.cfg.ReportInterval)
 
+	a.data.mx.Lock()
+	defer a.data.mx.Unlock()
+
 	for {
 		select {
 		case <-reportTicker.C:
-			a.data.mx.Lock()
-
 			allMetrics := make(emtyArrMetrics, 0)
 			i := 0
 			tempMetricsGauge := &a.data.metricsGauge
@@ -226,7 +227,7 @@ func (a *agent) MakeRequest() {
 			allMetrics = append(allMetrics, metrica)
 
 			go a.goPost2Server(allMetrics)
-			a.data.mx.Unlock()
+
 		case <-ctx.Done():
 			cancelFunc()
 			return
