@@ -97,20 +97,18 @@ func (DataBase *DataBase) SetMetric2DB(storedData encoding.ArrMetrics) error {
 
 func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error {
 
-	conn, err := DataBase.Pool.Acquire(DataBase.Context.Ctx)
-	if err != nil {
-		return err
-	}
-	defer conn.Release()
-
 	for _, data := range storedData {
-		//defer conn.Release()
+		conn, err := DataBase.Pool.Acquire(DataBase.Context.Ctx)
+		if err != nil {
+			return err
+		}
 
 		//cnn, _ := sql.Open("sql", "")
 		//cnn.QueryContext()
 		//rows := DataBase.Pool.QueryRow(DataBase.Context.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
 		rows, err := conn.Query(DataBase.Context.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
 		if err != nil {
+			conn.Release()
 			return errors.New("ошибка выборки данных в БД")
 		}
 
@@ -132,15 +130,17 @@ func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error 
 		if insert {
 			if _, err := conn.Exec(DataBase.Context.Ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 				constants.Logger.ErrorLog(err)
+				conn.Release()
 				return errors.New(err.Error())
 			}
 		} else {
 			if _, err := conn.Exec(DataBase.Context.Ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
 				constants.Logger.ErrorLog(err)
+				conn.Release()
 				return errors.New("ошибка обновления данных в БД")
 			}
 		}
+		conn.Release()
 	}
-	conn.Release()
 	return nil
 }
