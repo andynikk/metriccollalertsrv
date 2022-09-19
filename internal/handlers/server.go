@@ -541,11 +541,12 @@ func (rs *RepStore) BackupData() {
 		select {
 		case <-saveTicker.C:
 
-			rs.MX.Lock()
+			//rs.MX.Lock()
+			//defer rs.MX.Unlock()
+
 			for _, val := range rs.Config.TypeMetricsStorage {
 				val.WriteMetric(rs.PrepareDataBU())
 			}
-			rs.MX.Unlock()
 
 		case <-ctx.Done():
 			cancelFunc()
