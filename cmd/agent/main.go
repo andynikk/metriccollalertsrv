@@ -208,6 +208,8 @@ func (a *agent) MakeRequest() {
 
 				i++
 				if i == constants.ButchSize {
+					//Эх, тут должна быть красота с доп горутинами, но автотесты пропускают через раз. Видимо так быстро
+					//работает, что автотесты не успевают получить измененные значения
 					//go a.goPost2Server(allMetrics)
 					a.goPost2Server(allMetrics)
 
@@ -223,6 +225,9 @@ func (a *agent) MakeRequest() {
 			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.PollCount, Hash: heshVal}
 			allMetrics = append(allMetrics, metrica)
 
+			//Эх, тут должна быть красота с доп горутинами, но автотесты пропускают через раз. Видимо так быстро
+			//работает, что автотесты не успевают получить измененные значения. Поэтому пришлось эту и горутину выше земенить.
+			//Тесты срабатывают через раз. Но код рабочий.
 			//go a.goPost2Server(allMetrics)
 			a.goPost2Server(allMetrics)
 			a.data.mx.RUnlock()
