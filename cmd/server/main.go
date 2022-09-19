@@ -26,20 +26,16 @@ func Shutdown(rs *handlers.RepStore) {
 
 func main() {
 
-	fmt.Println("-----------------------")
 	server := new(server)
 	handlers.NewRepStore(&server.storege)
 	fmt.Println(server.storege.Config.Address)
 	if server.storege.Config.Restore {
 		go server.storege.RestoreData()
 	}
-	//
-	//go server.storege.BackupData()
+
+	go server.storege.BackupData()
 
 	go func() {
-		fmt.Println("+++++++++++++++++++++++")
-		fmt.Println(server.storege.Config.Address)
-		fmt.Println("+++++++++++++++++++++++")
 		s := &http.Server{
 			Addr:    server.storege.Config.Address,
 			Handler: server.storege.Router}
