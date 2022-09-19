@@ -288,22 +288,22 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		var arrMetrics encoding.ArrMetrics
 		arrMetrics = append(arrMetrics, mt)
 
-		cnn := rs.Config.TypeMetricsStorage[constants.MetricsStorageDB.String()]
-		db := cnn.ConnDB()
-		ctx := context.Background()
-
-		tx, err := db.Begin(ctx)
-		if err != nil {
-			constants.Logger.ErrorLog(err)
-		}
+		//cnn := rs.Config.TypeMetricsStorage[constants.MetricsStorageDB.String()]
+		//db := cnn.ConnDB()
+		//ctx := context.Background()
+		//
+		//tx, err := db.Begin(ctx)
+		//if err != nil {
+		//	constants.Logger.ErrorLog(err)
+		//}
 
 		for _, val := range rs.Config.TypeMetricsStorage {
 			val.WriteMetric(arrMetrics)
 		}
 
-		if err := tx.Commit(ctx); err != nil {
-			constants.Logger.ErrorLog(err)
-		}
+		//if err := tx.Commit(ctx); err != nil {
+		//	constants.Logger.ErrorLog(err)
+		//}
 	}
 }
 
@@ -344,6 +344,9 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		constants.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
+
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
 
 	for _, val := range storedData {
 		rs.SetValueInMapJSON(val)
