@@ -63,8 +63,8 @@ func (eam *emtyArrMetrics) prepareMetrics() ([]byte, error) {
 
 func (a *agent) fillMetric(mems *runtime.MemStats) {
 
-	//a.data.mx.Lock()
-	//defer a.data.mx.Unlock()
+	a.data.mx.Lock()
+	defer a.data.mx.Unlock()
 
 	a.data.metricsGauge["Alloc"] = repository.Gauge(mems.Alloc)
 	a.data.metricsGauge["BuckHashSys"] = repository.Gauge(mems.BuckHashSys)
@@ -116,13 +116,13 @@ func (a *agent) metrixOtherScan() {
 				CPUutilization1 = repository.Gauge(val)
 				break
 			}
-			//a.data.mx.Lock()
+			a.data.mx.Lock()
 
 			a.data.metricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
 			a.data.metricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free) + repository.Gauge(rand.Float64())
 			a.data.metricsGauge["CPUutilization1"] = CPUutilization1
 
-			//a.data.mx.Unlock()
+			a.data.mx.Unlock()
 		case <-ctx.Done():
 			cancelFunc()
 			return
@@ -192,7 +192,7 @@ func (a *agent) MakeRequest() {
 	for {
 		select {
 		case <-reportTicker.C:
-			//a.data.mx.Lock()
+			a.data.mx.RLock()
 
 			allMetrics := make(emtyArrMetrics, 0)
 			i := 0
@@ -224,7 +224,8 @@ func (a *agent) MakeRequest() {
 
 			go a.goPost2Server(allMetrics)
 
-			//a.data.mx.Unlock()
+			a.data.mx.RUnlock()
+
 		case <-ctx.Done():
 			cancelFunc()
 			return
