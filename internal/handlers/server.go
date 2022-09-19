@@ -517,15 +517,15 @@ func (rs *RepStore) PrepareDataBU() encoding.ArrMetrics {
 }
 
 func (rs *RepStore) RestoreData() {
+	rs.MX.Lock()
+	defer rs.MX.Unlock()
+
 	for _, val := range rs.Config.TypeMetricsStorage {
 		arrMetrics, err := val.GetMetric()
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 			continue
 		}
-
-		rs.MX.Lock()
-		defer rs.MX.Unlock()
 
 		for _, val := range arrMetrics {
 			rs.SetValueInMapJSON(val)

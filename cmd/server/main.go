@@ -5,6 +5,9 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type server struct {
@@ -27,9 +30,9 @@ func main() {
 	server := new(server)
 	handlers.NewRepStore(&server.storege)
 	fmt.Println(server.storege.Config.Address)
-	//if server.storege.Config.Restore {
-	//	go server.storege.RestoreData()
-	//}
+	if server.storege.Config.Restore {
+		go server.storege.RestoreData()
+	}
 	//
 	//go server.storege.BackupData()
 
@@ -47,9 +50,9 @@ func main() {
 		}
 	}()
 
-	//stop := make(chan os.Signal, 1)
-	//signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	//<-stop
-	//Shutdown(&server.storege)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	<-stop
+	Shutdown(&server.storege)
 
 }
