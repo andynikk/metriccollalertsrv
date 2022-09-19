@@ -48,8 +48,6 @@ type RepStore struct {
 	MutexRepo repMapMetrics
 }
 
-var sm sync.Mutex
-
 func (mt MetricType) String() string {
 	return [...]string{"gauge", "counter"}[mt]
 }
