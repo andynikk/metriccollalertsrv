@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
 type server struct {

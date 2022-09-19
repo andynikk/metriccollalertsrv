@@ -288,22 +288,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		var arrMetrics encoding.ArrMetrics
 		arrMetrics = append(arrMetrics, mt)
 
-		//cnn := rs.Config.TypeMetricsStorage[constants.MetricsStorageDB.String()]
-		//db := cnn.ConnDB()
-		//ctx := context.Background()
-		//
-		//tx, err := db.Begin(ctx)
-		//if err != nil {
-		//	constants.Logger.ErrorLog(err)
-		//}
-
 		for _, val := range rs.Config.TypeMetricsStorage {
 			val.WriteMetric(arrMetrics)
 		}
-
-		//if err := tx.Commit(ctx); err != nil {
-		//	constants.Logger.ErrorLog(err)
-		//}
 	}
 }
 
@@ -543,9 +530,6 @@ func (rs *RepStore) BackupData() {
 	for {
 		select {
 		case <-saveTicker.C:
-
-			//rs.MX.Lock()
-			//defer rs.MX.Unlock()
 
 			for _, val := range rs.Config.TypeMetricsStorage {
 				val.WriteMetric(rs.PrepareDataBU())

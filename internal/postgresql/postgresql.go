@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 )
 
 type DataBase struct {
