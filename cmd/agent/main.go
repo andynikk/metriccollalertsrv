@@ -37,7 +37,7 @@ type goRutine struct {
 
 type data struct {
 	mx           sync.RWMutex
-	pollCount    int64
+	PollCount    int64
 	metricsGauge MetricsGauge
 }
 
@@ -95,7 +95,7 @@ func (a *agent) fillMetric(mems *runtime.MemStats) {
 	a.data.metricsGauge["TotalAlloc"] = repository.Gauge(mems.TotalAlloc)
 	a.data.metricsGauge["RandomValue"] = repository.Gauge(rand.Float64())
 
-	a.data.pollCount = a.data.pollCount + 1
+	a.data.PollCount = a.data.PollCount + 1
 }
 
 func (a *agent) metrixOtherScan() {
@@ -215,11 +215,11 @@ func (a *agent) MakeRequest() {
 				}
 			}
 
-			cPollCount := repository.Counter(a.data.pollCount)
-			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
+			cPollCount := repository.Counter(a.data.PollCount)
+			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.PollCount)
 			heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
 
-			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
+			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.PollCount, Hash: heshVal}
 			allMetrics = append(allMetrics, metrica)
 
 			go a.goPost2Server(allMetrics)
@@ -239,7 +239,7 @@ func main() {
 	agent := agent{
 		cfg: environment.SetConfigAgent(),
 		data: data{
-			pollCount:    0,
+			PollCount:    0,
 			metricsGauge: make(MetricsGauge),
 		},
 		goRutine: goRutine{
