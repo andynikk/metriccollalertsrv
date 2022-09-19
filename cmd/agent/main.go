@@ -208,7 +208,8 @@ func (a *agent) MakeRequest() {
 
 				i++
 				if i == constants.ButchSize {
-					go a.goPost2Server(allMetrics)
+					//go a.goPost2Server(allMetrics)
+					a.goPost2Server(allMetrics)
 
 					allMetrics = make(emtyArrMetrics, 0)
 					i = 0
@@ -222,8 +223,8 @@ func (a *agent) MakeRequest() {
 			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.PollCount, Hash: heshVal}
 			allMetrics = append(allMetrics, metrica)
 
-			go a.goPost2Server(allMetrics)
-
+			//go a.goPost2Server(allMetrics)
+			a.goPost2Server(allMetrics)
 			a.data.mx.RUnlock()
 
 		case <-ctx.Done():
