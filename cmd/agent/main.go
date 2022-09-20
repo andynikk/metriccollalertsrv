@@ -208,10 +208,8 @@ func (a *agent) MakeRequest() {
 
 				i++
 				if i == constants.ButchSize {
-					//Эх, тут должна быть красота с доп горутинами, но автотесты пропускают через раз. Видимо так быстро
-					//работает, что автотесты не успевают получить измененные значения
-					//go a.goPost2Server(allMetrics)
-					a.goPost2Server(allMetrics)
+					go a.goPost2Server(allMetrics)
+					//a.goPost2Server(allMetrics)
 
 					allMetrics = make(emtyArrMetrics, 0)
 					i = 0
