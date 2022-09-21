@@ -39,13 +39,11 @@ type HTMLParam struct {
 	TextMetrics []string
 }
 
-type repMapMetrics repository.MapMetrics
-
 type RepStore struct {
 	Config environment.ServerConfig
 	Router chi.Router
 	sync.Mutex
-	MutexRepo repMapMetrics
+	repository.MapMetrics
 }
 
 func (mt MetricType) String() string {
@@ -58,7 +56,7 @@ func (et MetricError) String() string {
 
 func NewRepStore(rs *RepStore) {
 
-	rs.MutexRepo = make(repMapMetrics)
+	rs.MutexRepo = make(repository.MutexRepo)
 	rs.Router = chi.NewRouter()
 
 	rs.Router.Use(middleware.RequestID)
@@ -84,19 +82,12 @@ func NewRepStore(rs *RepStore) {
 	mapTypeStore := rs.Config.TypeMetricsStorage
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
 		ctx := context.Background()
-		//db, err := postgresql.NewClient(ctx, rs.Config.DatabaseDsn)
-		//if err != nil {
-		//	constants.Logger.ErrorLog(err)
-		//}
 
 		dbc, err := postgresql.PoolDB(rs.Config.DatabaseDsn)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 		}
 
-		//mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{
-		//	DBC: *dbc, DB: db, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn,
-		//}
 		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{
 			DBC: *dbc, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn,
 		}
@@ -450,7 +441,7 @@ func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
-	arrMetricsAndValue := rs.MutexRepo.TextMetricsAndValue()
+	arrMetricsAndValue := rs.MapMetrics.TextMetricsAndValue()
 
 	content := `<!DOCTYPE html>
 				<html>
@@ -544,16 +535,4 @@ func (rs *RepStore) HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 
-}
-
-func (rmm *repMapMetrics) TextMetricsAndValue() []string {
-	const msgFormat = "%s = %s"
-
-	var msg []string
-
-	for key, val := range *rmm {
-		msg = append(msg, fmt.Sprintf(msgFormat, key, val.String()))
-	}
-
-	return msg
 }
