@@ -91,14 +91,14 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
-		val := repository.Counter(agent.data.PollCount)
+		val := repository.Counter(agent.data.pollCount)
 		if val.Type() != "counter" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Counter")
 		}
 	})
 
 	t.Run("Checking the metrics value PollCount", func(t *testing.T) {
-		if agent.data.PollCount == 0 {
+		if agent.data.pollCount == 0 {
 			t.Errorf("The metric %s a value of %v", "PollCount", 0)
 		}
 
@@ -106,7 +106,7 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Increasing the metric PollCount", func(t *testing.T) {
 		var res = int64(2)
-		if agent.data.PollCount != res {
+		if agent.data.pollCount != res {
 			t.Errorf("The metric %s has not increased by %v", "PollCount", res)
 		}
 

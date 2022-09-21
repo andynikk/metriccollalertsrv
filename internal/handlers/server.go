@@ -42,9 +42,9 @@ type HTMLParam struct {
 type repMapMetrics repository.MapMetrics
 
 type RepStore struct {
-	Config    environment.ServerConfig
-	Router    chi.Router
-	MX        sync.Mutex
+	Config environment.ServerConfig
+	Router chi.Router
+	sync.Mutex
 	MutexRepo repMapMetrics
 }
 
@@ -199,8 +199,8 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	metName := chi.URLParam(rq, "metName")
 	fmt.Println("------- HandlerGetValue", metType, metName)
 
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		constants.Logger.InfoLog(fmt.Sprintf("== %d", 3))
@@ -222,8 +222,8 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
@@ -264,8 +264,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		return
 	}
 
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	rw.Header().Add("Content-Type", "application/json")
 	res := rs.SetValueInMapJSON(v)
@@ -330,8 +330,8 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	for _, val := range storedData {
 		rs.SetValueInMapJSON(val)
@@ -382,8 +382,8 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	metName := v.ID
 	fmt.Println("------- HandlerGetValue", metType, metName)
 
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
 
@@ -505,8 +505,8 @@ func (rs *RepStore) PrepareDataBU() encoding.ArrMetrics {
 }
 
 func (rs *RepStore) RestoreData() {
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	for _, val := range rs.Config.TypeMetricsStorage {
 		arrMetrics, err := val.GetMetric()

@@ -32,19 +32,18 @@ type emtyArrMetrics []encoding.Metrics
 type goRutine struct {
 	ctx context.Context
 	cnf context.CancelFunc
-	wg  sync.WaitGroup
 }
 
 type data struct {
-	mx           sync.RWMutex
-	PollCount    int64
+	sync.RWMutex
+	pollCount    int64
 	metricsGauge MetricsGauge
 }
 
 type agent struct {
-	cfg      environment.AgentConfig
-	goRutine goRutine
-	data     data
+	cfg environment.AgentConfig
+	goRutine
+	data
 }
 
 func (eam *emtyArrMetrics) prepareMetrics() ([]byte, error) {
@@ -63,8 +62,8 @@ func (eam *emtyArrMetrics) prepareMetrics() ([]byte, error) {
 
 func (a *agent) fillMetric(mems *runtime.MemStats) {
 
-	a.data.mx.Lock()
-	defer a.data.mx.Unlock()
+	a.data.Lock()
+	defer a.data.Unlock()
 
 	a.data.metricsGauge["Alloc"] = repository.Gauge(mems.Alloc)
 	a.data.metricsGauge["BuckHashSys"] = repository.Gauge(mems.BuckHashSys)
@@ -95,19 +94,18 @@ func (a *agent) fillMetric(mems *runtime.MemStats) {
 	a.data.metricsGauge["TotalAlloc"] = repository.Gauge(mems.TotalAlloc)
 	a.data.metricsGauge["RandomValue"] = repository.Gauge(rand.Float64())
 
-	a.data.PollCount = a.data.PollCount + 1
+	a.data.pollCount = a.data.pollCount + 1
 }
 
 func (a *agent) metrixOtherScan() {
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
 	saveTicker := time.NewTicker(a.cfg.PollInterval)
 	for {
 		select {
 		case <-saveTicker.C:
 
 			cpuUtilization, _ := cpu.Percent(2*time.Second, false)
-			swapMemory, err := mem.SwapMemoryWithContext(ctx)
+			swapMemory, err := mem.SwapMemoryWithContext(a.ctx)
 			if err != nil {
 				constants.Logger.ErrorLog(err)
 			}
@@ -116,15 +114,14 @@ func (a *agent) metrixOtherScan() {
 				CPUutilization1 = repository.Gauge(val)
 				break
 			}
-			a.data.mx.Lock()
-
+			a.data.Lock()
 			a.data.metricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
 			a.data.metricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free) + repository.Gauge(rand.Float64())
 			a.data.metricsGauge["CPUutilization1"] = CPUutilization1
 
-			a.data.mx.Unlock()
-		case <-ctx.Done():
-			cancelFunc()
+			a.data.Unlock()
+		case <-a.ctx.Done():
+			a.cnf()
 			return
 		}
 	}
@@ -132,7 +129,6 @@ func (a *agent) metrixOtherScan() {
 
 func (a *agent) metrixScan() {
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
 	saveTicker := time.NewTicker(a.cfg.PollInterval)
 	for {
 		select {
@@ -142,8 +138,8 @@ func (a *agent) metrixScan() {
 			runtime.ReadMemStats(&mems)
 			a.fillMetric(&mems)
 
-		case <-ctx.Done():
-			cancelFunc()
+		case <-a.ctx.Done():
+			a.cnf()
 			return
 		}
 	}
@@ -186,13 +182,12 @@ func (a *agent) goPost2Server(allMetrics emtyArrMetrics) {
 
 func (a *agent) MakeRequest() {
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
 	reportTicker := time.NewTicker(a.cfg.ReportInterval)
 
 	for {
 		select {
 		case <-reportTicker.C:
-			a.data.mx.RLock()
+			a.data.RLock()
 
 			allMetrics := make(emtyArrMetrics, 0)
 			i := 0
@@ -216,22 +211,21 @@ func (a *agent) MakeRequest() {
 				}
 			}
 
-			cPollCount := repository.Counter(a.data.PollCount)
-			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.PollCount)
+			cPollCount := repository.Counter(a.data.pollCount)
+			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
 			heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
 
-			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.PollCount, Hash: heshVal}
+			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
 			allMetrics = append(allMetrics, metrica)
 
-			//Эх, тут должна быть красота с доп горутинами, но автотесты пропускают через раз. Видимо так быстро
-			//работает, что автотесты не успевают получить измененные значения. Поэтому пришлось эту и горутину выше земенить.
-			//Тесты срабатывают через раз. Но код рабочий.
+			//Эх, тут должна быть красота с горутиной, но автотесты пропускают через раз. Видимо так быстро
+			//работает, что автотесты не успевают получить измененные значения. Поэтому пришлось из параллели
+			//пришлось сделать последовательность. Но код с горутиной рабочий.
 			//go a.goPost2Server(allMetrics)
 			a.goPost2Server(allMetrics)
-			a.data.mx.RUnlock()
-
-		case <-ctx.Done():
-			cancelFunc()
+			a.data.RUnlock()
+		case <-a.ctx.Done():
+			a.cnf()
 			return
 		}
 	}
@@ -243,7 +237,7 @@ func main() {
 	agent := agent{
 		cfg: environment.SetConfigAgent(),
 		data: data{
-			PollCount:    0,
+			pollCount:    0,
 			metricsGauge: make(MetricsGauge),
 		},
 		goRutine: goRutine{
