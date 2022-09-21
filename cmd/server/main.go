@@ -16,8 +16,8 @@ type server struct {
 }
 
 func Shutdown(rs *handlers.RepStore) {
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	for _, val := range rs.Config.TypeMetricsStorage {
 		val.WriteMetric(rs.PrepareDataBU())
