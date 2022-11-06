@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,8 +16,8 @@ type server struct {
 }
 
 func Shutdown(rs *handlers.RepStore) {
-	rs.MX.Lock()
-	defer rs.MX.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	for _, val := range rs.Config.TypeMetricsStorage {
 		val.WriteMetric(rs.PrepareDataBU())
@@ -28,9 +29,9 @@ func main() {
 
 	server := new(server)
 	handlers.NewRepStore(&server.storege)
-
+	fmt.Println(server.storege.Config.Address)
 	if server.storege.Config.Restore {
-		server.storege.RestoreData()
+		go server.storege.RestoreData()
 	}
 
 	go server.storege.BackupData()

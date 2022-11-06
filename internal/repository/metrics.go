@@ -13,7 +13,11 @@ import (
 type Gauge float64
 type Counter int64
 
-type MapMetrics = map[string]Metric
+type MutexRepo map[string]Metric
+
+type MapMetrics struct {
+	MutexRepo
+}
 
 type Metric interface {
 	String() string
@@ -106,3 +110,15 @@ func (c *Counter) Type() string {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+func (mm *MapMetrics) TextMetricsAndValue() []string {
+	const msgFormat = "%s = %s"
+
+	var msg []string
+
+	for key, val := range mm.MutexRepo {
+		msg = append(msg, fmt.Sprintf(msgFormat, key, val.String()))
+	}
+
+	return msg
+}
