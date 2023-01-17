@@ -214,7 +214,7 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	IPAddressAllowed := rq.Context().Value("IP-Address-Allowed")
+	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}
@@ -231,7 +231,7 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	IPAddressAllowed := rq.Context().Value("IP-Address-Allowed")
+	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}
@@ -296,7 +296,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	IPAddressAllowed := rq.Context().Value("IP-Address-Allowed")
+	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}
