@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -40,6 +41,7 @@ type HTMLParam struct {
 
 type RepStore struct {
 	Config environment.ServerConfig
+	PK     *encryption.KeyEncryption
 	Router chi.Router
 	sync.Mutex
 	repository.MapMetrics

@@ -1,22 +1,55 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
-
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
+	"github.com/go-chi/chi/v5"
 )
 
-func TestFuncServer(t *testing.T) {
+func TestFuncServerHTTP(t *testing.T) {
+	var fValue float64 = 0.001
+	var iDelta int64 = 10
 
-	var postStr = "http://127.0.0.1:8080/update/gauge/Alloc/0.1\nhttp://127.0.0.1:8080/update/gauge/" +
-		"BuckHashSys/0.002\nhttp://127.0.0.1:8080/update/counter/PollCount/5"
+	server := new(server)
+	handlers.NewRepStore(&server.storege)
+
+	t.Run("Checking init server", func(t *testing.T) {
+		//rp.Config = environment.InitConfigServer()
+		if server.storege.Config.Address == "" {
+			t.Errorf("Error checking init server")
+		}
+	})
+	fmt.Println(server.storege.Config.Address)
+
+	server.storege.MutexRepo = make(repository.MutexRepo)
+	t.Run("Checking init router", func(t *testing.T) {
+		if server.storege.Router == nil {
+			t.Errorf("Error checking init router")
+		}
+	})
+
+	t.Run("Checking init config", func(t *testing.T) {
+		if server.storege.Config.Address == "" {
+			t.Errorf("Error checking init config")
+		}
+	})
+
+	postStr := fmt.Sprintf("http://%s/update/gauge/Alloc/0.1\nhttp://%s/update/gauge/BuckHashSys/0.002"+
+		"\nhttp://%s/update/counter/PollCount/5", server.storege.Config.Address, server.storege.Config.Address, server.storege.Config.Address)
 
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
@@ -24,6 +57,232 @@ func TestFuncServer(t *testing.T) {
 		if len(messageRaz) != 3 {
 			t.Errorf("The string (%s) was incorrectly decomposed into an array", postStr)
 		}
+	})
+
+	t.Run("Checking rsa crypt", func(t *testing.T) {
+		t.Run("Checking init crypto key", func(t *testing.T) {
+			server.storege.PK, _ = encryption.InitPrivateKey(server.storege.Config.CryptoKey)
+			if server.storege.Config.CryptoKey != "" && server.storege.PK == nil {
+				t.Errorf("Error checking init crypto key")
+			}
+		})
+		t.Run("Checking rsa encrypt", func(t *testing.T) {
+			testMsg := "Тестовое сообщение"
+
+			encryptMsg, err := server.storege.PK.RsaEncrypt([]byte(testMsg))
+			if err != nil {
+				t.Errorf("Error checking rsa encrypt")
+			}
+			t.Run("Checking rsa decrypt", func(t *testing.T) {
+				decryptMsg, err := server.storege.PK.RsaDecrypt(encryptMsg)
+				if err != nil {
+					t.Errorf("Error checking rsa decrypt")
+				}
+				byteTestMsg := []byte(testMsg)
+				if !bytes.Equal(decryptMsg, byteTestMsg) {
+					t.Errorf("Error checking rsa decrypt")
+				}
+			})
+		})
+	})
+
+	t.Run("Checking connect DB", func(t *testing.T) {
+		t.Run("Checking create DB table", func(t *testing.T) {
+			storageType, err := repository.InitStoreDB(server.storege.Config.StorageType, server.storege.Config.DatabaseDsn)
+			if err != nil {
+				t.Errorf(fmt.Sprintf("Error create DB table: %s", err.Error()))
+			}
+			server.storege.Config.StorageType = storageType
+			t.Run("Checking handlers /ping GET", func(t *testing.T) {
+				mapTypeStore := server.storege.Config.StorageType
+				if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
+					t.Errorf("Error handlers /ping GET")
+				}
+
+				if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
+					t.Errorf("Error handlers /ping GET")
+				}
+			})
+		})
+	})
+
+	t.Run("Checking metric methods", func(t *testing.T) {
+		t.Run(`Checking method "String" type "Counter"`, func(t *testing.T) {
+			var c repository.Counter = 58
+			if c.String() != "58" {
+				t.Errorf(`Error method "String" for Counter `)
+			}
+		})
+		t.Run(`Checking method "String" type "Gauge"`, func(t *testing.T) {
+			var c repository.Gauge = 0.001
+			if c.String() != "0.001" {
+				t.Errorf(`Error method "String" for Counter `)
+			}
+		})
+		t.Run(`Checking method "GetMetrics" type "Counter"`, func(t *testing.T) {
+			mType := "counter"
+			id := "TestCounter"
+			hashKey := "TestHash"
+
+			c := repository.Counter(58)
+
+			mt := c.GetMetrics(mType, id, hashKey)
+			msg := fmt.Sprintf("MType: %s, ID: %s, Value: %v, Delta: %d, Hash: %s",
+				mt.MType, mt.ID, 0, *mt.Delta, mt.Hash)
+
+			if msg != "MType: counter, ID: TestCounter, Value: 0, Delta: 58, Hash: 29bd8e4bde7ec6302393fe3f7954895a65f4d4b22372d00a35fc1adbcc2ec239" {
+				t.Errorf(`method "GetMetrics" type "Counter"`)
+			}
+		})
+		t.Run(`Checking method "GetMetrics" type "Gauge"`, func(t *testing.T) {
+			mType := "gauge"
+			id := "TestGauge"
+			hashKey := "TestHash"
+
+			g := repository.Gauge(0.01)
+
+			mt := g.GetMetrics(mType, id, hashKey)
+			msg := fmt.Sprintf("MType: %s, ID: %s, Value: %f, Delta: %d, Hash: %s",
+				mt.MType, mt.ID, *mt.Value, 0, mt.Hash)
+			if msg != "MType: gauge, ID: TestGauge, Value: 0.010000, Delta: 0, Hash: 4e5d8a0e257dd12355b15f730591dddd9e45e18a6ef67460a58f20edc12c9465" {
+				t.Errorf(`method "GetMetrics" type "Counter"`)
+			}
+		})
+		t.Run(`Checking method "Set" type "Counter"`, func(t *testing.T) {
+			var c repository.Counter
+			var i int64 = 58
+			v := encoding.Metrics{
+				ID:    "",
+				MType: "",
+				Delta: &i,
+				Hash:  "",
+			}
+			c.Set(v)
+
+			if c != 58 {
+				t.Errorf(`Error method "Set" for Counter `)
+			}
+		})
+		t.Run(`Checking method "Set" type "Gauge"`, func(t *testing.T) {
+			var g repository.Gauge
+			var f float64 = 0.01
+
+			v := encoding.Metrics{
+				ID:    "",
+				MType: "",
+				Value: &f,
+				Hash:  "",
+			}
+			g.Set(v)
+			if g != 0.01 {
+				t.Errorf(`Error method "Set" for Counter `)
+			}
+		})
+		t.Run(`Checking method "Type" type "Counter"`, func(t *testing.T) {
+			var c repository.Counter = 58
+			if c.Type() != "counter" {
+				t.Errorf(`Error method "Type" for Counter `)
+			}
+		})
+		t.Run(`Checking method "Type" type "Gauge"`, func(t *testing.T) {
+			var g repository.Gauge = 0.001
+			if g.Type() != "gauge" {
+				t.Errorf(`Error method "Type" for Counter `)
+			}
+		})
+		t.Run(`Checking method "SetFromText" type "Counter"`, func(t *testing.T) {
+			metValue := "58"
+			c := repository.Gauge(0)
+			c.SetFromText(metValue)
+			if c != 58 {
+				t.Errorf(`Error method "SetFromText" for Counter `)
+			}
+		})
+		t.Run(`Checking method "SetFromText" type "Gauge"`, func(t *testing.T) {
+			metValue := "0.01"
+			g := repository.Gauge(0)
+			g.SetFromText(metValue)
+			if g != 0.01 {
+				t.Errorf(`Error method "SetFromText" for Counter `)
+			}
+		})
+
+		t.Run(`Checking method PrepareDataForBackup`, func(t *testing.T) {
+			valG := repository.Gauge(0)
+			if ok := valG.SetFromText("0.001"); !ok {
+				t.Errorf(`Error method "PrepareDataForBackup"`)
+			}
+			server.storege.MutexRepo["TestGauge"] = &valG
+
+			valC := repository.Counter(0)
+			if ok := valC.SetFromText("58"); !ok {
+				t.Errorf(`Error method "PrepareDataForBackup"`)
+			}
+			server.storege.MutexRepo["TestCounter"] = &valC
+
+			data := server.storege.PrepareDataBuckUp()
+			if len(data) != 2 {
+				t.Errorf(`Error method "PrepareDataForBackup"`)
+			}
+		})
+	})
+
+	t.Run("Checking handlers", func(t *testing.T) {
+		ts := httptest.NewServer(server.storege.Router)
+		defer ts.Close()
+
+		t.Run("Checking handler /update/{metType}/{metName}/{metValue}/", func(t *testing.T) {
+			resp := testRequest(t, ts, http.MethodPost, "/update/gauge/TestGauge/0.01", nil)
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("Error handler /update/{metType}/{metName}/{metValue}/")
+			}
+			t.Run("Checking handler /value/", func(t *testing.T) {
+				resp := testRequest(t, ts, http.MethodGet, "/value/gauge/TestGauge", nil)
+				defer resp.Body.Close()
+
+				if resp.StatusCode != http.StatusOK {
+					t.Errorf("Error handler /value/")
+				}
+			})
+		})
+		//t.Run("Checking handler /updates POST/", func(t *testing.T) {
+		//	//resp := testRequest(t, ts, http.MethodPost, "/updates", nil)
+		//	//defer resp.Body.Close()
+		//	//
+		//	//if resp.StatusCode != http.StatusOK {
+		//	//	t.Errorf("Error handler //update/{metType}/{metName}/{metValue}/")
+		//	//}
+		//})
+		t.Run("Checking handler /update POST/", func(t *testing.T) {
+			//testA := testArray("")
+			testA := testMericGougeHTTP("")
+			arrMetrics, err := json.MarshalIndent(testA, "", " ")
+			if err != nil {
+				t.Errorf("Error handler /update POST/")
+			}
+			body := bytes.NewReader(arrMetrics)
+			resp := testRequest(t, ts, http.MethodPost, "/update", body)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("Error handler /update POST/")
+			}
+			t.Run("Checking handler /value POST/", func(t *testing.T) {
+				metricJSON, err := json.MarshalIndent(testMericGougeHTTP(""), "", " ")
+				if err != nil {
+					t.Errorf("Error handler /value POST/")
+				}
+				body := bytes.NewReader(metricJSON)
+
+				resp := testRequest(t, ts, http.MethodPost, "/value", body)
+				defer resp.Body.Close()
+
+				if resp.StatusCode != http.StatusOK {
+					t.Errorf("Error handler /value POST/")
+				}
+			})
+		})
 	})
 
 	t.Run("Checking the filling of metrics", func(t *testing.T) {
@@ -56,12 +315,14 @@ func TestFuncServer(t *testing.T) {
 
 				r := chi.NewRouter()
 				ts := httptest.NewServer(r)
+				//rp := new(api.RepStore)
 
-				rp := new(handlers.RepStore)
-				rp.MutexRepo = make(repository.MutexRepo)
-				rp.Router = nil
+				smm := new(repository.SyncMapMetrics)
+				smm.MutexRepo = make(repository.MutexRepo)
+				//rp.SyncMapMetrics = smm
 
-				r.Post("/update/{metType}/{metName}/{metValue}", rp.HandlerSetMetricaPOST)
+				//server.storege.Router = nil
+				r.Post("/update/{metType}/{metName}/{metValue}", server.storege.HandlerSetMetricaPOST)
 
 				defer ts.Close()
 				resp := testRequest(t, ts, http.MethodPost, tt.request, nil)
@@ -88,6 +349,90 @@ func TestFuncServer(t *testing.T) {
 
 	})
 
+	t.Run("Checking compresion - decompression", func(t *testing.T) {
+
+		textGzip := "Testing massage"
+		arrByte := []byte(textGzip)
+
+		compresMsg, err := compression.Compress(arrByte)
+		if err != nil {
+			t.Errorf("Error compres")
+		}
+
+		decompresMsg, err := compression.Decompress(compresMsg)
+		if err != nil {
+			t.Errorf("Error decompres")
+		}
+
+		msgReader := bytes.NewReader(decompresMsg)
+		buf := new(bytes.Buffer)
+		if _, err := buf.ReadFrom(msgReader); err != nil {
+			t.Errorf("Error read decompression msg")
+		}
+		decompresText := buf.String()
+
+		if decompresText != textGzip {
+			t.Errorf("Error checking compresion - decompression")
+		}
+	})
+
+	t.Run("Checking Hash SHA 256", func(t *testing.T) {
+		configKey := "testKey"
+		txtData := "Test data"
+
+		hashData := cryptohash.HeshSHA256(txtData, configKey)
+		if hashData == "" || len(hashData) != 64 {
+			t.Errorf("Error checking Hash SHA 256")
+		}
+
+		t.Run("Checking set val in map", func(t *testing.T) {
+			rs := new(handlers.RepStore)
+
+			//smm := new(repository.SyncMapMetrics)
+			//smm.MutexRepo = make(repository.MutexRepo)
+
+			rs.MapMetrics.MutexRepo = make(repository.MutexRepo)
+
+			arrM := testArray(configKey)
+
+			for idx, val := range arrM {
+				if idx == 0 {
+					valG := repository.Gauge(0)
+					rs.MutexRepo[val.ID] = &valG
+				} else {
+					valC := repository.Counter(0)
+					rs.MutexRepo[val.ID] = &valC
+				}
+				rs.MutexRepo[val.ID].Set(val)
+			}
+
+			erorr := false
+			for idx, val := range rs.MutexRepo {
+				gauge := repository.Gauge(fValue)
+				counter := repository.Counter(iDelta)
+				if idx == "TestGauge" && val.String() != gauge.String() {
+					erorr = true
+				} else if idx == "TestCounter" && val.String() != counter.String() {
+					erorr = true
+				}
+			}
+
+			if erorr {
+				t.Errorf("Error checking Hash SHA 256")
+			}
+		})
+	})
+
+	t.Run("Checking marshal metrics JSON", func(t *testing.T) {
+
+		for key, val := range server.storege.MutexRepo {
+			mt := val.GetMetrics(val.Type(), key, server.storege.Config.Key)
+			_, err := mt.MarshalMetrica()
+			if err != nil {
+				t.Errorf("Error checking marshal metrics JSON")
+			}
+		}
+	})
 }
 
 func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io.Reader) *http.Response {
@@ -103,12 +448,41 @@ func testRequest(t *testing.T, ts *httptest.Server, method, path string, body io
 		return nil
 	}
 
-	//respBody, err := ioutil.ReadAll(resp.Body)
-	//if err != nil {
-	//	t.Fatal(err)
-	//	return nil
-	//}
 	defer resp.Body.Close()
 
 	return resp
+}
+
+func testArray(configKey string) encoding.ArrMetrics {
+	var arrM encoding.ArrMetrics
+
+	arrM = append(arrM, testMericGougeHTTP(configKey))
+	arrM = append(arrM, testMericCaunterHTTP(configKey))
+
+	return arrM
+}
+
+func testMericGougeHTTP(configKey string) encoding.Metrics {
+
+	var fValue float64 = 0.001
+
+	var mGauge encoding.Metrics
+	mGauge.ID = "TestGauge"
+	mGauge.MType = "gauge"
+	mGauge.Value = &fValue
+	mGauge.Hash = cryptohash.HeshSHA256(mGauge.ID, configKey)
+
+	return mGauge
+}
+
+func testMericCaunterHTTP(configKey string) encoding.Metrics {
+	var iDelta int64 = 10
+
+	var mCounter encoding.Metrics
+	mCounter.ID = "TestCounter"
+	mCounter.MType = "counter"
+	mCounter.Delta = &iDelta
+	mCounter.Hash = cryptohash.HeshSHA256(mCounter.ID, configKey)
+
+	return mCounter
 }
