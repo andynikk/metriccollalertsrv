@@ -71,7 +71,7 @@ func TestFuncAgen(t *testing.T) {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
 
-	agent.fillMetric(&mem)
+	agent.fillMetric()
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
 		val := agent.data.metricsGauge["Frees"]
@@ -87,7 +87,7 @@ func TestFuncAgen(t *testing.T) {
 
 	})
 
-	agent.fillMetric(&mem)
+	agent.fillMetric()
 
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
