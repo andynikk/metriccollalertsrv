@@ -96,11 +96,11 @@ func TestFuncServerHTTP(t *testing.T) {
 			t.Run("Checking handlers /ping GET", func(t *testing.T) {
 				mapTypeStore := server.storege.Config.StorageType
 				if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
-					t.Errorf("Error handlers /ping GET")
+					t.Errorf("Error handlers 1 /ping GET", len(mapTypeStore))
 				}
 
 				if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
-					t.Errorf("Error handlers /ping GET")
+					t.Errorf("Error handlers 2 /ping GET")
 				}
 			})
 		})
