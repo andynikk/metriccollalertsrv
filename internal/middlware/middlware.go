@@ -13,7 +13,6 @@ type KeyValueContext string
 
 func CheckIP(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		xRealIP := r.Header.Get("X-Real-IP")
 		if xRealIP == "" {
 			w.WriteHeader(http.StatusOK)
