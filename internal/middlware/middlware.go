@@ -19,7 +19,6 @@ func CheckIP(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
 			endpoint(w, r)
 			return
 		}
-
 		ok := networks.AddressAllowed(strings.Split(xRealIP, constants.SepIPAddress))
 		if ok {
 			w.WriteHeader(http.StatusOK)
