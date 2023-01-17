@@ -14,6 +14,7 @@ var BanOsExit = &analysis.Analyzer{
 
 func run(pass *analysis.Pass) (interface{}, error) {
 	funcMain := false
+
 	for _, f := range pass.Files {
 		funcMain = false
 		ast.Inspect(f, func(node ast.Node) bool {
