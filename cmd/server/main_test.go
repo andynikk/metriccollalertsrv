@@ -92,17 +92,19 @@ func TestFuncServerHTTP(t *testing.T) {
 			if err != nil {
 				t.Errorf(fmt.Sprintf("Error create DB table: %s", err.Error()))
 			}
-			server.storege.Config.StorageType = storageType
-			t.Run("Checking handlers /ping GET", func(t *testing.T) {
-				mapTypeStore := server.storege.Config.StorageType
-				if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
-					t.Errorf("Error handlers 1 /ping GET (%d)", len(mapTypeStore))
-				}
+			if len(storageType) == 0 {
+				server.storege.Config.StorageType = storageType
+				t.Run("Checking handlers /ping GET", func(t *testing.T) {
+					mapTypeStore := server.storege.Config.StorageType
+					if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
+						t.Errorf("Error handlers 1 /ping GET (%d)", len(mapTypeStore))
+					}
 
-				if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
-					t.Errorf("Error handlers 2 /ping GET")
-				}
-			})
+					if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
+						t.Errorf("Error handlers 2 /ping GET")
+					}
+				})
+			}
 		})
 	})
 

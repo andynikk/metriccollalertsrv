@@ -3,7 +3,6 @@ package environment
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -149,14 +148,11 @@ func (sc *ServerConfig) InitConfigServerENV() {
 		typeSrv = cfgENV.TypeServer
 	}
 
-	fmt.Println("++++++++++++++++++1", databaseDsn)
 	MapTypeStore := make(repository.MapTypeStore)
 	if databaseDsn != "" {
-		fmt.Println("++++++++++++++++++2", databaseDsn)
 		typeDB := repository.TypeStoreDataDB{}
 		MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
 	} else if storeFileMetrics != "" {
-		fmt.Println("++++++++++++++++++3", databaseDsn)
 		typeFile := repository.TypeStoreDataFile{}
 		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 	}
@@ -202,14 +198,11 @@ func (sc *ServerConfig) InitConfigServerFlag() {
 	}
 
 	MapTypeStore := make(repository.MapTypeStore)
-	fmt.Println("++++++++++++++++++4", len(sc.StorageType))
 	if len(sc.StorageType) == 0 {
 		if *keyDatabaseDsn != "" {
-			fmt.Println("++++++++++++++++++5", len(sc.StorageType))
 			typeDB := repository.TypeStoreDataDB{}
 			MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
 		} else if *cryptoKeyFlag != "" {
-			fmt.Println("++++++++++++++++++6", len(sc.StorageType))
 			typeFile := repository.TypeStoreDataFile{}
 			MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 		}
@@ -266,15 +259,12 @@ func (sc *ServerConfig) InitConfigServerFile() {
 	patchCryptoKey := jsonCfg.CryptoKey
 	trustedSubnet := jsonCfg.TrustedSubnet
 
-	fmt.Println("++++++++++++++++++7", len(sc.StorageType))
 	MapTypeStore := make(repository.MapTypeStore)
 	if len(sc.StorageType) == 0 {
 		if databaseDsn != "" {
-			fmt.Println("++++++++++++++++++8", len(sc.StorageType))
 			typeDB := repository.TypeStoreDataDB{}
 			MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
 		} else if storeFileMetrics != "" {
-			fmt.Println("++++++++++++++++++9", len(sc.StorageType))
 			typeFile := repository.TypeStoreDataFile{}
 			MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 		}
