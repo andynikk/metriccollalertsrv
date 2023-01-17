@@ -10,6 +10,7 @@ require (
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/rs/zerolog v1.28.0
 	github.com/shirou/gopsutil/v3 v3.22.10
+	golang.org/x/tools v0.1.12
 )
 
 require (
