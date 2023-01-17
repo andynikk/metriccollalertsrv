@@ -1,6 +1,7 @@
 package middlware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -30,6 +31,28 @@ func CheckIP(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 		}
+	})
+}
+
+func ChiCheckIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		xRealIP := r.Header.Get("X-Real-IP")
+		ctx := context.WithValue(r.Context(), "IP-Address-Allowed", "false")
+		if xRealIP == "" {
+			ctx = context.WithValue(r.Context(), "IP-Address-Allowed", "true")
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		ok := networks.AddressAllowed(strings.Split(xRealIP, constants.SepIPAddress))
+		if ok {
+			ctx = context.WithValue(r.Context(), "IP-Address-Allowed", "true")
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

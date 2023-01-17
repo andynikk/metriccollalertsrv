@@ -29,3 +29,4 @@ Accept: html/text
 ### Send POST request with json body
 POST http://localhost:8080/update/counter/testCounter/100
 Content-Type: text/plain
+X-Real-IP: 192.168.2.1

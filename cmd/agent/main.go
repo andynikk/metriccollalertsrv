@@ -204,7 +204,7 @@ func (a *agent) SendMetricsServer() (MapMetricsButch, error) {
 		valFloat64 := float64(val)
 
 		msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
-		heshVal := cryptohash.HeshSHA256(msg, a.config.Key)
+		heshVal := cryptohash.HashSHA256(msg, a.config.Key)
 
 		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
 		allMetrics = append(allMetrics, metrica)
@@ -221,7 +221,7 @@ func (a *agent) SendMetricsServer() (MapMetricsButch, error) {
 
 	cPollCount := repository.Counter(a.data.pollCount)
 	msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
-	heshVal := cryptohash.HeshSHA256(msg, a.config.Key)
+	heshVal := cryptohash.HashSHA256(msg, a.config.Key)
 
 	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
 	allMetrics = append(allMetrics, metrica)

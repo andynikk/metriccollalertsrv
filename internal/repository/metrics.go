@@ -40,7 +40,7 @@ func (g *Gauge) GetMetrics(mType string, id string, hashKey string) encoding.Met
 
 	value := float64(*g)
 	msg := fmt.Sprintf("%s:%s:%f", id, mType, value)
-	heshVal := cryptohash.HeshSHA256(msg, hashKey)
+	heshVal := cryptohash.HashSHA256(msg, hashKey)
 
 	mt := encoding.Metrics{ID: id, MType: mType, Value: &value, Hash: heshVal}
 
@@ -98,7 +98,7 @@ func (c *Counter) GetMetrics(mType string, id string, hashKey string) encoding.M
 	delta := int64(*c)
 
 	msg := fmt.Sprintf("%s:%s:%d", id, mType, delta)
-	heshVal := cryptohash.HeshSHA256(msg, hashKey)
+	heshVal := cryptohash.HashSHA256(msg, hashKey)
 
 	mt := encoding.Metrics{ID: id, MType: mType, Delta: &delta, Hash: heshVal}
 

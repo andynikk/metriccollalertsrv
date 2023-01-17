@@ -382,7 +382,7 @@ func TestFuncServerHTTP(t *testing.T) {
 		configKey := "testKey"
 		txtData := "Test data"
 
-		hashData := cryptohash.HeshSHA256(txtData, configKey)
+		hashData := cryptohash.HashSHA256(txtData, configKey)
 		if hashData == "" || len(hashData) != 64 {
 			t.Errorf("Error checking Hash SHA 256")
 		}
@@ -472,7 +472,7 @@ func testMericGougeHTTP(configKey string) encoding.Metrics {
 	mGauge.ID = "TestGauge"
 	mGauge.MType = "gauge"
 	mGauge.Value = &fValue
-	mGauge.Hash = cryptohash.HeshSHA256(mGauge.ID, configKey)
+	mGauge.Hash = cryptohash.HashSHA256(mGauge.ID, configKey)
 
 	return mGauge
 }
@@ -484,7 +484,7 @@ func testMericCaunterHTTP(configKey string) encoding.Metrics {
 	mCounter.ID = "TestCounter"
 	mCounter.MType = "counter"
 	mCounter.Delta = &iDelta
-	mCounter.Hash = cryptohash.HeshSHA256(mCounter.ID, configKey)
+	mCounter.Hash = cryptohash.HashSHA256(mCounter.ID, configKey)
 
 	return mCounter
 }

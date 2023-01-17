@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
+	"github.com/andynikk/metriccollalertsrv/internal/middlware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -55,6 +56,21 @@ func (et MetricError) String() string {
 	return [...]string{"Not error", "Error convert", "Error get type"}[et]
 }
 
+func UserContextBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		//var user User
+		//
+		//err := json.NewDecoder(r.Body).Decode(&user)
+		//if err != nil {
+		//	fmt.Println(err)
+		//	return
+		//}
+		//
+		//ctx := context.WithValue(r.Context(), "user", user)
+		//next.ServeHTTP(rw, r.WithContext(ctx))
+	})
+}
+
 func NewRepStore(rs *RepStore) {
 
 	rs.MutexRepo = make(repository.MutexRepo)
@@ -66,14 +82,17 @@ func NewRepStore(rs *RepStore) {
 	rs.Router.Use(middleware.Recoverer)
 	rs.Router.Use(middleware.StripSlashes)
 
-	rs.Router.HandleFunc("/", rs.HandleFunc)
-	rs.Router.NotFound(rs.HandlerNotFound)
+	rs.Router.Use(middlware.ChiCheckIP)
 
-	rs.Router.Get("/", rs.HandlerGetAllMetrics)
-	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
+	rs.Router.NotFound(rs.HandlerNotFound)
+	rs.Router.HandleFunc("/", rs.HandleFunc)
+
 	rs.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
 	rs.Router.Post("/update", rs.HandlerUpdateMetricJSON)
 	rs.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
+
+	rs.Router.Get("/", rs.HandlerGetAllMetrics)
+	rs.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
@@ -129,7 +148,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		valValue = *v.Value
 
 		msg := fmt.Sprintf("%s:gauge:%f", v.ID, valValue)
-		heshVal = cryptohash.HeshSHA256(msg, rs.Config.Key)
+		heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valG := repository.Gauge(0)
 			rs.MutexRepo[v.ID] = &valG
@@ -139,7 +158,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		valDelta = *v.Delta
 
 		msg := fmt.Sprintf("%s:counter:%d", v.ID, valDelta)
-		heshVal = cryptohash.HeshSHA256(msg, rs.Config.Key)
+		heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valC := repository.Counter(0)
 			rs.MutexRepo[v.ID] = &valC
@@ -195,6 +214,11 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
+	IPAddressAllowed := rq.Context().Value("IP-Address-Allowed")
+	if IPAddressAllowed == "false" {
+		return
+	}
+
 	rs.Lock()
 	defer rs.Unlock()
 
@@ -206,6 +230,11 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 }
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
+
+	IPAddressAllowed := rq.Context().Value("IP-Address-Allowed")
+	if IPAddressAllowed == "false" {
+		return
+	}
 
 	var bodyJSON io.Reader
 
@@ -266,6 +295,11 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 }
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
+
+	IPAddressAllowed := rq.Context().Value("IP-Address-Allowed")
+	if IPAddressAllowed == "false" {
+		return
+	}
 
 	var bodyJSON io.Reader
 	var arrBody []byte
