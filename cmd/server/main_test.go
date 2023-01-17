@@ -92,7 +92,7 @@ func TestFuncServerHTTP(t *testing.T) {
 			if err != nil {
 				t.Errorf(fmt.Sprintf("Error create DB table: %s", err.Error()))
 			}
-			if len(storageType) == 0 {
+			if len(storageType) != 0 {
 				server.storege.Config.StorageType = storageType
 				t.Run("Checking handlers /ping GET", func(t *testing.T) {
 					mapTypeStore := server.storege.Config.StorageType
