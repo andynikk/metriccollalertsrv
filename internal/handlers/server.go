@@ -78,24 +78,6 @@ func NewRepStore(rs *RepStore) {
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
 	rs.Config = *environment.InitConfigServer()
-
-	//mapTypeStore := rs.Config.TypeMetricsStorage
-	//if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
-	//	ctx := context.Background()
-	//
-	//	dbc, err := postgresql.PoolDB(rs.Config.DatabaseDsn)
-	//	if err != nil {
-	//		constants.Logger.ErrorLog(err)
-	//	}
-	//
-	//	mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{
-	//		DBC: *dbc, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn,
-	//	}
-	//	mapTypeStore[constants.MetricsStorageDB.String()].CreateTable()
-	//}
-	//if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
-	//	mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataFile{StoreFile: rs.Config.StoreFile}
-	//}
 }
 
 func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) int {
