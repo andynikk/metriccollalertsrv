@@ -7,7 +7,6 @@ require github.com/go-chi/chi/v5 v5.0.7
 require github.com/caarlos0/env/v6 v6.10.1
 
 require (
-	github.com/andynikk/advancedmetrics v0.0.0-20221217112417-f4e2ce2b25bd
 	github.com/jackc/pgx/v4 v4.17.2
 	github.com/rs/zerolog v1.28.0
 	github.com/shirou/gopsutil/v3 v3.22.10

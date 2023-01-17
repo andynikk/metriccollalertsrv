@@ -1,7 +1,5 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
-github.com/andynikk/advancedmetrics v0.0.0-20221217112417-f4e2ce2b25bd h1:VYjRBEEYpXZJPFmyCIgBhUa9HcAapmJWXcEZDR2ZXKY=
-github.com/andynikk/advancedmetrics v0.0.0-20221217112417-f4e2ce2b25bd/go.mod h1:K3EzFBFNqBQ3My4Slb+d0KUx3Q6d0GAlEyYpFpMf104=
 github.com/caarlos0/env/v6 v6.10.1 h1:t1mPSxNpei6M5yAeu1qtRdPAK29Nbcf/n3G7x+b3/II=
 github.com/caarlos0/env/v6 v6.10.1/go.mod h1:hvp/ryKXKipEkcuYjs9mI4bBCg+UI0Yhgm5Zu0ddvwc=
 github.com/cockroachdb/apd v1.1.0 h1:3LFP3629v+1aKXU5Q37mxmRxX/pIu1nijXydLShEq5I=
