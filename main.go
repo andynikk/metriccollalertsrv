@@ -9,6 +9,5 @@ func main() {
 	for i := range samples {
 		samples[i].Name = v[i].Name
 	}
-
 	metrics.Read(samples)
 }
