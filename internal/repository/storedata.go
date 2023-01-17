@@ -4,23 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/jackc/pgx/v4/pgxpool"
-	"io/ioutil"
 	"os"
+	"sync"
+
+	"github.com/jackc/pgx/v4/pgxpool"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 )
 
+// TypeStoreDataDB Структура хранения настроек БД
+// DBC: конект с базой данных
+// Ctx: контекст на момент создания
+// DBDsn: строка соединения с базой данных
 type TypeStoreDataDB struct {
 	DBC   postgresql.DBConnector
 	Ctx   context.Context
 	DBDsn string
 }
+
+// TypeStoreDataFile Структура хранения настроек файла
+// StoreFile путь к файлу хранения метрик
 type TypeStoreDataFile struct {
 	StoreFile string
+}
+
+type SyncMapMetrics struct {
+	sync.Mutex
+	MapMetrics
 }
 
 type MapTypeStore = map[string]TypeStoreData
@@ -28,32 +40,69 @@ type MapTypeStore = map[string]TypeStoreData
 type TypeStoreData interface {
 	WriteMetric(storedData encoding.ArrMetrics)
 	GetMetric() ([]encoding.Metrics, error)
-	CreateTable()
+	CreateTable() bool
 	ConnDB() *pgxpool.Pool
-	SetMetric2DB(storedData encoding.ArrMetrics) error
 }
 
-func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
-	dataBase := sdb.DBC
-	tx, err := dataBase.Pool.Begin(dataBase.Context.Ctx)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
+// InitStoreDB инициализация хранилища БД
+func InitStoreDB(mts MapTypeStore, store string) (MapTypeStore, error) {
+	if _, findKey := mts[constants.MetricsStorageDB.String()]; findKey {
+		ctx := context.Background()
+
+		dbc, err := postgresql.PoolDB(store)
+		if err != nil {
+			return nil, err
+		}
+
+		mts[constants.MetricsStorageDB.String()] = &TypeStoreDataDB{
+			DBC: *dbc, Ctx: ctx, DBDsn: store,
+		}
+		if ok := mts[constants.MetricsStorageDB.String()].CreateTable(); !ok {
+			return nil, err
+		}
+	}
+	//if _, findKey := mts[constants.MetricsStorageFile.String()]; findKey {
+	//	mts[constants.MetricsStorageDB.String()] = &TypeStoreDataFile{StoreFile: store}
+	//}
+
+	return mts, nil
+}
+
+// InitStoreFile инициализация хранилища в файле
+func InitStoreFile(mts MapTypeStore, store string) (MapTypeStore, error) {
+
+	if _, findKey := mts[constants.MetricsStorageFile.String()]; findKey {
+		mts[constants.MetricsStorageDB.String()] = &TypeStoreDataFile{StoreFile: store}
 	}
 
+	return mts, nil
+}
+
+// WriteMetric Запись метрик в базу данных
+func (sdb *TypeStoreDataDB) WriteMetric(storedData encoding.ArrMetrics) {
+	dataBase := sdb.DBC
 	if err := dataBase.SetMetric2DB(storedData); err != nil {
 		constants.Logger.ErrorLog(err)
 	}
-
-	if err := tx.Commit(dataBase.Context.Ctx); err != nil {
-		constants.Logger.ErrorLog(err)
-	}
 }
 
+// GetMetric Получение метрик из базы данных
 func (sdb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 	var arrMatrics []encoding.Metrics
 
-	poolRow, err := sdb.DBC.Pool.Query(sdb.Ctx, constants.QuerySelect)
+	ctx := context.Background()
+	defer ctx.Done()
+
+	conn, err := sdb.DBC.Pool.Acquire(ctx)
 	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return nil, errors.New("ошибка создания соединения с БД")
+	}
+	defer conn.Release()
+
+	poolRow, err := conn.Query(sdb.Ctx, constants.QuerySelect)
+	if err != nil {
+		conn.Release()
 		constants.Logger.ErrorLog(err)
 		return nil, errors.New("ошибка чтения БД")
 	}
@@ -70,83 +119,60 @@ func (sdb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 		arrMatrics = append(arrMatrics, nst)
 	}
 
+	ctx.Done()
+	conn.Release()
+
 	return arrMatrics, nil
 }
 
+// ConnDB Возвращает соединение с базой данных
 func (sdb *TypeStoreDataDB) ConnDB() *pgxpool.Pool {
 	return sdb.DBC.Pool
 }
 
-func (sdb *TypeStoreDataDB) CreateTable() {
-
-	if _, err := sdb.DBC.Pool.Exec(sdb.Ctx, constants.QuerySchema); err != nil {
-		constants.Logger.ErrorLog(err)
-		return
-	}
-
-	if _, err := sdb.DBC.Pool.Exec(sdb.Ctx, constants.QueryTable); err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-}
-
-func (sdb *TypeStoreDataDB) SetMetric2DB(storedData encoding.ArrMetrics) error {
-
-	DB, err := postgresql.NewClient(sdb.Ctx, "postgresql://postgres:101650@localhost:5433/yapracticum")
+// CreateTable Проверка и создание, если таковых нет, таблиц в базе данных
+func (sdb *TypeStoreDataDB) CreateTable() bool {
+	ctx := context.Background()
+	conn, err := sdb.DBC.Pool.Acquire(ctx)
 	if err != nil {
-		return errors.New("ошибка выборки данных в БД")
+		constants.Logger.ErrorLog(err)
+		return false
 	}
-	for _, data := range storedData {
-		rows, err := DB.Query(sdb.Ctx, constants.QuerySelectWithWhereTemplate, data.ID, data.MType)
-		if err != nil {
-			return errors.New("ошибка выборки данных в БД")
-		}
-
-		dataValue := float64(0)
-		if data.Value != nil {
-			dataValue = *data.Value
-		}
-		dataDelta := int64(0)
-		if data.Delta != nil {
-			dataDelta = *data.Delta
-		}
-
-		insert := true
-		if rows.Next() {
-			insert = false
-		}
-		rows.Close()
-
-		if insert {
-			if _, err := DB.Exec(sdb.Ctx, constants.QueryInsertTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-				constants.Logger.ErrorLog(err)
-				return errors.New(err.Error())
-			}
-		} else {
-			if _, err := DB.Exec(sdb.Ctx, constants.QueryUpdateTemplate, data.ID, data.MType, dataValue, dataDelta, ""); err != nil {
-				constants.Logger.ErrorLog(err)
-				return errors.New("ошибка обновления данных в БД")
-			}
-		}
+	defer conn.Release()
+	if _, err := conn.Exec(sdb.Ctx, constants.QuerySchema); err != nil {
+		conn.Release()
+		constants.Logger.ErrorLog(err)
+		return false
 	}
-	return nil
+	if _, err := conn.Exec(sdb.Ctx, constants.QueryTable); err != nil {
+		conn.Release()
+		constants.Logger.ErrorLog(err)
+		return false
+	}
+	conn.Release()
+	ctx.Done()
+
+	return true
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// WriteMetric Запись метрик в файл
 func (f *TypeStoreDataFile) WriteMetric(storedData encoding.ArrMetrics) {
 	arrJSON, err := json.Marshal(storedData)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return
 	}
-	if err := ioutil.WriteFile(f.StoreFile, arrJSON, 0777); err != nil {
+	if err := os.WriteFile(f.StoreFile, arrJSON, 0777); err != nil {
 		constants.Logger.ErrorLog(err)
 		return
 	}
 }
 
+// GetMetric Получение метрик из файла
 func (f *TypeStoreDataFile) GetMetric() ([]encoding.Metrics, error) {
-	res, err := ioutil.ReadFile(f.StoreFile)
+	res, err := os.ReadFile(f.StoreFile)
 	if err != nil {
 		return nil, err
 	}
@@ -158,20 +184,17 @@ func (f *TypeStoreDataFile) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatric, nil
 }
 
+// ConnDB Возвращает с файлом. Для файла не используется. Возвращает nil
 func (f *TypeStoreDataFile) ConnDB() *pgxpool.Pool {
 	return nil
 }
 
-func (f *TypeStoreDataFile) CreateTable() {
+// CreateTable Проверка и создание, если нет, файла для хранения метрик
+func (f *TypeStoreDataFile) CreateTable() bool {
 	if _, err := os.Create(f.StoreFile); err != nil {
 		constants.Logger.ErrorLog(err)
+		return false
 	}
 
-}
-
-func (f *TypeStoreDataFile) SetMetric2DB(storedData encoding.ArrMetrics) error {
-	for _, val := range storedData {
-		constants.Logger.InfoLog(fmt.Sprintf("очень странно, но этого сообщения не должно быть %s", val.ID))
-	}
-	return nil
+	return true
 }

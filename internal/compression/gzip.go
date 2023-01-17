@@ -26,7 +26,7 @@ func Decompress(data []byte) ([]byte, error) {
 	defer reader.Close()
 
 	var valByte bytes.Buffer
-	if _, err := valByte.ReadFrom(reader); err != nil {
+	if _, err = valByte.ReadFrom(reader); err != nil {
 		return nil, fmt.Errorf("failed decompress data: %v", err)
 	}
 

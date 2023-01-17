@@ -22,7 +22,3 @@ func (m *Metrics) MarshalMetrica() (val []byte, err error) {
 
 	return arrJSON, nil
 }
-
-func (am *ArrMetrics) Clear() {
-	*am = ArrMetrics{}
-}
