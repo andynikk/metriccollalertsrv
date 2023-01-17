@@ -22,7 +22,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
@@ -76,25 +75,25 @@ func NewRepStore(rs *RepStore) {
 	rs.Router.Post("/value", rs.HandlerValueMetricaJSON)
 	rs.Router.Get("/ping", rs.HandlerPingDB)
 
-	rs.Config = environment.SetConfigServer()
+	rs.Config = *environment.InitConfigServer()
 
-	mapTypeStore := rs.Config.TypeMetricsStorage
-	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
-		ctx := context.Background()
-
-		dbc, err := postgresql.PoolDB(rs.Config.DatabaseDsn)
-		if err != nil {
-			constants.Logger.ErrorLog(err)
-		}
-
-		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{
-			DBC: *dbc, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn,
-		}
-		mapTypeStore[constants.MetricsStorageDB.String()].CreateTable()
-	}
-	if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
-		mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataFile{StoreFile: rs.Config.StoreFile}
-	}
+	//mapTypeStore := rs.Config.TypeMetricsStorage
+	//if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; findKey {
+	//	ctx := context.Background()
+	//
+	//	dbc, err := postgresql.PoolDB(rs.Config.DatabaseDsn)
+	//	if err != nil {
+	//		constants.Logger.ErrorLog(err)
+	//	}
+	//
+	//	mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataDB{
+	//		DBC: *dbc, Ctx: ctx, DBDsn: rs.Config.DatabaseDsn,
+	//	}
+	//	mapTypeStore[constants.MetricsStorageDB.String()].CreateTable()
+	//}
+	//if _, findKey := mapTypeStore[constants.MetricsStorageFile.String()]; findKey {
+	//	mapTypeStore[constants.MetricsStorageDB.String()] = &repository.TypeStoreDataFile{StoreFile: rs.Config.StoreFile}
+	//}
 }
 
 func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) int {
@@ -276,7 +275,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		var arrMetrics encoding.ArrMetrics
 		arrMetrics = append(arrMetrics, mt)
 
-		for _, val := range rs.Config.TypeMetricsStorage {
+		for _, val := range rs.Config.StorageType {
 			val.WriteMetric(arrMetrics)
 		}
 	}
@@ -291,7 +290,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 
 	bodyJSON = rq.Body
 	if strings.Contains(contentEncoding, "gzip") {
-		bytBody, err := ioutil.ReadAll(rq.Body)
+		bytBody, err := io.ReadAll(rq.Body)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
@@ -328,7 +327,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
 	}
 
-	for _, val := range rs.Config.TypeMetricsStorage {
+	for _, val := range rs.Config.StorageType {
 		val.WriteMetric(storedData)
 	}
 }
@@ -416,7 +415,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 	defer rq.Body.Close()
-	mapTypeStore := rs.Config.TypeMetricsStorage
+	mapTypeStore := rs.Config.StorageType
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -485,7 +484,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (rs *RepStore) PrepareDataBU() encoding.ArrMetrics {
+func (rs *RepStore) PrepareDataBuckUp() encoding.ArrMetrics {
 
 	var storedData encoding.ArrMetrics
 	for key, val := range rs.MutexRepo {
@@ -498,7 +497,7 @@ func (rs *RepStore) RestoreData() {
 	rs.Lock()
 	defer rs.Unlock()
 
-	for _, val := range rs.Config.TypeMetricsStorage {
+	for _, val := range rs.Config.StorageType {
 		arrMetrics, err := val.GetMetric()
 		if err != nil {
 			constants.Logger.ErrorLog(err)
@@ -519,8 +518,8 @@ func (rs *RepStore) BackupData() {
 		select {
 		case <-saveTicker.C:
 
-			for _, val := range rs.Config.TypeMetricsStorage {
-				val.WriteMetric(rs.PrepareDataBU())
+			for _, val := range rs.Config.StorageType {
+				val.WriteMetric(rs.PrepareDataBuckUp())
 			}
 
 		case <-ctx.Done():

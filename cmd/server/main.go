@@ -19,8 +19,8 @@ func Shutdown(rs *handlers.RepStore) {
 	rs.Lock()
 	defer rs.Unlock()
 
-	for _, val := range rs.Config.TypeMetricsStorage {
-		val.WriteMetric(rs.PrepareDataBU())
+	for _, val := range rs.Config.StorageType {
+		val.WriteMetric(rs.PrepareDataBuckUp())
 	}
 	constants.Logger.InfoLog("server stopped")
 }

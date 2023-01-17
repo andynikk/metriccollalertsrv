@@ -22,17 +22,14 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricsGauge map[string]repository.Gauge
-type emtyArrMetrics []encoding.Metrics
-
-type goRutine struct {
-	ctx context.Context
-	cnf context.CancelFunc
-}
+type emptyArrMetrics []encoding.Metrics
+type MapMetricsButch map[int]emptyArrMetrics
 
 type data struct {
 	sync.RWMutex
@@ -40,13 +37,24 @@ type data struct {
 	metricsGauge MetricsGauge
 }
 
+type ServerHTTP bool
+type ServerGRPC bool
+
+type ServerType interface {
+	Post2Server(agent *agent, allMetrics []byte) error
+}
+
 type agent struct {
-	cfg environment.AgentConfig
-	goRutine
+	config        *environment.AgentConfig
+	KeyEncryption *encryption.KeyEncryption
 	data
 }
 
-func (eam *emtyArrMetrics) prepareMetrics() ([]byte, error) {
+var buildVersion = "N/A"
+var buildDate = "N/A"
+var buildCommit = "N/A"
+
+func (eam *emptyArrMetrics) prepareMetrics(key *encryption.KeyEncryption) ([]byte, error) {
 	arrMetrics, err := json.MarshalIndent(eam, "", " ")
 	if err != nil {
 		return nil, err
@@ -57,10 +65,20 @@ func (eam *emtyArrMetrics) prepareMetrics() ([]byte, error) {
 		return nil, err
 	}
 
+	if key != nil && key.PublicKey != nil {
+		gziparrMetrics, err = key.RsaEncrypt(gziparrMetrics)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return gziparrMetrics, nil
 }
 
-func (a *agent) fillMetric(mems *runtime.MemStats) {
+func (a *agent) fillMetric() {
+
+	var mems runtime.MemStats
+	runtime.ReadMemStats(&mems)
 
 	a.data.Lock()
 	defer a.data.Unlock()
@@ -98,57 +116,145 @@ func (a *agent) fillMetric(mems *runtime.MemStats) {
 }
 
 func (a *agent) metrixOtherScan() {
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
 
-	saveTicker := time.NewTicker(a.cfg.PollInterval)
+	cpuUtilization, _ := cpu.Percent(2*time.Second, false)
+	swapMemory, err := mem.SwapMemoryWithContext(ctx)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+	}
+	CPUutilization1 := repository.Gauge(0)
+	for _, val := range cpuUtilization {
+		CPUutilization1 = repository.Gauge(val)
+		break
+	}
+	a.data.Lock()
+
+	a.data.metricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
+	a.data.metricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free) + repository.Gauge(rand.Float64())
+	a.data.metricsGauge["CPUutilization1"] = CPUutilization1
+
+	a.data.Unlock()
+}
+
+func (a *agent) goMetrixOtherScan(ctx context.Context, cancelFunc context.CancelFunc) {
+
+	saveTicker := time.NewTicker(a.config.PollInterval)
 	for {
 		select {
 		case <-saveTicker.C:
 
-			cpuUtilization, _ := cpu.Percent(2*time.Second, false)
-			swapMemory, err := mem.SwapMemoryWithContext(a.ctx)
-			if err != nil {
-				constants.Logger.ErrorLog(err)
-			}
-			CPUutilization1 := repository.Gauge(0)
-			for _, val := range cpuUtilization {
-				CPUutilization1 = repository.Gauge(val)
-				break
-			}
-			a.data.Lock()
-			a.data.metricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
-			a.data.metricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free) + repository.Gauge(rand.Float64())
-			a.data.metricsGauge["CPUutilization1"] = CPUutilization1
+			a.metrixOtherScan()
 
-			a.data.Unlock()
-		case <-a.ctx.Done():
-			a.cnf()
+		case <-ctx.Done():
+			cancelFunc()
 			return
 		}
 	}
 }
 
-func (a *agent) metrixScan() {
+func (a *agent) goMetrixScan(ctx context.Context, cancelFunc context.CancelFunc) {
 
-	saveTicker := time.NewTicker(a.cfg.PollInterval)
+	saveTicker := time.NewTicker(a.config.PollInterval)
 	for {
 		select {
 		case <-saveTicker.C:
 
-			var mems runtime.MemStats
-			runtime.ReadMemStats(&mems)
-			a.fillMetric(&mems)
+			a.fillMetric()
 
-		case <-a.ctx.Done():
-			a.cnf()
+		case <-ctx.Done():
+			cancelFunc()
 			return
 		}
 	}
 }
 
-func (a *agent) Post2Server(allMterics []byte) error {
+func (a *agent) goPost2Server(metricsButch MapMetricsButch) error {
 
-	addressPost := fmt.Sprintf("http://%s/updates", a.cfg.Address)
-	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(allMterics))
+	for _, allMetrics := range metricsButch {
+
+		gzipArrMetrics, err := allMetrics.prepareMetrics(a.KeyEncryption)
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return err
+		}
+
+		//typeSrv := constants.TypeServer.String()
+		typeSrv := "HTTP"
+		if err = GetTypeSrv(typeSrv).Post2Server(a, gzipArrMetrics); err != nil {
+			constants.Logger.ErrorLog(err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *agent) SendMetricsServer() (MapMetricsButch, error) {
+	a.data.RLock()
+	defer a.data.RUnlock()
+
+	mapMatricsButch := MapMetricsButch{}
+
+	allMetrics := make(emptyArrMetrics, 0)
+	i := 0
+	sch := 0
+	tempMetricsGauge := &a.data.metricsGauge
+	for key, val := range *tempMetricsGauge {
+		valFloat64 := float64(val)
+
+		msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
+		heshVal := cryptohash.HeshSHA256(msg, a.config.Key)
+
+		metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
+		allMetrics = append(allMetrics, metrica)
+
+		i++
+		if i == constants.ButchSize {
+
+			mapMatricsButch[sch] = allMetrics
+			allMetrics = make(emptyArrMetrics, 0)
+			sch++
+			i = 0
+		}
+	}
+
+	cPollCount := repository.Counter(a.data.pollCount)
+	msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
+	heshVal := cryptohash.HeshSHA256(msg, a.config.Key)
+
+	metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
+	allMetrics = append(allMetrics, metrica)
+
+	mapMatricsButch[sch] = allMetrics
+
+	return mapMatricsButch, nil
+}
+
+func (a *agent) goMakeRequest(ctx context.Context, cancelFunc context.CancelFunc) {
+
+	reportTicker := time.NewTicker(a.config.ReportInterval)
+
+	for {
+		select {
+		case <-reportTicker.C:
+			mapAllMetrics, _ := a.SendMetricsServer()
+			go a.goPost2Server(mapAllMetrics)
+
+		case <-ctx.Done():
+
+			cancelFunc()
+			return
+
+		}
+	}
+}
+
+func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
+
+	addressPost := fmt.Sprintf("http://%s/updates", agent.config.Address)
+
+	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(allMetrics))
 	if err != nil {
 
 		constants.Logger.ErrorLog(err)
@@ -157,6 +263,11 @@ func (a *agent) Post2Server(allMterics []byte) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("X-Real-IP", agent.config.IPAddress)
+	if agent.KeyEncryption != nil && agent.KeyEncryption.PublicKey != nil {
+		req.Header.Set("Content-Encryption", agent.KeyEncryption.TypeEncryption)
+	}
+
 	defer req.Body.Close()
 
 	client := &http.Client{}
@@ -170,88 +281,40 @@ func (a *agent) Post2Server(allMterics []byte) error {
 	return nil
 }
 
-func (a *agent) goPost2Server(allMetrics emtyArrMetrics) {
-	gziparrMetrics, err := allMetrics.prepareMetrics()
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-	if err := a.Post2Server(gziparrMetrics); err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-}
+func GetTypeSrv(stringTypeServer string) ServerType {
 
-func (a *agent) MakeRequest() {
-
-	reportTicker := time.NewTicker(a.cfg.ReportInterval)
-
-	for {
-		select {
-		case <-reportTicker.C:
-			a.data.RLock()
-
-			allMetrics := make(emtyArrMetrics, 0)
-			i := 0
-			tempMetricsGauge := &a.data.metricsGauge
-			for key, val := range *tempMetricsGauge {
-				valFloat64 := float64(val)
-
-				msg := fmt.Sprintf("%s:gauge:%f", key, valFloat64)
-				heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
-
-				metrica := encoding.Metrics{ID: key, MType: val.Type(), Value: &valFloat64, Hash: heshVal}
-				allMetrics = append(allMetrics, metrica)
-
-				i++
-				if i == constants.ButchSize {
-					go a.goPost2Server(allMetrics)
-					//a.goPost2Server(allMetrics)
-
-					allMetrics = make(emtyArrMetrics, 0)
-					i = 0
-				}
-			}
-
-			cPollCount := repository.Counter(a.data.pollCount)
-			msg := fmt.Sprintf("%s:counter:%d", "PollCount", a.data.pollCount)
-			heshVal := cryptohash.HeshSHA256(msg, a.cfg.Key)
-
-			metrica := encoding.Metrics{ID: "PollCount", MType: cPollCount.Type(), Delta: &a.data.pollCount, Hash: heshVal}
-			allMetrics = append(allMetrics, metrica)
-
-			//Эх, тут должна быть красота с горутиной, но автотесты пропускают через раз. Видимо так быстро
-			//работает, что автотесты не успевают получить измененные значения. Поэтому пришлось из параллели
-			//пришлось сделать последовательность. Но код с горутиной рабочий.
-			//go a.goPost2Server(allMetrics)
-			a.goPost2Server(allMetrics)
-			a.data.RUnlock()
-		case <-a.ctx.Done():
-			a.cnf()
-			return
-		}
-	}
+	return new(ServerHTTP)
 }
 
 func main() {
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	agent := agent{
-		cfg: environment.SetConfigAgent(),
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
+	configAgent := environment.InitConfigAgent()
+	certPublicKey, _ := encryption.InitPublicKey(configAgent.CryptoKey)
+
+	a := agent{
+		config: configAgent,
 		data: data{
 			pollCount:    0,
 			metricsGauge: make(MetricsGauge),
 		},
-		goRutine: goRutine{
-			ctx: ctx,
-			cnf: cancelFunc,
-		},
+		KeyEncryption: certPublicKey,
 	}
 
-	go agent.metrixScan()
-	go agent.metrixOtherScan()
-	go agent.MakeRequest()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	go a.goMetrixScan(ctx, cancelFunc)
+	go a.goMetrixOtherScan(ctx, cancelFunc)
+	go a.goMakeRequest(ctx, cancelFunc)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
 
+	//a.metricsGauge["BuckHashSys"] = repository.Gauge(0.0001)
+	mapMetricsButch, _ := a.SendMetricsServer()
+	_ = a.goPost2Server(mapMetricsButch)
 }
