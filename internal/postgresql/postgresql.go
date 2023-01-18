@@ -91,7 +91,6 @@ func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error 
 
 	ctx := context.Background()
 	conn, err := DataBase.Pool.Acquire(ctx)
-
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package handlers;
+
+option go_package = "./";
+
+service MetricCollector {
+  rpc UpdatesAllMetricsJSON(UpdatesRequest) returns (TextErrResponse) {}
+  rpc UpdateOneMetricsJSON(UpdateStrRequest) returns (TextErrResponse) {}
+  rpc UpdateOneMetrics(UpdateRequest) returns (TextErrResponse) {}
+
+  rpc PingDataBases(EmptyRequest) returns (TextErrResponse) {}
+
+  rpc GetValueJSON(UpdatesRequest) returns (FullResponse) {}
+  rpc GetValue(UpdatesRequest) returns (StatusResponse) {}
+
+  rpc GetListMetrics(EmptyRequest) returns (StatusResponse) {}
+}
+
+message UpdateRequest {
+  bytes metType = 1;
+  bytes metName = 2;
+  bytes metValue = 3;
+}
+
+message UpdatesRequest {
+  bytes body = 1;
+}
+
+message EmptyRequest {
+
+}
+
+message UpdateStrRequest {
+  bytes body = 1;
+}
+
+message ValueRequest {
+  bytes metType = 1;
+  bytes metName = 2;
+}
+
+/////////////////////////Response///////////////////////
+message TextErrResponse {
+  bytes result = 1;
+}
+
+message StatusResponse {
+  bytes result = 1;
+}
+
+message FullResponse {
+  bytes header = 1;
+  bytes body = 2;
+  bool result = 3;
+}
