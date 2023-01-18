@@ -48,12 +48,14 @@ func PoolDB(dsn string) (*DBConnector, error) {
 
 	pool, err := pgxpool.Connect(ctx, dsn)
 	if err != nil {
+		fmt.Println("++++++++++++++014", err)
 		fmt.Print(err.Error())
 	}
 
 	strQuery := fmt.Sprintf(constants.QueryCheckExistDB, constants.NameDB)
 	rows, err := pool.Query(ctx, strQuery)
 	if err != nil {
+		fmt.Println("++++++++++++++015", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -61,6 +63,7 @@ func PoolDB(dsn string) (*DBConnector, error) {
 	if !rows.Next() {
 		strQuery = fmt.Sprintf(constants.QueryDB, constants.NameDB)
 		if _, err = pool.Exec(ctx, strQuery); err != nil {
+			fmt.Println("++++++++++++++016", err)
 			return nil, err
 		}
 	}
@@ -68,6 +71,7 @@ func PoolDB(dsn string) (*DBConnector, error) {
 	dsn = strings.Replace(dsn, "/"+constants.NameDB, "", -1)
 	pool, err = pgxpool.Connect(ctx, dsn+"/"+constants.NameDB)
 	if err != nil {
+		fmt.Println("++++++++++++++017", err)
 		return nil, err
 	}
 
@@ -78,6 +82,7 @@ func PoolDB(dsn string) (*DBConnector, error) {
 			CancelFunc: cancelFunc,
 		},
 	}
+	fmt.Println("++++++++++++++018", pool)
 	return &dbc, nil
 }
 

@@ -51,6 +51,7 @@ func InitStoreDB(mts MapTypeStore, store string) (MapTypeStore, error) {
 		fmt.Println("++++++++++++++008", len(mts))
 		ctx := context.Background()
 
+		fmt.Println("++++++++++++++013", store)
 		dbc, err := postgresql.PoolDB(store)
 		if err != nil {
 			fmt.Println("++++++++++++++009", err)
