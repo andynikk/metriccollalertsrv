@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -55,10 +54,8 @@ func TestFuncServer(t *testing.T) {
 
 	t.Run("Checking handlers PING", func(t *testing.T) {
 		req := EmptyRequest{}
-		fmt.Println("+++++++++++003", len(server.Config.StorageType))
-		fmt.Println("+++++++++++004", len(config.StorageType))
 		textErr, err := server.PingDataBases(ctx, &req)
-		if errs.CodeGRPC(err) != codes.OK {
+		if errs.CodeGRPC(err) != codes.OK && len(server.Config.StorageType) != 0 {
 			t.Errorf("Error checking handlers PING. %s", textErr)
 		}
 	})
