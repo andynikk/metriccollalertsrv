@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"context"
+	"errors"
 
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -43,13 +46,8 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 }
 
 func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrRequest) (*TextErrResponse, error) {
-	//header := FillHeader(ctx)
-	//
-	//err := s.RepStore.HandlerUpdateMetricJSON(header, req.Body)
-	//if err != nil {
-	//	return &TextErrResponse{Result: []byte(err.Error())}, err
-	//}
-	return &TextErrResponse{Result: []byte("")}, nil
+	_, _, err := HandlerUpdateMetricJSON(req.Body, s.GetRepStore())
+	return &TextErrResponse{Result: []byte(err.Error())}, err
 }
 
 func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (*TextErrResponse, error) {
@@ -60,13 +58,25 @@ func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (
 }
 
 func (s *serverGRPS) PingDataBases(ctx context.Context, req *EmptyRequest) (*TextErrResponse, error) {
-	//header := FillHeader(ctx)
-	//
-	//err := s.RepStore.HandlerPingDB(header)
-	//if err != nil {
-	//	return &TextErrResponse{Result: []byte(err.Error())}, err
-	//}
+	mapTypeStore := s.Config.StorageType
+
+	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
+		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
+		return nil, errs.ErrStatusInternalServer
+	}
+
+	if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
+		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
+		return nil, errs.ErrStatusInternalServer
+	}
+
 	return &TextErrResponse{Result: []byte("")}, nil
+}
+
+func (s *serverGRPS) GetValue(ctx context.Context, req *UpdatesRequest) (*StatusResponse, error) {
+
+	//val, err := s.RepStore.HandlerGetValue(req.Body)
+	return &StatusResponse{Result: []byte("")}, nil
 }
 
 func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*FullResponse, error) {
@@ -84,11 +94,6 @@ func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*Fu
 	//}
 
 	return &FullResponse{Header: []byte(""), Body: []byte(""), Result: false}, nil
-}
-
-func (s *serverGRPS) GetValue(ctx context.Context, req *UpdatesRequest) (*StatusResponse, error) {
-	//val, err := s.RepStore.HandlerGetValue(req.Body)
-	return &StatusResponse{Result: []byte("")}, nil
 }
 
 func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*StatusResponse, error) {

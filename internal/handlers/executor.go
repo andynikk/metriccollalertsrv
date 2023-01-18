@@ -70,3 +70,20 @@ func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (Header, []byte, error) 
 
 	return headerRequest, metricsJSON, nil
 }
+
+func HandlerGetValue(body []byte, rs *RepStore) (string, error) {
+
+	metName := string(body)
+
+	rs.Lock()
+	defer rs.Unlock()
+
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
+		constants.Logger.InfoLog(fmt.Sprintf("== %d", 3))
+		return "", errs.ErrNotFound
+	}
+
+	strMetric := rs.MutexRepo[metName].String()
+	return strMetric, nil
+
+}

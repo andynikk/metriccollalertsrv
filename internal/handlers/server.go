@@ -76,14 +76,15 @@ func NewRepStore(s *serverHTTP) {
 	s.Router.NotFound(rs.HandlerNotFound)
 	s.Router.HandleFunc("/", rs.HandleFunc)
 
+	s.Router.Get("/", rs.HandlerGetAllMetrics)
+
 	s.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
 	s.Router.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
 	s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
 
-	s.Router.Get("/", rs.HandlerGetAllMetrics)
+	s.Router.Get("/ping", rs.HandlerPingDB) //+
 	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
 	s.Router.Post("/value", rs.HandlerValueMetricaJSON)
-	s.Router.Get("/ping", rs.HandlerPingDB)
 
 	s.Router.HandleFunc("/debug/pprof", pprof.Index)
 	s.Router.HandleFunc("/debug/pprof/", pprof.Index)
@@ -199,15 +200,19 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	strMetric := rs.MutexRepo[metName].String()
-	_, err := io.WriteString(rw, strMetric)
+	strMetric, err := HandlerGetValue([]byte(metName), rs)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return
+	}
+
+	_, err = io.WriteString(rw, strMetric)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return
 	}
 
 	rw.WriteHeader(http.StatusOK)
-
 }
 
 func (rs *RepStore) Shutdown() {
