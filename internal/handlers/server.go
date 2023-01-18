@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -84,7 +83,7 @@ func NewRepStore(s *serverHTTP) {
 
 	s.Router.Get("/ping", rs.HandlerPingDB)                        //+
 	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue) //+
-	s.Router.Post("/value", rs.HandlerValueMetricaJSON)
+	s.Router.Post("/value", rs.HandlerValueMetricaJSON)            //+
 
 	s.Router.HandleFunc("/debug/pprof", pprof.Index)
 	s.Router.HandleFunc("/debug/pprof/", pprof.Index)
@@ -370,16 +369,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	header := Header{}
-	for key, val := range rw.Header() {
-		valHeader := ""
-		for _, valH := range val {
-			valHeader = valHeader + valH
-		}
-		header[key] = strings.ToLower(valHeader)
-	}
-
-	err = HandlerUpdatesMetricJSON(header, respByte, rs)
+	err = HandlerUpdatesMetricJSON(respByte, rs)
 	rw.WriteHeader(errs.StatusHTTP(err))
 
 	//var storedData encoding.ArrMetrics
@@ -403,80 +393,112 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	var bodyJSON io.Reader
-	bodyJSON = rq.Body
-
-	acceptEncoding := rq.Header.Get("Accept-Encoding")
-	contentEncoding := rq.Header.Get("Content-Encoding")
-	if strings.Contains(contentEncoding, "gzip") {
-		constants.Logger.InfoLog("-- метрика с агента gzip (value)")
-		bytBody, err := io.ReadAll(rq.Body)
-		if err != nil {
-			constants.Logger.ErrorLog(err)
-			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-			return
+	header := Header{}
+	for key, val := range rw.Header() {
+		valHeader := ""
+		for _, valH := range val {
+			valHeader = valHeader + valH
 		}
-
-		arrBody, err := compression.Decompress(bytBody)
-		if err != nil {
-			constants.Logger.ErrorLog(err)
-			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
-			return
-		}
-
-		bodyJSON = bytes.NewReader(arrBody)
+		header[key] = strings.ToLower(valHeader)
 	}
 
-	v := encoding.Metrics{}
-	err := json.NewDecoder(bodyJSON).Decode(&v)
+	bytBody, err := io.ReadAll(rq.Body)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
-		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
-		return
-	}
-	metType := v.MType
-	metName := v.ID
-
-	rs.Lock()
-	defer rs.Unlock()
-
-	if _, findKey := rs.MutexRepo[metName]; !findKey {
-
-		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
-
-		rw.WriteHeader(http.StatusNotFound)
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
+		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 		return
 	}
 
-	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
-	metricsJSON, err := mt.MarshalMetrica()
+	headerOut, body, err := HandlerValueMetricaJSON(header, bytBody, rs)
 	if err != nil {
-		constants.Logger.ErrorLog(err)
+		rw.WriteHeader(errs.StatusHTTP(err))
 		return
 	}
 
-	var byteMeterics []byte
-	bt := bytes.NewBuffer(metricsJSON).Bytes()
-	byteMeterics = append(byteMeterics, bt...)
-	compData, err := compression.Compress(byteMeterics)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
+	for key, val := range headerOut {
+		rw.Header().Add(key, val)
 	}
 
-	var bodyBate []byte
-	rw.Header().Add("Content-Type", "application/json")
-	if strings.Contains(acceptEncoding, "gzip") {
-		rw.Header().Add("Content-Encoding", "gzip")
-		bodyBate = compData
-	} else {
-		bodyBate = metricsJSON
-	}
-
-	if _, err := rw.Write(bodyBate); err != nil {
+	if _, err = rw.Write(body); err != nil {
 		constants.Logger.ErrorLog(err)
 		return
 	}
+	rw.WriteHeader(http.StatusOK)
+
+	//var bodyJSON io.Reader
+	//bodyJSON = rq.Body
+	//
+	//acceptEncoding := rq.Header.Get("Accept-Encoding")
+	//contentEncoding := rq.Header.Get("Content-Encoding")
+	//if strings.Contains(contentEncoding, "gzip") {
+	//	constants.Logger.InfoLog("-- метрика с агента gzip (value)")
+	//	bytBody, err := io.ReadAll(rq.Body)
+	//	if err != nil {
+	//		constants.Logger.ErrorLog(err)
+	//		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
+	//		return
+	//	}
+	//
+	//	arrBody, err := compression.Decompress(bytBody)
+	//	if err != nil {
+	//		constants.Logger.ErrorLog(err)
+	//		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+	//		return
+	//	}
+	//
+	//	bodyJSON = bytes.NewReader(arrBody)
+	//}
+	//
+	//v := encoding.Metrics{}
+	//err := json.NewDecoder(bodyJSON).Decode(&v)
+	//if err != nil {
+	//	constants.Logger.ErrorLog(err)
+	//	http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
+	//	return
+	//}
+	//metType := v.MType
+	//metName := v.ID
+	//
+	//rs.Lock()
+	//defer rs.Unlock()
+	//
+	//if _, findKey := rs.MutexRepo[metName]; !findKey {
+	//
+	//	constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
+	//
+	//	rw.WriteHeader(http.StatusNotFound)
+	//	http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
+	//	return
+	//}
+	//
+	//mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
+	//metricsJSON, err := mt.MarshalMetrica()
+	//if err != nil {
+	//	constants.Logger.ErrorLog(err)
+	//	return
+	//}
+	//
+	//var byteMeterics []byte
+	//bt := bytes.NewBuffer(metricsJSON).Bytes()
+	//byteMeterics = append(byteMeterics, bt...)
+	//compData, err := compression.Compress(byteMeterics)
+	//if err != nil {
+	//	constants.Logger.ErrorLog(err)
+	//}
+	//
+	//var bodyBate []byte
+	//rw.Header().Add("Content-Type", "application/json")
+	//if strings.Contains(acceptEncoding, "gzip") {
+	//	rw.Header().Add("Content-Encoding", "gzip")
+	//	bodyBate = compData
+	//} else {
+	//	bodyBate = metricsJSON
+	//}
+	//
+	//if _, err := rw.Write(bodyBate); err != nil {
+	//	constants.Logger.ErrorLog(err)
+	//	return
+	//}
 }
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {

@@ -37,10 +37,9 @@ func (s *serverGRPS) mustEmbedUnimplementedMetricCollectorServer() {
 }
 
 func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequest) (*TextErrResponse, error) {
-	header := FillHeader(ctx)
 
 	rp := s.GetRepStore()
-	err := HandlerUpdatesMetricJSON(header, req.Body, rp)
+	err := HandlerUpdatesMetricJSON(req.Body, rp)
 
 	return &TextErrResponse{Result: []byte(err.Error())}, err
 }

@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 )
 
-func HandlerUpdatesMetricJSON(header Header, body []byte, rs *RepStore) error {
+func HandlerUpdatesMetricJSON(body []byte, rs *RepStore) error {
 
 	var storedData encoding.ArrMetrics
 	if err := json.Unmarshal(body, &storedData); err != nil {
@@ -86,4 +89,76 @@ func HandlerGetValue(body []byte, rs *RepStore) (string, error) {
 	strMetric := rs.MutexRepo[metName].String()
 	return strMetric, nil
 
+}
+
+func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, []byte, error) {
+
+	var bodyJSON io.Reader
+	bodyJSON = bytes.NewReader(body)
+
+	acceptEncoding := header[strings.ToLower("Accept-Encoding")]
+	contentEncoding := header[strings.ToLower("Content-Encoding")]
+
+	if strings.Contains(contentEncoding, "gzip") {
+		constants.Logger.InfoLog("-- метрика с агента gzip (value)")
+		bytBody, err := io.ReadAll(bodyJSON)
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return nil, nil, errs.ErrStatusInternalServer
+		}
+
+		arrBody, err := compression.Decompress(bytBody)
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return nil, nil, errs.ErrStatusInternalServer
+		}
+
+		bodyJSON = bytes.NewReader(arrBody)
+	}
+
+	v := encoding.Metrics{}
+	err := json.NewDecoder(bodyJSON).Decode(&v)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return nil, nil, errs.ErrStatusInternalServer
+	}
+	metType := v.MType
+	metName := v.ID
+
+	rs.Lock()
+	defer rs.Unlock()
+
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
+
+		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
+		return nil, nil, errs.ErrNotFound
+	}
+
+	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
+	metricsJSON, err := mt.MarshalMetrica()
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return nil, nil, err
+	}
+
+	var byteMeterics []byte
+	bt := bytes.NewBuffer(metricsJSON).Bytes()
+	byteMeterics = append(byteMeterics, bt...)
+	compData, err := compression.Compress(byteMeterics)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+	}
+
+	var bodyBate []byte
+
+	headerOut := Header{}
+	headerOut["Content-Type"] = "application/json"
+	if strings.Contains(acceptEncoding, "gzip") {
+		headerOut["Content-Encoding"] = "gzip"
+		bodyBate = compData
+	} else {
+		bodyBate = metricsJSON
+	}
+
+	return headerOut, bodyBate, nil
 }
