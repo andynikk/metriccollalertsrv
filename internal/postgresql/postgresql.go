@@ -156,7 +156,7 @@ func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error 
 	for _, val := range allArrTM.Arr {
 		sValue := fmt.Sprintf("%d", 0)
 		if val.Value != nil {
-			sValue = fmt.Sprintf("%f", *val.Value)
+			sValue = fmt.Sprintf("%g", *val.Value)
 		}
 		sDelta := fmt.Sprintf("%d", 0)
 		if val.Delta != nil {
