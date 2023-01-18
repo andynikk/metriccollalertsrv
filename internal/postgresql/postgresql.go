@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 
@@ -70,7 +69,7 @@ func PoolDB(dsn string) (*DBConnector, error) {
 	}
 
 	fmt.Println("++++++++++++++017-1", dsn)
-	dsn = strings.Replace(dsn, "/"+constants.NameDB, "", -1)
+	//dsn = strings.Replace(dsn, "/"+constants.NameDB, "", -1)
 	fmt.Println("++++++++++++++017-2", dsn)
 	fmt.Println("++++++++++++++017-3", dsn+"/"+constants.NameDB)
 	//pool, err = pgxpool.Connect(ctx, dsn+"/"+constants.NameDB)
