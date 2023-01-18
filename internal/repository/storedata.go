@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"sync"
 
@@ -48,27 +47,21 @@ type TypeStoreData interface {
 // InitStoreDB инициализация хранилища БД
 func InitStoreDB(mts MapTypeStore, store string) (MapTypeStore, error) {
 	if _, findKey := mts[constants.MetricsStorageDB.String()]; findKey {
-		fmt.Println("++++++++++++++008", len(mts))
 		ctx := context.Background()
 
-		fmt.Println("++++++++++++++013", store)
 		dbc, err := postgresql.PoolDB(store)
 		if err != nil {
-			fmt.Println("++++++++++++++009", err)
 			return nil, err
 		}
 
-		fmt.Println("++++++++++++++012", *dbc, ctx, store)
 		mts[constants.MetricsStorageDB.String()] = &TypeStoreDataDB{
 			DBC: *dbc, Ctx: ctx, DBDsn: store,
 		}
 		if ok := mts[constants.MetricsStorageDB.String()].CreateTable(); !ok {
-			fmt.Println("++++++++++++++010", err)
 			return nil, err
 		}
 	}
 
-	fmt.Println("++++++++++++++011", len(mts))
 	return mts, nil
 }
 
@@ -131,13 +124,11 @@ func (sdb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 
 // ConnDB Возвращает соединение с базой данных
 func (sdb *TypeStoreDataDB) ConnDB() *pgxpool.Pool {
-	fmt.Println("++++++++++++++07", sdb.DBC.Pool)
 	return sdb.DBC.Pool
 }
 
 // CreateTable Проверка и создание, если таковых нет, таблиц в базе данных
 func (sdb *TypeStoreDataDB) CreateTable() bool {
-	fmt.Println("++++++++++++++08", sdb.DBC.Pool)
 	ctx := context.Background()
 	conn, err := sdb.DBC.Pool.Acquire(ctx)
 	if err != nil {
@@ -192,15 +183,12 @@ func (f *TypeStoreDataFile) GetMetric() ([]encoding.Metrics, error) {
 
 // ConnDB Возвращает с файлом. Для файла не используется. Возвращает nil
 func (f *TypeStoreDataFile) ConnDB() *pgxpool.Pool {
-	fmt.Println("++++++++++++++04", "file")
 	return nil
 }
 
 // CreateTable Проверка и создание, если нет, файла для хранения метрик
 func (f *TypeStoreDataFile) CreateTable() bool {
-	fmt.Println("++++++++++++++05", f.StoreFile)
 	if _, err := os.Create(f.StoreFile); err != nil {
-		fmt.Println("++++++++++++++06", err)
 		constants.Logger.ErrorLog(err)
 		return false
 	}

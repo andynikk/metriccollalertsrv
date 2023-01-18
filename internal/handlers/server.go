@@ -231,36 +231,44 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
+	fmt.Println("++++++++++++++001", rq.Body)
 	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}
+	fmt.Println("++++++++++++++002", rq.Body)
 
 	var bodyJSON io.Reader
 
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	bodyJSON = rq.Body
 	if strings.Contains(contentEncoding, "gzip") {
-		bytBody, err := ioutil.ReadAll(rq.Body)
+		bytBody, err := io.ReadAll(rq.Body)
+		fmt.Println("++++++++++++++003", bytBody)
 		if err != nil {
+			fmt.Println("++++++++++++++004", err)
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 			return
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
+		fmt.Println("++++++++++++++005", arrBody)
 		if err != nil {
+			fmt.Println("++++++++++++++006", err)
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
 
 		bodyJSON = bytes.NewReader(arrBody)
+		fmt.Println("++++++++++++++007", bodyJSON)
 	}
 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
+		fmt.Println("++++++++++++++008", err)
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
 		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
 		return
@@ -271,20 +279,26 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	rw.Header().Add("Content-Type", "application/json")
 	res := rs.SetValueInMapJSON(v)
-	rw.WriteHeader(res)
 
+	fmt.Println("++++++++++++++009", v.MType, v.ID, rs.Config.Key)
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
+	fmt.Println("++++++++++++++010", metricsJSON)
 	if err != nil {
+		fmt.Println("++++++++++++++011", err)
 		constants.Logger.ErrorLog(err)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if _, err := rw.Write(metricsJSON); err != nil {
+		fmt.Println("++++++++++++++012", err)
 		constants.Logger.ErrorLog(err)
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if res == http.StatusOK {
+		fmt.Println("++++++++++++++013", err)
 		var arrMetrics encoding.ArrMetrics
 		arrMetrics = append(arrMetrics, mt)
 
@@ -292,6 +306,8 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 			val.WriteMetric(arrMetrics)
 		}
 	}
+	fmt.Println("++++++++++++++014", err)
+	rw.WriteHeader(res)
 }
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
@@ -434,17 +450,14 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 	defer rq.Body.Close()
 	mapTypeStore := rs.Config.StorageType
-	fmt.Println("++++++++++++++01", len(mapTypeStore))
 
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
-		fmt.Println("++++++++++++++02", len(mapTypeStore))
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
-		fmt.Println("++++++++++++++03", len(mapTypeStore))
 
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
