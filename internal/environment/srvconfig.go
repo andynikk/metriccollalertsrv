@@ -3,6 +3,7 @@ package environment
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -84,7 +85,10 @@ func InitConfigServer() *ServerConfig {
 	sc.InitConfigServerFile()
 	sc.InitConfigServerDefault()
 
+	fmt.Println("++++++++++++++001", sc.DatabaseDsn, len(sc.StorageType))
 	sc.StorageType, _ = repository.InitStoreDB(sc.StorageType, sc.DatabaseDsn)
+	fmt.Println("++++++++++++++002", sc.DatabaseDsn, len(sc.StorageType))
+
 	sc.StorageType, _ = repository.InitStoreFile(sc.StorageType, sc.StoreFile)
 
 	return &sc
@@ -148,6 +152,7 @@ func (sc *ServerConfig) InitConfigServerENV() {
 		typeSrv = cfgENV.TypeServer
 	}
 
+	fmt.Println("++++++++++++++003", databaseDsn, storeFileMetrics)
 	MapTypeStore := make(repository.MapTypeStore)
 	if databaseDsn != "" {
 		typeDB := repository.TypeStoreDataDB{}
@@ -156,6 +161,7 @@ func (sc *ServerConfig) InitConfigServerENV() {
 		typeFile := repository.TypeStoreDataFile{}
 		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 	}
+	fmt.Println("++++++++++++++004", len(sc.StorageType))
 
 	sc.StoreInterval = storeIntervalMetrics
 	sc.StoreFile = storeFileMetrics
