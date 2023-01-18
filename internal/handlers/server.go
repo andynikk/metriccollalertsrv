@@ -73,7 +73,7 @@ func UserContextBody(next http.Handler) http.Handler {
 func NewRepStore(s *serverHTTP) {
 
 	s.Router = chi.NewRouter()
-
+	rs := s.RepStore
 	s.Router.Use(middleware.RequestID)
 	s.Router.Use(middleware.RealIP)
 	s.Router.Use(middleware.Logger)
@@ -82,24 +82,24 @@ func NewRepStore(s *serverHTTP) {
 
 	s.Router.Use(middlware.ChiCheckIP)
 
-	s.Router.NotFound(s.HandlerNotFound)
-	s.Router.HandleFunc("/", s.HandleFunc)
+	s.Router.NotFound(rs.HandlerNotFound)
+	s.Router.HandleFunc("/", rs.HandleFunc)
 
-	s.Router.Post("/update/{metType}/{metName}/{metValue}", s.HandlerSetMetricaPOST)
-	s.Router.Post("/update", s.HandlerUpdateMetricJSON)
-	s.Router.Post("/updates", s.HandlerUpdatesMetricJSON)
+	s.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
+	s.Router.Post("/update", rs.HandlerUpdateMetricJSON)
+	s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
 
-	s.Router.Get("/", s.HandlerGetAllMetrics)
-	s.Router.Get("/value/{metType}/{metName}", s.HandlerGetValue)
-	s.Router.Post("/value", s.HandlerValueMetricaJSON)
-	s.Router.Get("/ping", s.HandlerPingDB)
+	s.Router.Get("/", rs.HandlerGetAllMetrics)
+	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
+	s.Router.Post("/value", rs.HandlerValueMetricaJSON)
+	s.Router.Get("/ping", rs.HandlerPingDB)
 }
 
-func (s *serverHTTP) setValueInMap(metType string, metName string, metValue string) int {
+func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) int {
 
 	switch metType {
 	case GaugeMetric.String():
-		if val, findKey := s.MutexRepo[metName]; findKey {
+		if val, findKey := rs.MutexRepo[metName]; findKey {
 			if ok := val.SetFromText(metValue); !ok {
 				return http.StatusBadRequest
 			}
@@ -110,11 +110,11 @@ func (s *serverHTTP) setValueInMap(metType string, metName string, metValue stri
 				return http.StatusBadRequest
 			}
 
-			s.MutexRepo[metName] = &valG
+			rs.MutexRepo[metName] = &valG
 		}
 
 	case CounterMetric.String():
-		if val, findKey := s.MutexRepo[metName]; findKey {
+		if val, findKey := rs.MutexRepo[metName]; findKey {
 			if ok := val.SetFromText(metValue); !ok {
 				return http.StatusBadRequest
 			}
@@ -125,7 +125,7 @@ func (s *serverHTTP) setValueInMap(metType string, metName string, metValue stri
 				return http.StatusBadRequest
 			}
 
-			s.MutexRepo[metName] = &valC
+			rs.MutexRepo[metName] = &valC
 		}
 	default:
 		return http.StatusNotImplemented
@@ -134,7 +134,7 @@ func (s *serverHTTP) setValueInMap(metType string, metName string, metValue stri
 	return http.StatusOK
 }
 
-func (s *serverHTTP) SetValueInMapJSON(v encoding.Metrics) int {
+func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
 	var heshVal string
 
@@ -144,20 +144,20 @@ func (s *serverHTTP) SetValueInMapJSON(v encoding.Metrics) int {
 		valValue = *v.Value
 
 		msg := fmt.Sprintf("%s:gauge:%f", v.ID, valValue)
-		heshVal = cryptohash.HashSHA256(msg, s.Config.Key)
-		if _, findKey := s.MutexRepo[v.ID]; !findKey {
+		heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
+		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valG := repository.Gauge(0)
-			s.MutexRepo[v.ID] = &valG
+			rs.MutexRepo[v.ID] = &valG
 		}
 	case CounterMetric.String():
 		var valDelta int64
 		valDelta = *v.Delta
 
 		msg := fmt.Sprintf("%s:counter:%d", v.ID, valDelta)
-		heshVal = cryptohash.HashSHA256(msg, s.Config.Key)
-		if _, findKey := s.MutexRepo[v.ID]; !findKey {
+		heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
+		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valC := repository.Counter(0)
-			s.MutexRepo[v.ID] = &valC
+			rs.MutexRepo[v.ID] = &valC
 		}
 	default:
 		return http.StatusNotImplemented
@@ -176,28 +176,28 @@ func (s *serverHTTP) SetValueInMapJSON(v encoding.Metrics) int {
 	}
 	constants.Logger.InfoLog(fmt.Sprintf("** %s %s %v %d", v.ID, v.MType, v.Value, v.Delta))
 
-	s.MutexRepo[v.ID].Set(v)
+	rs.MutexRepo[v.ID].Set(v)
 	return http.StatusOK
 
 }
 
-func (s *serverHTTP) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	fmt.Println("------- HandlerGetValue", metType, metName)
 
-	s.Lock()
-	defer s.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
-	if _, findKey := s.MutexRepo[metName]; !findKey {
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
 		constants.Logger.InfoLog(fmt.Sprintf("== %d", 3))
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
 
-	strMetric := s.MutexRepo[metName].String()
+	strMetric := rs.MutexRepo[metName].String()
 	_, err := io.WriteString(rw, strMetric)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
@@ -208,24 +208,24 @@ func (s *serverHTTP) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 }
 
-func (s *serverHTTP) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
 	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	rw.WriteHeader(s.setValueInMap(metType, metName, metValue))
+	rw.WriteHeader(rs.setValueInMap(metType, metName, metValue))
 }
 
-func (s *serverHTTP) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
@@ -262,13 +262,13 @@ func (s *serverHTTP) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Re
 		return
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	rw.Header().Add("Content-Type", "application/json")
-	res := s.SetValueInMapJSON(v)
+	res := rs.SetValueInMapJSON(v)
 
-	mt := s.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, s.Config.Key)
+	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		constants.Logger.ErrorLog(err)
@@ -285,14 +285,14 @@ func (s *serverHTTP) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Re
 		var arrMetrics encoding.ArrMetrics
 		arrMetrics = append(arrMetrics, mt)
 
-		for _, val := range s.Config.StorageType {
+		for _, val := range rs.Config.StorageType {
 			val.WriteMetric(arrMetrics)
 		}
 	}
 	rw.WriteHeader(res)
 }
 
-func (s *serverHTTP) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
@@ -335,20 +335,20 @@ func (s *serverHTTP) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.R
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
 	for _, val := range storedData {
-		s.SetValueInMapJSON(val)
-		s.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, s.Config.Key)
+		rs.SetValueInMapJSON(val)
+		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
 	}
 
-	for _, val := range s.Config.StorageType {
+	for _, val := range rs.Config.StorageType {
 		val.WriteMetric(storedData)
 	}
 }
 
-func (s *serverHTTP) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	var bodyJSON io.Reader
 	bodyJSON = rq.Body
@@ -387,19 +387,19 @@ func (s *serverHTTP) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Re
 	metName := v.ID
 	fmt.Println("------- HandlerGetValue", metType, metName)
 
-	s.Lock()
-	defer s.Unlock()
+	rs.Lock()
+	defer rs.Unlock()
 
-	if _, findKey := s.MutexRepo[metName]; !findKey {
+	if _, findKey := rs.MutexRepo[metName]; !findKey {
 
-		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(s.MutexRepo), s.Config.DatabaseDsn))
+		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
 
 		rw.WriteHeader(http.StatusNotFound)
 		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
 		return
 	}
 
-	mt := s.MutexRepo[metName].GetMetrics(metType, metName, s.Config.Key)
+	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
 		constants.Logger.ErrorLog(err)
@@ -429,9 +429,9 @@ func (s *serverHTTP) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Re
 	}
 }
 
-func (s *serverHTTP) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 	defer rq.Body.Close()
-	mapTypeStore := s.Config.StorageType
+	mapTypeStore := rs.Config.StorageType
 
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
@@ -449,15 +449,15 @@ func (s *serverHTTP) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (s *serverHTTP) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandleFunc(rw http.ResponseWriter, rq *http.Request) {
 
 	defer rq.Body.Close()
 	rw.WriteHeader(http.StatusOK)
 }
 
-func (s *serverHTTP) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
+func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Request) {
 
-	arrMetricsAndValue := s.MapMetrics.TextMetricsAndValue()
+	arrMetricsAndValue := rs.MapMetrics.TextMetricsAndValue()
 
 	content := `<!DOCTYPE html>
 				<html>
@@ -511,11 +511,11 @@ func (rs *RepStore) PrepareDataBuckUp() encoding.ArrMetrics {
 	return storedData
 }
 
-func (s *serverHTTP) RestoreData() {
-	s.Lock()
-	defer s.Unlock()
+func (rs *RepStore) RestoreData() {
+	rs.Lock()
+	defer rs.Unlock()
 
-	for _, val := range s.Config.StorageType {
+	for _, val := range rs.Config.StorageType {
 		arrMetrics, err := val.GetMetric()
 		if err != nil {
 			constants.Logger.ErrorLog(err)
@@ -523,21 +523,21 @@ func (s *serverHTTP) RestoreData() {
 		}
 
 		for _, val := range arrMetrics {
-			s.SetValueInMapJSON(val)
+			rs.SetValueInMapJSON(val)
 		}
 	}
 }
 
-func (s *serverHTTP) BackupData() {
+func (rs *RepStore) BackupData() {
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	saveTicker := time.NewTicker(s.Config.StoreInterval)
+	saveTicker := time.NewTicker(rs.Config.StoreInterval)
 	for {
 		select {
 		case <-saveTicker.C:
 
-			for _, val := range s.Config.StorageType {
-				val.WriteMetric(s.PrepareDataBuckUp())
+			for _, val := range rs.Config.StorageType {
+				val.WriteMetric(rs.PrepareDataBuckUp())
 			}
 
 		case <-ctx.Done():
@@ -547,7 +547,7 @@ func (s *serverHTTP) BackupData() {
 	}
 }
 
-func (s *serverHTTP) HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
+func (rs *RepStore) HandlerNotFound(rw http.ResponseWriter, r *http.Request) {
 
 	http.Error(rw, "Метрика "+r.URL.Path+" не найдена", http.StatusNotFound)
 

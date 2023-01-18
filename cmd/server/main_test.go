@@ -15,6 +15,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
+	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/go-chi/chi/v5"
@@ -24,32 +25,34 @@ func TestFuncServerHTTP(t *testing.T) {
 	var fValue float64 = 0.001
 	var iDelta int64 = 10
 
-	server := new(server)
-	handlers.NewRepStore(&server.storege)
+	config := environment.InitConfigServer()
+	server := handlers.NewServer(config)
+	repStore := server.GetRepStore()
+	router := server.GetRouter()
 
 	t.Run("Checking init server", func(t *testing.T) {
 		//rp.Config = environment.InitConfigServer()
-		if server.storege.Config.Address == "" {
+		if repStore.Config.Address == "" {
 			t.Errorf("Error checking init server")
 		}
 	})
-	fmt.Println(server.storege.Config.Address)
+	fmt.Println(repStore.Config.Address)
 
-	server.storege.MutexRepo = make(repository.MutexRepo)
+	repStore.MutexRepo = make(repository.MutexRepo)
 	t.Run("Checking init router", func(t *testing.T) {
-		if server.storege.Router == nil {
+		if router == nil {
 			t.Errorf("Error checking init router")
 		}
 	})
 
 	t.Run("Checking init config", func(t *testing.T) {
-		if server.storege.Config.Address == "" {
+		if repStore.Config.Address == "" {
 			t.Errorf("Error checking init config")
 		}
 	})
 
 	postStr := fmt.Sprintf("http://%s/update/gauge/Alloc/0.1\nhttp://%s/update/gauge/BuckHashSys/0.002"+
-		"\nhttp://%s/update/counter/PollCount/5", server.storege.Config.Address, server.storege.Config.Address, server.storege.Config.Address)
+		"\nhttp://%s/update/counter/PollCount/5", repStore.Config.Address, repStore.Config.Address, repStore.Config.Address)
 
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
@@ -61,20 +64,20 @@ func TestFuncServerHTTP(t *testing.T) {
 
 	t.Run("Checking rsa crypt", func(t *testing.T) {
 		t.Run("Checking init crypto key", func(t *testing.T) {
-			server.storege.PK, _ = encryption.InitPrivateKey(server.storege.Config.CryptoKey)
-			if server.storege.Config.CryptoKey != "" && server.storege.PK == nil {
+			repStore.PK, _ = encryption.InitPrivateKey(repStore.Config.CryptoKey)
+			if repStore.Config.CryptoKey != "" && repStore.PK == nil {
 				t.Errorf("Error checking init crypto key")
 			}
 		})
 		t.Run("Checking rsa encrypt", func(t *testing.T) {
 			testMsg := "Тестовое сообщение"
 
-			encryptMsg, err := server.storege.PK.RsaEncrypt([]byte(testMsg))
+			encryptMsg, err := repStore.PK.RsaEncrypt([]byte(testMsg))
 			if err != nil {
 				t.Errorf("Error checking rsa encrypt")
 			}
 			t.Run("Checking rsa decrypt", func(t *testing.T) {
-				decryptMsg, err := server.storege.PK.RsaDecrypt(encryptMsg)
+				decryptMsg, err := repStore.PK.RsaDecrypt(encryptMsg)
 				if err != nil {
 					t.Errorf("Error checking rsa decrypt")
 				}
@@ -88,14 +91,14 @@ func TestFuncServerHTTP(t *testing.T) {
 
 	t.Run("Checking connect DB", func(t *testing.T) {
 		t.Run("Checking create DB table", func(t *testing.T) {
-			storageType, err := repository.InitStoreDB(server.storege.Config.StorageType, server.storege.Config.DatabaseDsn)
+			storageType, err := repository.InitStoreDB(repStore.Config.StorageType, repStore.Config.DatabaseDsn)
 			if err != nil {
 				t.Errorf(fmt.Sprintf("Error create DB table: %s", err.Error()))
 			}
 			if len(storageType) != 0 {
-				server.storege.Config.StorageType = storageType
+				repStore.Config.StorageType = storageType
 				t.Run("Checking handlers /ping GET", func(t *testing.T) {
-					mapTypeStore := server.storege.Config.StorageType
+					mapTypeStore := repStore.Config.StorageType
 					if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
 						t.Errorf("Error handlers 1 /ping GET (%d)", len(mapTypeStore))
 					}
@@ -214,15 +217,15 @@ func TestFuncServerHTTP(t *testing.T) {
 			if ok := valG.SetFromText("0.001"); !ok {
 				t.Errorf(`Error method "PrepareDataForBackup"`)
 			}
-			server.storege.MutexRepo["TestGauge"] = &valG
+			repStore.MutexRepo["TestGauge"] = &valG
 
 			valC := repository.Counter(0)
 			if ok := valC.SetFromText("58"); !ok {
 				t.Errorf(`Error method "PrepareDataForBackup"`)
 			}
-			server.storege.MutexRepo["TestCounter"] = &valC
+			repStore.MutexRepo["TestCounter"] = &valC
 
-			data := server.storege.PrepareDataBuckUp()
+			data := repStore.PrepareDataBuckUp()
 			if len(data) != 2 {
 				t.Errorf(`Error method "PrepareDataForBackup"`)
 			}
@@ -230,7 +233,7 @@ func TestFuncServerHTTP(t *testing.T) {
 	})
 
 	t.Run("Checking handlers", func(t *testing.T) {
-		ts := httptest.NewServer(server.storege.Router)
+		ts := httptest.NewServer(router)
 		defer ts.Close()
 
 		t.Run("Checking handler /update/{metType}/{metName}/{metValue}/", func(t *testing.T) {
@@ -317,14 +320,11 @@ func TestFuncServerHTTP(t *testing.T) {
 
 				r := chi.NewRouter()
 				ts := httptest.NewServer(r)
-				//rp := new(api.RepStore)
 
 				smm := new(repository.SyncMapMetrics)
 				smm.MutexRepo = make(repository.MutexRepo)
-				//rp.SyncMapMetrics = smm
 
-				//server.storege.Router = nil
-				r.Post("/update/{metType}/{metName}/{metValue}", server.storege.HandlerSetMetricaPOST)
+				r.Post("/update/{metType}/{metName}/{metValue}", repStore.HandlerSetMetricaPOST)
 
 				defer ts.Close()
 				resp := testRequest(t, ts, http.MethodPost, tt.request, nil)
@@ -427,8 +427,8 @@ func TestFuncServerHTTP(t *testing.T) {
 
 	t.Run("Checking marshal metrics JSON", func(t *testing.T) {
 
-		for key, val := range server.storege.MutexRepo {
-			mt := val.GetMetrics(val.Type(), key, server.storege.Config.Key)
+		for key, val := range repStore.MutexRepo {
+			mt := val.GetMetrics(val.Type(), key, repStore.Config.Key)
 			_, err := mt.MarshalMetrica()
 			if err != nil {
 				t.Errorf("Error checking marshal metrics JSON")

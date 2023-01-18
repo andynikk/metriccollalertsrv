@@ -19,12 +19,24 @@ type serverGRPS struct {
 	RepStore
 }
 
+type HServer interface {
+}
+
 type Server interface {
 	Start() error
 	RestoreData()
 	BackupData()
 	Shutdown()
 	GetRouter() chi.Router
+	GetRepStore() RepStore
+}
+
+func (s *serverGRPS) GetRepStore() RepStore {
+	return s.RepStore
+}
+
+func (s *serverHTTP) GetRepStore() RepStore {
+	return s.RepStore
 }
 
 func (s *serverGRPS) GetRouter() chi.Router {
@@ -98,9 +110,8 @@ func newHTTPServer(configServer *environment.ServerConfig) *serverHTTP {
 
 	server.Config = *configServer
 	server.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
-	NewRepStore(server)
-
 	server.MutexRepo = make(repository.MutexRepo)
+	NewRepStore(server)
 
 	return server
 }
