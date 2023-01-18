@@ -238,7 +238,7 @@ func TestFuncServer(t *testing.T) {
 
 func testMericGouge(configKey string) encoding.Metrics {
 
-	var fValue float64 = 0.001
+	var fValue = 0.001
 
 	var mGauge encoding.Metrics
 	mGauge.ID = "TestGauge"
@@ -251,7 +251,7 @@ func testMericGouge(configKey string) encoding.Metrics {
 
 func testMericWrongGouge(configKey string) encoding.Metrics {
 
-	var fValue float64 = 0.001
+	var fValue = 0.001
 
 	var mGauge encoding.Metrics
 	mGauge.ID = "TestGauge322"
@@ -264,7 +264,7 @@ func testMericWrongGouge(configKey string) encoding.Metrics {
 
 func testMericNoGouge(configKey string) encoding.Metrics {
 
-	var fValue float64 = 0.001
+	var fValue = 0.001
 
 	var mGauge encoding.Metrics
 	mGauge.ID = "TestGauge"
