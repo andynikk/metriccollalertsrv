@@ -191,9 +191,6 @@ func (ac *AgentConfig) InitConfigAgentFile() {
 	if ac.CryptoKey == "" {
 		ac.CryptoKey = patchCryptoKey
 	}
-	if ac.CryptoKey == "" {
-		ac.CryptoKey = patchCryptoKey
-	}
 }
 
 func (ac *AgentConfig) InitConfigAgentDefault() {

@@ -3,8 +3,8 @@ POST http://localhost:8080/value/
 Content-Type: application/json
 
 {
-  "id": "FreeMemory",
-  "type": "gauge"
+  "id": "GetSet58",
+  "type": "counter"
 }
 
 ### Send POST request with json body
@@ -16,9 +16,9 @@ POST http://localhost:8080/update
 Content-Type: application/json
 
 {
-  "id": "PollCount",
+  "id": "GetSet58",
   "type": "counter",
-  "delta": 6634086670,
+  "delta": 824633880584,
   "hash": ""
 }
 
