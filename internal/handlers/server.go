@@ -172,7 +172,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
 	if v.Hash != "" && !hmacEqual {
 		constants.Logger.InfoLog(fmt.Sprintf("++ %s, %s %s - %s (%s)", v.ID, v.MType, v.Hash, heshVal, rs.Config.Key))
-		//return http.StatusBadRequest
+		return http.StatusBadRequest
 	}
 
 	rs.MutexRepo[v.ID].Set(v)
@@ -279,12 +279,12 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
-		constants.Logger.ErrorLog(err)
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 4 %s", err.Error()))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if _, err := rw.Write(metricsJSON); err != nil {
-		constants.Logger.ErrorLog(err)
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
