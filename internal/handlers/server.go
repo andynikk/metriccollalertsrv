@@ -62,7 +62,7 @@ func (et MetricError) String() string {
 func NewRepStore(s *serverHTTP) {
 
 	s.Router = chi.NewRouter()
-	rs := &s.RepStore
+	rs := s.RepStore
 
 	s.Router.Use(middleware.RequestID)
 	s.Router.Use(middleware.RealIP)

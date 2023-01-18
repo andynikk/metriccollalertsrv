@@ -16,12 +16,12 @@ import (
 type KeyContext string
 
 type serverHTTP struct {
-	RepStore
+	*RepStore
 	chi.Router
 }
 
 type serverGRPS struct {
-	RepStore
+	*RepStore
 }
 
 type HServer interface {
@@ -37,11 +37,11 @@ type Server interface {
 }
 
 func (s *serverGRPS) GetRepStore() *RepStore {
-	return &s.RepStore
+	return s.RepStore
 }
 
 func (s *serverHTTP) GetRepStore() *RepStore {
-	return &s.RepStore
+	return s.RepStore
 }
 
 func (s *serverGRPS) GetRouter() chi.Router {
@@ -69,7 +69,7 @@ func (s *serverGRPS) Start() error {
 
 	server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
 	srv := &serverGRPS{
-		RepStore: RepStore{},
+		RepStore: s.RepStore,
 	}
 
 	RegisterMetricCollectorServer(server, srv)
@@ -117,11 +117,10 @@ func newHTTPServer(configServer *environment.ServerConfig) *serverHTTP {
 
 func newGRPCServer(configServer *environment.ServerConfig) *serverGRPS {
 	server := new(serverGRPS)
-
-	server.Config = *configServer
-	server.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
-	server.MutexRepo = make(repository.MutexRepo)
-
+	server.RepStore = &RepStore{}
+	server.RepStore.Config = *configServer
+	server.RepStore.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
+	server.RepStore.MutexRepo = make(repository.MutexRepo)
 	return server
 }
 

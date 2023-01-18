@@ -15,6 +15,8 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestmakeMsg(adresServer string, memStats MetricsGauge) string {
@@ -176,6 +178,14 @@ func BenchmarkSendMetrics(b *testing.B) {
 	a.config = environment.InitConfigAgent()
 	if a.config.Address == "" {
 		return
+	}
+
+	if a.config.StringTypeServer == constants.TypeSrvGRPC.String() {
+		conn, err := grpc.Dial(constants.AddressServer, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return
+		}
+		a.GRPCClientConn = conn
 	}
 
 	certPublicKey, _ := encryption.InitPublicKey(a.config.CryptoKey)

@@ -44,9 +44,21 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 
 	header := FillHeader(ctx)
 	contentEncoding := header["content-encoding"]
+	contentEncryption := header["content-encryption"]
+
 	bytBody := req.Body
+
+	if contentEncryption != "" {
+		bytBodyRsaDecrypt, err := s.PK.RsaDecrypt(bytBody)
+		if err != nil {
+			constants.Logger.InfoLog(fmt.Sprintf("$$ 2.1 %s", err.Error()))
+			return &TextErrResponse{Result: []byte(err.Error())}, err
+		}
+		bytBody = bytBodyRsaDecrypt
+	}
+
 	if strings.Contains(contentEncoding, "gzip") {
-		bytBodyDecompress, err := compression.Decompress(req.Body)
+		bytBodyDecompress, err := compression.Decompress(bytBody)
 		if err != nil {
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
 			return &TextErrResponse{Result: []byte(err.Error())}, err
@@ -114,7 +126,7 @@ func (s *serverGRPS) PingDataBases(ctx context.Context, req *EmptyRequest) (*Tex
 
 func (s *serverGRPS) GetValue(ctx context.Context, req *UpdatesRequest) (*StatusResponse, error) {
 
-	strMetric, err := HandlerGetValue(req.Body, &s.RepStore)
+	strMetric, err := HandlerGetValue(req.Body, s.RepStore)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return nil, err
@@ -125,7 +137,7 @@ func (s *serverGRPS) GetValue(ctx context.Context, req *UpdatesRequest) (*Status
 func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*FullResponse, error) {
 
 	headerIn := FillHeader(ctx)
-	headerOut, bodyOut, err := HandlerValueMetricaJSON(headerIn, req.Body, &s.RepStore)
+	headerOut, bodyOut, err := HandlerValueMetricaJSON(headerIn, req.Body, s.RepStore)
 	if err != nil {
 		return nil, err
 	}

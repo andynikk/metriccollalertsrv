@@ -20,6 +20,7 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
@@ -334,6 +335,11 @@ func main() {
 			metricsGauge: make(MetricsGauge),
 		},
 		KeyEncryption: certPublicKey,
+	}
+
+	if a.config.StringTypeServer == constants.TypeSrvGRPC.String() {
+		conn, _ := grpc.Dial(constants.AddressServer, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		a.GRPCClientConn = conn
 	}
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
