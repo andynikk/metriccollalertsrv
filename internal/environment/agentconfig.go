@@ -198,8 +198,7 @@ func (ac *AgentConfig) InitConfigAgentDefault() {
 	addressServ := constants.AddressServer
 	reportIntervalMetric := constants.ReportInterval * time.Second
 	pollIntervalMetrics := constants.PollInterval * time.Second
-	typeSrv := constants.TypeSrvGRPC.String()
-	//typeSrv := constants.TypeSrvHTTP.String()
+	typeSrv := constants.TypeSrvHTTP.String()
 
 	if ac.Address == "" {
 		ac.Address = addressServ
