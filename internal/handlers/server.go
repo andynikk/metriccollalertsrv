@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/pprof"
 	"strings"
 	"sync"
 	"time"
@@ -59,21 +60,6 @@ func (et MetricError) String() string {
 	return [...]string{"Not error", "Error convert", "Error get type"}[et]
 }
 
-func UserContextBody(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		//var user User
-		//
-		//err := json.NewDecoder(r.Body).Decode(&user)
-		//if err != nil {
-		//	fmt.Println(err)
-		//	return
-		//}
-		//
-		//ctx := context.WithValue(r.Context(), "user", user)
-		//next.ServeHTTP(rw, r.WithContext(ctx))
-	})
-}
-
 func NewRepStore(s *serverHTTP) {
 
 	s.Router = chi.NewRouter()
@@ -90,29 +76,45 @@ func NewRepStore(s *serverHTTP) {
 	s.Router.NotFound(rs.HandlerNotFound)
 	s.Router.HandleFunc("/", rs.HandleFunc)
 
-	s.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST)
-	s.Router.Post("/update", rs.HandlerUpdateMetricJSON)
-	s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)
+	s.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
+	s.Router.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
+	s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
 
 	s.Router.Get("/", rs.HandlerGetAllMetrics)
 	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
 	s.Router.Post("/value", rs.HandlerValueMetricaJSON)
 	s.Router.Get("/ping", rs.HandlerPingDB)
+
+	s.Router.HandleFunc("/debug/pprof", pprof.Index)
+	s.Router.HandleFunc("/debug/pprof/", pprof.Index)
+	s.Router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	s.Router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	s.Router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	s.Router.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	s.Router.Handle("/debug/block", pprof.Handler("block"))
+	s.Router.Handle("/debug/goroutine", pprof.Handler("goroutine"))
+	s.Router.Handle("/debug/heap", pprof.Handler("heap"))
+	s.Router.Handle("/debug/threadcreate", pprof.Handler("threadcreate"))
+	s.Router.Handle("/debug/allocs", pprof.Handler("allocs"))
+	s.Router.Handle("/debug/mutex", pprof.Handler("mutex"))
+	s.Router.Handle("/debug/mutex", pprof.Handler("mutex"))
+
 }
 
-func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) int {
+func (rs *RepStore) setValueInMap(metType string, metName string, metValue string) error {
 
 	switch metType {
 	case GaugeMetric.String():
 		if val, findKey := rs.MutexRepo[metName]; findKey {
 			if ok := val.SetFromText(metValue); !ok {
-				return http.StatusBadRequest
+				return errs.ErrBadRequest
 			}
 		} else {
 
 			valG := repository.Gauge(0)
 			if ok := valG.SetFromText(metValue); !ok {
-				return http.StatusBadRequest
+				return errs.ErrBadRequest
 			}
 
 			rs.MutexRepo[metName] = &valG
@@ -121,22 +123,22 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 	case CounterMetric.String():
 		if val, findKey := rs.MutexRepo[metName]; findKey {
 			if ok := val.SetFromText(metValue); !ok {
-				return http.StatusBadRequest
+				return errs.ErrBadRequest
 			}
 		} else {
 
 			valC := repository.Counter(0)
 			if ok := valC.SetFromText(metValue); !ok {
-				return http.StatusBadRequest
+				return errs.ErrBadRequest
 			}
 
 			rs.MutexRepo[metName] = &valC
 		}
 	default:
-		return http.StatusNotImplemented
+		return errs.ErrStatusInternalServer
 	}
 
-	return http.StatusOK
+	return nil
 }
 
 func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
@@ -234,7 +236,8 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 	metName := chi.URLParam(rq, "metName")
 	metValue := chi.URLParam(rq, "metValue")
 
-	rw.WriteHeader(rs.setValueInMap(metType, metName, metValue))
+	err := rs.setValueInMap(metType, metName, metValue)
+	rw.WriteHeader(errs.StatusHTTP(err))
 }
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {

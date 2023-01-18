@@ -53,13 +53,10 @@ func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrReq
 }
 
 func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (*TextErrResponse, error) {
-	//err := s.RepStore.HandlerSetMetricaPOST(string(req.MetType), string(req.MetName), string(req.MetValue))
-	//
-	//if err != nil {
-	//	return &TextErrResponse{Result: []byte(err.Error())}, err
-	//}
 
-	return &TextErrResponse{Result: []byte("")}, nil
+	rp := s.GetRepStore()
+	err := rp.setValueInMap(string(req.MetType), string(req.MetName), string(req.MetType))
+	return &TextErrResponse{Result: []byte(err.Error())}, err
 }
 
 func (s *serverGRPS) PingDataBases(ctx context.Context, req *EmptyRequest) (*TextErrResponse, error) {
