@@ -69,7 +69,7 @@ const (
 						"ID" character varying COLLATE pg_catalog."default",
 						"MType" character varying COLLATE pg_catalog."default",
 						"Value" double precision NOT NULL DEFAULT 0,
-						"Delta" numeric NOT NULL DEFAULT 0,
+						"Delta" bigint NOT NULL DEFAULT 0,
 						"Hash" character varying COLLATE pg_catalog."default"
 					)
 					
