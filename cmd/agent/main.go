@@ -185,9 +185,8 @@ func (a *agent) goPost2Server(metricsButch MapMetricsButch) error {
 			return err
 		}
 
-		//typeSrv := constants.TypeServer.String()
-		typeSrv := "HTTP"
-		if err = GetTypeSrv(typeSrv).Post2Server(a, gzipArrMetrics); err != nil {
+		srv := GetTypeSrv(a.config.StringTypeServer)
+		if err = srv.Post2Server(a, gzipArrMetrics); err != nil {
 			constants.Logger.ErrorLog(err)
 			return err
 		}
@@ -313,6 +312,9 @@ func (s *ServerGRPC) Post2Server(agent *agent, allMetrics []byte) error {
 }
 
 func GetTypeSrv(stringTypeServer string) ServerType {
+	if stringTypeServer == constants.TypeSrvGRPC.String() {
+		return new(ServerGRPC)
+	}
 
 	return new(ServerHTTP)
 }
