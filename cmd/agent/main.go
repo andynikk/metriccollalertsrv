@@ -280,7 +280,6 @@ func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
 		return errs.ErrStatusInternalServer
 	}
 	defer resp.Body.Close()
-
 	return nil
 }
 
