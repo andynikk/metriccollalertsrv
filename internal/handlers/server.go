@@ -239,56 +239,14 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	arrBody, err := io.ReadAll(rq.Body)
-	if err != nil {
-		constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
-		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-		return
-	}
-
-	contentEncoding := rq.Header.Get("Content-Encoding")
-	if strings.Contains(contentEncoding, "gzip") {
-		bytBody, err := io.ReadAll(rq.Body)
-		if err != nil {
-			constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
-			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-			return
-		}
-
-		arrBody, err = compression.Decompress(bytBody)
-		if err != nil {
-			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
-			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
-			return
-		}
-	}
-	header, body, err := HandlerUpdateMetricJSON(arrBody, rs)
-	if err != nil {
-		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
-		http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
-		return
-	}
-
-	for key, val := range header {
-		rw.Header().Add(key, val)
-	}
-
-	if _, err = rw.Write(body); err != nil {
-		constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
-		rw.WriteHeader(errs.StatusHTTP(errs.ErrStatusInternalServer))
-		return
-	}
-	rw.WriteHeader(errs.StatusHTTP(err))
-
-	//IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
-	//if IPAddressAllowed == "false" {
+	//arrBody, err := io.ReadAll(rq.Body)
+	//if err != nil {
+	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
+	//	http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 	//	return
 	//}
 	//
-	//var bodyJSON io.Reader
-	//
 	//contentEncoding := rq.Header.Get("Content-Encoding")
-	//bodyJSON = rq.Body
 	//if strings.Contains(contentEncoding, "gzip") {
 	//	bytBody, err := io.ReadAll(rq.Body)
 	//	if err != nil {
@@ -297,52 +255,93 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	//		return
 	//	}
 	//
-	//	arrBody, err := compression.Decompress(bytBody)
+	//	arrBody, err = compression.Decompress(bytBody)
 	//	if err != nil {
 	//		constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
 	//		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	//		return
 	//	}
-	//
-	//	bodyJSON = bytes.NewReader(arrBody)
 	//}
-	//
-	//v := encoding.Metrics{}
-	//err := json.NewDecoder(bodyJSON).Decode(&v)
+	//header, body, err := HandlerUpdateMetricJSON(arrBody, rs)
 	//if err != nil {
 	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
-	//	http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
+	//	http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
 	//	return
 	//}
 	//
-	//rs.Lock()
-	//defer rs.Unlock()
-	//
-	//rw.Header().Add("Content-Type", "application/json")
-	//res := rs.SetValueInMapJSON(v)
-	//
-	//mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
-	//metricsJSON, err := mt.MarshalMetrica()
-	//if err != nil {
-	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 4 %s", err.Error()))
-	//	rw.WriteHeader(http.StatusInternalServerError)
-	//	return
+	//for key, val := range header {
+	//	rw.Header().Add(key, val)
 	//}
-	//if _, err := rw.Write(metricsJSON); err != nil {
+	//if _, err = rw.Write(body); err != nil {
 	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
-	//	rw.WriteHeader(http.StatusInternalServerError)
+	//	rw.WriteHeader(errs.StatusHTTP(errs.ErrStatusInternalServer))
 	//	return
 	//}
-	//
-	//if res == http.StatusOK {
-	//	var arrMetrics encoding.ArrMetrics
-	//	arrMetrics = append(arrMetrics, mt)
-	//
-	//	for _, val := range rs.Config.StorageType {
-	//		val.WriteMetric(arrMetrics)
-	//	}
-	//}
-	//rw.WriteHeader(res)
+	//rw.WriteHeader(errs.StatusHTTP(err))
+
+	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
+	if IPAddressAllowed == "false" {
+		return
+	}
+
+	var bodyJSON io.Reader
+
+	contentEncoding := rq.Header.Get("Content-Encoding")
+	bodyJSON = rq.Body
+	if strings.Contains(contentEncoding, "gzip") {
+		bytBody, err := io.ReadAll(rq.Body)
+		if err != nil {
+			constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
+			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
+			return
+		}
+
+		arrBody, err := compression.Decompress(bytBody)
+		if err != nil {
+			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
+			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+			return
+		}
+
+		bodyJSON = bytes.NewReader(arrBody)
+	}
+
+	v := encoding.Metrics{}
+	err := json.NewDecoder(bodyJSON).Decode(&v)
+	if err != nil {
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
+		http.Error(rw, "Ошибка получения JSON", http.StatusInternalServerError)
+		return
+	}
+
+	rs.Lock()
+	defer rs.Unlock()
+
+	rw.Header().Add("Content-Type", "application/json")
+	res := rs.SetValueInMapJSON(v)
+
+	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
+	metricsJSON, err := mt.MarshalMetrica()
+	if err != nil {
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 4 %s", err.Error()))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if _, err := rw.Write(metricsJSON); err != nil {
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if res == http.StatusOK {
+		var arrMetrics encoding.ArrMetrics
+		arrMetrics = append(arrMetrics, mt)
+
+		for _, val := range rs.Config.StorageType {
+			val.WriteMetric(arrMetrics)
+		}
+	}
+	rw.WriteHeader(res)
 }
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
