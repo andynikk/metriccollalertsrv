@@ -192,12 +192,14 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 	strMetric, err := HandlerGetValue([]byte(metName), rs)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
+		rw.WriteHeader(errs.StatusHTTP(err))
 		return
 	}
 
 	_, err = io.WriteString(rw, strMetric)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
+		rw.WriteHeader(errs.StatusHTTP(err))
 		return
 	}
 
