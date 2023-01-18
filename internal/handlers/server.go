@@ -116,7 +116,6 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 			if ok := valG.SetFromText(metValue); !ok {
 				return errs.ErrBadRequest
 			}
-
 			rs.MutexRepo[metName] = &valG
 		}
 
@@ -131,7 +130,6 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 			if ok := valC.SetFromText(metValue); !ok {
 				return errs.ErrBadRequest
 			}
-
 			rs.MutexRepo[metName] = &valC
 		}
 	default:
