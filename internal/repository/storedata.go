@@ -48,24 +48,26 @@ type TypeStoreData interface {
 // InitStoreDB инициализация хранилища БД
 func InitStoreDB(mts MapTypeStore, store string) (MapTypeStore, error) {
 	if _, findKey := mts[constants.MetricsStorageDB.String()]; findKey {
+		fmt.Println("++++++++++++++008", len(mts))
 		ctx := context.Background()
 
 		dbc, err := postgresql.PoolDB(store)
 		if err != nil {
+			fmt.Println("++++++++++++++009", err)
 			return nil, err
 		}
 
+		fmt.Println("++++++++++++++012", *dbc, ctx, store)
 		mts[constants.MetricsStorageDB.String()] = &TypeStoreDataDB{
 			DBC: *dbc, Ctx: ctx, DBDsn: store,
 		}
 		if ok := mts[constants.MetricsStorageDB.String()].CreateTable(); !ok {
+			fmt.Println("++++++++++++++010", err)
 			return nil, err
 		}
 	}
-	//if _, findKey := mts[constants.MetricsStorageFile.String()]; findKey {
-	//	mts[constants.MetricsStorageDB.String()] = &TypeStoreDataFile{StoreFile: store}
-	//}
 
+	fmt.Println("++++++++++++++011", len(mts))
 	return mts, nil
 }
 

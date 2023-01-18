@@ -84,8 +84,8 @@ func InitConfigServer() *ServerConfig {
 	sc.InitConfigServerFlag()
 	sc.InitConfigServerFile()
 	sc.InitConfigServerDefault()
-
 	fmt.Println("++++++++++++++001", sc.DatabaseDsn, len(sc.StorageType))
+
 	sc.StorageType, _ = repository.InitStoreDB(sc.StorageType, sc.DatabaseDsn)
 	fmt.Println("++++++++++++++002", sc.DatabaseDsn, len(sc.StorageType))
 
@@ -161,7 +161,7 @@ func (sc *ServerConfig) InitConfigServerENV() {
 		typeFile := repository.TypeStoreDataFile{}
 		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 	}
-	fmt.Println("++++++++++++++004", len(sc.StorageType))
+	fmt.Println("++++++++++++++004", len(MapTypeStore))
 
 	sc.StoreInterval = storeIntervalMetrics
 	sc.StoreFile = storeFileMetrics
@@ -170,6 +170,7 @@ func (sc *ServerConfig) InitConfigServerENV() {
 	sc.Key = keyHash
 	sc.DatabaseDsn = databaseDsn
 	sc.StorageType = MapTypeStore
+	fmt.Println("++++++++++++++005", len(sc.StorageType))
 	sc.CryptoKey = patchCryptoKey
 	sc.ConfigFilePath = patchFileConfig
 	sc.TypeServer = typeSrv
@@ -203,17 +204,6 @@ func (sc *ServerConfig) InitConfigServerFlag() {
 		pathFileCfg = *fileCfgC
 	}
 
-	MapTypeStore := make(repository.MapTypeStore)
-	if len(sc.StorageType) == 0 {
-		if *keyDatabaseDsn != "" {
-			typeDB := repository.TypeStoreDataDB{}
-			MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
-		} else if *cryptoKeyFlag != "" {
-			typeFile := repository.TypeStoreDataFile{}
-			MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
-		}
-	}
-
 	if sc.Address == "" {
 		sc.Address = *addressPtr
 	}
@@ -239,6 +229,19 @@ func (sc *ServerConfig) InitConfigServerFlag() {
 		sc.ConfigFilePath = pathFileCfg
 	}
 	if len(sc.StorageType) == 0 {
+
+		MapTypeStore := make(repository.MapTypeStore)
+		if len(sc.StorageType) == 0 {
+			if *keyDatabaseDsn != "" {
+				typeDB := repository.TypeStoreDataDB{}
+				MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
+			} else if *cryptoKeyFlag != "" {
+				typeFile := repository.TypeStoreDataFile{}
+				MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
+			}
+		}
+
+		fmt.Println("++++++++++++++006", len(MapTypeStore), len(sc.StorageType))
 		sc.StorageType = MapTypeStore
 	}
 	if sc.TrustedSubnet == nil {
@@ -265,17 +268,6 @@ func (sc *ServerConfig) InitConfigServerFile() {
 	patchCryptoKey := jsonCfg.CryptoKey
 	trustedSubnet := jsonCfg.TrustedSubnet
 
-	MapTypeStore := make(repository.MapTypeStore)
-	if len(sc.StorageType) == 0 {
-		if databaseDsn != "" {
-			typeDB := repository.TypeStoreDataDB{}
-			MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
-		} else if storeFileMetrics != "" {
-			typeFile := repository.TypeStoreDataFile{}
-			MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
-		}
-	}
-
 	if sc.Address == "" {
 		sc.Address = addressServ
 	}
@@ -295,6 +287,18 @@ func (sc *ServerConfig) InitConfigServerFile() {
 		sc.CryptoKey = patchCryptoKey
 	}
 	if len(sc.StorageType) == 0 {
+		MapTypeStore := make(repository.MapTypeStore)
+		if len(sc.StorageType) == 0 {
+			if databaseDsn != "" {
+				typeDB := repository.TypeStoreDataDB{}
+				MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
+			} else if storeFileMetrics != "" {
+				typeFile := repository.TypeStoreDataFile{}
+				MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
+			}
+		}
+
+		fmt.Println("++++++++++++++007", len(MapTypeStore), len(sc.StorageType))
 		sc.StorageType = MapTypeStore
 	}
 	if sc.TrustedSubnet == nil {
