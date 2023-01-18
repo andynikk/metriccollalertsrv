@@ -65,6 +65,7 @@ func PoolDB(dsn string) (*DBConnector, error) {
 		if _, err = pool.Exec(ctx, strQuery); err != nil {
 			fmt.Println("++++++++++++++016", err)
 			return nil, err
+
 		}
 	}
 
