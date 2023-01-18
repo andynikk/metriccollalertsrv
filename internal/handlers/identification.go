@@ -28,15 +28,15 @@ type Server interface {
 	BackupData()
 	Shutdown()
 	GetRouter() chi.Router
-	GetRepStore() RepStore
+	GetRepStore() *RepStore
 }
 
-func (s *serverGRPS) GetRepStore() RepStore {
-	return s.RepStore
+func (s *serverGRPS) GetRepStore() *RepStore {
+	return &s.RepStore
 }
 
-func (s *serverHTTP) GetRepStore() RepStore {
-	return s.RepStore
+func (s *serverHTTP) GetRepStore() *RepStore {
+	return &s.RepStore
 }
 
 func (s *serverGRPS) GetRouter() chi.Router {
@@ -78,12 +78,12 @@ func (s *serverGRPS) Start() error {
 
 func (s *serverGRPS) RestoreData() {
 	if s.Config.Restore {
-		s.RestoreData()
+		s.RepStore.RestoreData()
 	}
 }
 
 func (s *serverGRPS) BackupData() {
-	s.BackupData()
+	s.RepStore.BackupData()
 }
 
 func (s *serverHTTP) Shutdown() {
@@ -92,16 +92,6 @@ func (s *serverHTTP) Shutdown() {
 
 func (s *serverGRPS) Shutdown() {
 	s.RepStore.Shutdown()
-}
-
-func (rs *RepStore) Shutdown() {
-	rs.Lock()
-	defer rs.Unlock()
-
-	for _, val := range rs.Config.StorageType {
-		val.WriteMetric(rs.PrepareDataBuckUp())
-	}
-	constants.Logger.InfoLog("server stopped")
 }
 
 func newHTTPServer(configServer *environment.ServerConfig) *serverHTTP {

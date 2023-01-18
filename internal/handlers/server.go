@@ -73,7 +73,8 @@ func UserContextBody(next http.Handler) http.Handler {
 func NewRepStore(s *serverHTTP) {
 
 	s.Router = chi.NewRouter()
-	rs := s.RepStore
+	rs := &s.RepStore
+
 	s.Router.Use(middleware.RequestID)
 	s.Router.Use(middleware.RealIP)
 	s.Router.Use(middleware.Logger)
@@ -206,6 +207,16 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 	rw.WriteHeader(http.StatusOK)
 
+}
+
+func (rs *RepStore) Shutdown() {
+	rs.Lock()
+	defer rs.Unlock()
+
+	for _, val := range rs.Config.StorageType {
+		val.WriteMetric(rs.PrepareDataBuckUp())
+	}
+	constants.Logger.InfoLog("server stopped")
 }
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
@@ -353,7 +364,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	var bodyJSON io.Reader
 	bodyJSON = rq.Body
 
-	fmt.Println("------- HandlerGetValue", 1)
+	fmt.Println("------- HandlerValueMetricaJSON", 1)
 
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
@@ -385,7 +396,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	}
 	metType := v.MType
 	metName := v.ID
-	fmt.Println("------- HandlerGetValue", metType, metName)
 
 	rs.Lock()
 	defer rs.Unlock()

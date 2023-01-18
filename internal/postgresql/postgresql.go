@@ -159,7 +159,7 @@ func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error 
 		}
 		sDelta := fmt.Sprintf("%d", 0)
 		if val.Delta != nil {
-			sDelta = fmt.Sprintf("%d", *val.Delta)
+			sDelta = fmt.Sprintf("%v", *val.Delta)
 		}
 
 		if ok := updArrTM.find(val.MType, val.ID); ok {
