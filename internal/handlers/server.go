@@ -82,8 +82,8 @@ func NewRepStore(s *serverHTTP) {
 	s.Router.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
 	s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
 
-	s.Router.Get("/ping", rs.HandlerPingDB) //+
-	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue)
+	s.Router.Get("/ping", rs.HandlerPingDB)                        //+
+	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue) //+
 	s.Router.Post("/value", rs.HandlerValueMetricaJSON)
 
 	s.Router.HandleFunc("/debug/pprof", pprof.Index)
@@ -187,18 +187,7 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
 func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
-	metType := chi.URLParam(rq, "metType")
 	metName := chi.URLParam(rq, "metName")
-
-	rs.Lock()
-	defer rs.Unlock()
-
-	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		constants.Logger.InfoLog(fmt.Sprintf("== %d", 3))
-		rw.WriteHeader(http.StatusNotFound)
-		http.Error(rw, "Метрика "+metName+" с типом "+metType+" не найдена", http.StatusNotFound)
-		return
-	}
 
 	strMetric, err := HandlerGetValue([]byte(metName), rs)
 	if err != nil {
