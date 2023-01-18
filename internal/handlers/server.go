@@ -239,7 +239,12 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	var arrBody []byte
+	arrBody, err := io.ReadAll(rq.Body)
+	if err != nil {
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
+		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
+		return
+	}
 
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	if strings.Contains(contentEncoding, "gzip") {
@@ -412,8 +417,6 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 	var bodyJSON io.Reader
 	bodyJSON = rq.Body
-
-	fmt.Println("------- HandlerValueMetricaJSON", 1)
 
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 	contentEncoding := rq.Header.Get("Content-Encoding")
