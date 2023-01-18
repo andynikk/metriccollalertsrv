@@ -106,7 +106,7 @@ func (s *serverGRPS) Shutdown() {
 func newHTTPServer(configServer *environment.ServerConfig) *serverHTTP {
 
 	server := new(serverHTTP)
-
+	server.RepStore = &RepStore{}
 	server.Config = *configServer
 	server.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
 	server.MutexRepo = make(repository.MutexRepo)
