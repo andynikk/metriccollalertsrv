@@ -137,6 +137,7 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 
 func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
+	fmt.Println("++++++007", v.ID, v.MType, v.Delta)
 	var heshVal string
 
 	switch v.MType {
@@ -159,25 +160,33 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valC := repository.Counter(0)
 			rs.MutexRepo[v.ID] = &valC
+			fmt.Println("++++++008", v.ID, v.MType, v.Delta, &valC)
 		}
+		fmt.Println("++++++009", v.ID, v.MType, v.Delta)
 	default:
+		fmt.Println("++++++0010", v.ID, v.MType, v.Delta)
 		return http.StatusNotImplemented
 	}
 
-	heshAgent := []byte(v.Hash)
-	heshServer := []byte(heshVal)
+	hashAgent := []byte(v.Hash)
+	hashServer := []byte(heshVal)
 
-	hmacEqual := hmac.Equal(heshServer, heshAgent)
+	hmacEqual := hmac.Equal(hashServer, hashAgent)
 
-	constants.Logger.InfoLog(fmt.Sprintf("-- %s - %s", v.Hash, heshVal))
+	if v.ID == "PollCount" {
+		fmt.Println("++++++011", v.ID, v.MType, v.Delta)
+		//constants.Logger.InfoLog(fmt.Sprintf("-- %s - %s", v.Hash, heshVal))
+	}
 
 	if v.Hash != "" && !hmacEqual {
+		fmt.Println("++++++012", v.ID, v.MType, v.Delta, "ERROR")
 		constants.Logger.InfoLog(fmt.Sprintf("++ %s - %s", v.Hash, heshVal))
 		return http.StatusBadRequest
 	}
-	constants.Logger.InfoLog(fmt.Sprintf("** %s %s %v %d", v.ID, v.MType, v.Value, v.Delta))
+	//constants.Logger.InfoLog(fmt.Sprintf("** %s %s %v %d", v.ID, v.MType, v.Value, v.Delta))
 
 	rs.MutexRepo[v.ID].Set(v)
+	fmt.Println("++++++012", rs.MutexRepo[v.ID].GetMetrics(v.ID, v.MType, v.Hash))
 	return http.StatusOK
 
 }
