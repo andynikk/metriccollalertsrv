@@ -53,7 +53,6 @@ func TestFuncServer(t *testing.T) {
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	t.Run("Checking handlers PING", func(t *testing.T) {
-
 		req := EmptyRequest{}
 		textErr, err := server.PingDataBases(ctx, &req)
 		if errs.CodeGRPC(err) != codes.OK {
