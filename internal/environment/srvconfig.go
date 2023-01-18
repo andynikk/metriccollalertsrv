@@ -3,6 +3,7 @@ package environment
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -149,10 +150,13 @@ func (sc *ServerConfig) InitConfigServerENV() {
 	}
 
 	MapTypeStore := make(repository.MapTypeStore)
+	fmt.Println("+++++++++++005", databaseDsn, storeFileMetrics)
 	if databaseDsn != "" {
+		fmt.Println("+++++++++++006", databaseDsn)
 		typeDB := repository.TypeStoreDataDB{}
 		MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
 	} else if storeFileMetrics != "" {
+		fmt.Println("+++++++++++007", storeFileMetrics)
 		typeFile := repository.TypeStoreDataFile{}
 		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 	}
@@ -221,8 +225,10 @@ func (sc *ServerConfig) InitConfigServerFlag() {
 	if sc.ConfigFilePath == "" {
 		sc.ConfigFilePath = pathFileCfg
 	}
+	fmt.Println("+++++++++++008", sc.StorageType)
 	if len(sc.StorageType) == 0 {
 
+		fmt.Println("+++++++++++009", len(sc.StorageType), *keyDatabaseDsn, *cryptoKeyFlag)
 		MapTypeStore := make(repository.MapTypeStore)
 		if len(sc.StorageType) == 0 {
 			if *keyDatabaseDsn != "" {
@@ -278,6 +284,7 @@ func (sc *ServerConfig) InitConfigServerFile() {
 	if sc.CryptoKey == "" {
 		sc.CryptoKey = patchCryptoKey
 	}
+	fmt.Println("+++++++++++010", len(sc.StorageType), databaseDsn, storeFileMetrics)
 	if len(sc.StorageType) == 0 {
 		MapTypeStore := make(repository.MapTypeStore)
 		if len(sc.StorageType) == 0 {
