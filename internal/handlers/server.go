@@ -399,7 +399,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		for _, valH := range val {
 			valHeader = valHeader + valH
 		}
-		header[key] = strings.ToLower(valHeader)
+		header[strings.ToLower(key)] = valHeader
 	}
 
 	bytBody, err := io.ReadAll(rq.Body)
