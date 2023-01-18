@@ -1,13 +1,16 @@
 package handlers
 
 import (
+	"net"
 	"net/http"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
+	"github.com/andynikk/metriccollalertsrv/internal/middlware"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/go-chi/chi/v5"
+	"google.golang.org/grpc"
 )
 
 type serverHTTP struct {
@@ -50,29 +53,33 @@ func (s *serverHTTP) GetRouter() chi.Router {
 func (s *serverHTTP) Start() error {
 	HTTPServer := &http.Server{
 		Addr:    s.Config.Address,
-		Handler: s.Router,
+		Handler: s.GetRouter(),
 	}
 
 	if err := HTTPServer.ListenAndServe(); err != nil {
+		constants.Logger.ErrorLog(err)
 		return err
 	}
-
 	return nil
 }
 
 func (s *serverGRPS) Start() error {
 
-	//server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
-	//RegisterMetricCollectorServer(server, s)
-	//l, err := net.Listen("tcp", constants.AddressServer)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if err = server.Serve(l); err != nil {
-	//	return err
-	//}
-	//
+	server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
+	srv := &serverGRPS{
+		RepStore: RepStore{},
+	}
+
+	RegisterMetricCollectorServer(server, srv)
+	l, err := net.Listen("tcp", constants.AddressServer)
+	if err != nil {
+		return err
+	}
+
+	if err = server.Serve(l); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -108,21 +115,11 @@ func newHTTPServer(configServer *environment.ServerConfig) *serverHTTP {
 
 func newGRPCServer(configServer *environment.ServerConfig) *serverGRPS {
 	server := new(serverGRPS)
-	//
-	//server.storage.Config = configServer
-	//server.storage.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
-	//
-	//grpchandlers.NewRepStore(&server.storage)
-	//fmt.Println(server.storage.Config.Address)
-	//
-	//gRepStore := general.New[grpchandlers.RepStore]()
-	//gRepStore.Set(constants.TypeSrvGRPC.String(), server.storage)
-	//
-	//srv := &GRPCServer{
-	//	RepStore: gRepStore,
-	//}
-	//server.srv = *srv
-	//
+
+	server.Config = *configServer
+	server.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
+	server.MutexRepo = make(repository.MutexRepo)
+
 	return server
 }
 

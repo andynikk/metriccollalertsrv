@@ -8,12 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/middlware"
@@ -40,11 +40,15 @@ type HTMLParam struct {
 	TextMetrics []string
 }
 
+type MutexRepStore struct {
+	sync.Mutex
+	repository.MapMetrics
+}
+
 type RepStore struct {
 	Config environment.ServerConfig
 	PK     *encryption.KeyEncryption
-	sync.Mutex
-	repository.MapMetrics
+	MutexRepStore
 }
 
 func (mt MetricType) String() string {
@@ -331,29 +335,41 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		bodyJSON = bytes.NewReader(arrBody)
 	}
 
-	respByte, err := ioutil.ReadAll(bodyJSON)
+	respByte, err := io.ReadAll(bodyJSON)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	var storedData encoding.ArrMetrics
-	if err := json.Unmarshal(respByte, &storedData); err != nil {
-		constants.Logger.ErrorLog(err)
-		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+	header := Header{}
+	for key, val := range rw.Header() {
+		valHeader := ""
+		for _, valH := range val {
+			valHeader = valHeader + valH
+		}
+		header[key] = strings.ToLower(valHeader)
 	}
 
-	rs.Lock()
-	defer rs.Unlock()
+	err = HandlerUpdatesMetricJSON(header, respByte, rs)
+	rw.WriteHeader(errs.StatusHTTP(err))
 
-	for _, val := range storedData {
-		rs.SetValueInMapJSON(val)
-		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
-	}
-
-	for _, val := range rs.Config.StorageType {
-		val.WriteMetric(storedData)
-	}
+	//var storedData encoding.ArrMetrics
+	//if err := json.Unmarshal(respByte, &storedData); err != nil {
+	//	constants.Logger.ErrorLog(err)
+	//	http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
+	//}
+	//
+	//rs.Lock()
+	//defer rs.Unlock()
+	//
+	//for _, val := range storedData {
+	//	rs.SetValueInMapJSON(val)
+	//	rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
+	//}
+	//
+	//for _, val := range rs.Config.StorageType {
+	//	val.WriteMetric(storedData)
+	//}
 }
 
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {

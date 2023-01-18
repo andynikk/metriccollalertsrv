@@ -1,29 +1,13 @@
 package main
 
 import (
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
-
-//type server struct {
-//	storege handlers.RepStore
-//}
-//
-//func Shutdown(rs *handlers.RepStore) {
-//	rs.Lock()
-//	defer rs.Unlock()
-//
-//	for _, val := range rs.Config.StorageType {
-//		val.WriteMetric(rs.PrepareDataBuckUp())
-//	}
-//	constants.Logger.InfoLog("server stopped")
-//}
 
 func main() {
 
@@ -33,15 +17,7 @@ func main() {
 	go srv.BackupData()
 
 	go func() {
-		HTTPServer := &http.Server{
-			Addr:    config.Address,
-			Handler: srv.GetRouter(),
-		}
-
-		if err := HTTPServer.ListenAndServe(); err != nil {
-			constants.Logger.ErrorLog(err)
-			return
-		}
+		srv.Start()
 	}()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
