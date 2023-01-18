@@ -289,7 +289,6 @@ func (sc *ServerConfig) InitConfigServerFile() {
 				MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
 			}
 		}
-
 		sc.StorageType = MapTypeStore
 	}
 	if sc.TrustedSubnet == nil {

@@ -74,7 +74,7 @@ const (
 					)
 					
 					TABLESPACE pg_default;
-					
+
 					ALTER TABLE IF EXISTS metrics.store
 						OWNER to postgres;`
 
