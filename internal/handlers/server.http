@@ -16,9 +16,9 @@ POST http://localhost:8080/update
 Content-Type: application/json
 
 {
-  "id": "GetSet581",
-  "type": "gauge",
-  "value": 142156.9095382984,
+  "id": "GetSet58",
+  "type": "counter",
+  "delta": 1699171834,
   "hash": ""
 }
 

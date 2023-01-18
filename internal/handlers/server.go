@@ -394,7 +394,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Request) {
 
 	header := Header{}
-	for key, val := range rw.Header() {
+	for key, val := range rq.Header {
 		valHeader := ""
 		for _, valH := range val {
 			valHeader = valHeader + valH

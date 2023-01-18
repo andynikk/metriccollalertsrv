@@ -97,7 +97,9 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	bodyJSON = bytes.NewReader(body)
 
 	acceptEncoding := header[strings.ToLower("Accept-Encoding")]
+	fmt.Println("+++++++++++1", acceptEncoding, len(header))
 	contentEncoding := header[strings.ToLower("Content-Encoding")]
+	fmt.Println("+++++++++++2", contentEncoding, len(header))
 
 	if strings.Contains(contentEncoding, "gzip") {
 		constants.Logger.InfoLog("-- метрика с агента gzip (value)")
