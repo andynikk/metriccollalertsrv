@@ -101,16 +101,22 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	contentEncoding := header[strings.ToLower("Content-Encoding")]
 	fmt.Println("+++++++++++2", contentEncoding, len(header))
 
+	for k, v := range header {
+		fmt.Println("+++++++++++3", k, v)
+	}
+
 	if strings.Contains(contentEncoding, "gzip") {
 		constants.Logger.InfoLog("-- метрика с агента gzip (value)")
 		bytBody, err := io.ReadAll(bodyJSON)
 		if err != nil {
+			fmt.Println("+++++++++++4", err)
 			constants.Logger.ErrorLog(err)
 			return nil, nil, errs.ErrStatusInternalServer
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
+			fmt.Println("+++++++++++5", err)
 			constants.Logger.ErrorLog(err)
 			return nil, nil, errs.ErrStatusInternalServer
 		}
@@ -121,6 +127,7 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
+		fmt.Println("+++++++++++6", err)
 		constants.Logger.ErrorLog(err)
 		return nil, nil, errs.ErrStatusInternalServer
 	}
@@ -131,7 +138,7 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	defer rs.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-
+		fmt.Println("+++++++++++7", "ERROR")
 		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
 		return nil, nil, errs.ErrNotFound
 	}
@@ -139,6 +146,7 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
+		fmt.Println("+++++++++++8", err)
 		constants.Logger.ErrorLog(err)
 		return nil, nil, err
 	}
@@ -148,6 +156,7 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	byteMeterics = append(byteMeterics, bt...)
 	compData, err := compression.Compress(byteMeterics)
 	if err != nil {
+		fmt.Println("+++++++++++9", err)
 		constants.Logger.ErrorLog(err)
 	}
 
@@ -156,9 +165,11 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	headerOut := Header{}
 	headerOut["Content-Type"] = "application/json"
 	if strings.Contains(acceptEncoding, "gzip") {
+		fmt.Println("+++++++++++10", "gzip")
 		headerOut["Content-Encoding"] = "gzip"
 		bodyBate = compData
 	} else {
+		fmt.Println("+++++++++++11", "no gzip")
 		bodyBate = metricsJSON
 	}
 
