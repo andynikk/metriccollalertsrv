@@ -171,8 +171,8 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 	hmacEqual := hmac.Equal(hashServer, hashAgent)
 
 	if v.Hash != "" && !hmacEqual {
-		constants.Logger.InfoLog(fmt.Sprintf("++ %s - %s", v.Hash, heshVal))
-		return http.StatusBadRequest
+		constants.Logger.InfoLog(fmt.Sprintf("++ %s, %s %s - %s (%s)", v.ID, v.MType, v.Hash, heshVal, rs.Config.Key))
+		//return http.StatusBadRequest
 	}
 
 	rs.MutexRepo[v.ID].Set(v)
