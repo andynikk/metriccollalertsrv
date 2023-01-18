@@ -15,8 +15,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
+	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
@@ -45,8 +49,9 @@ type ServerType interface {
 }
 
 type agent struct {
-	config        *environment.AgentConfig
-	KeyEncryption *encryption.KeyEncryption
+	config         *environment.AgentConfig
+	KeyEncryption  *encryption.KeyEncryption
+	GRPCClientConn *grpc.ClientConn
 	data
 }
 
@@ -258,8 +263,7 @@ func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
 	if err != nil {
 
 		constants.Logger.ErrorLog(err)
-
-		return errors.New("-- ошибка отправки данных на сервер (1)")
+		return errs.ErrStatusInternalServer
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
@@ -274,9 +278,36 @@ func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
 	resp, err := client.Do(req)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
-		return errors.New("-- ошибка отправки данных на сервер (2)")
+		return errs.ErrStatusInternalServer
 	}
 	defer resp.Body.Close()
+
+	return nil
+}
+
+func (s *ServerGRPC) Post2Server(agent *agent, allMetrics []byte) error {
+
+	c := handlers.NewMetricCollectorClient(agent.GRPCClientConn)
+	mHeader := map[string]string{"Content-Type": "application/json",
+		"Content-Encoding": "gzip",
+		"X-Real-IP":        agent.config.IPAddress}
+	if agent.KeyEncryption != nil && agent.KeyEncryption.PublicKey != nil {
+		mHeader["Content-Encryption"] = agent.KeyEncryption.TypeEncryption
+	}
+
+	md := metadata.New(mHeader)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	res, err := c.UpdatesAllMetricsJSON(ctx, &handlers.UpdatesRequest{Body: allMetrics})
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return err
+	}
+
+	textErr := string(res.GetResult())
+	if textErr != "" {
+		constants.Logger.ErrorLog(errors.New(textErr))
+		return errs.ErrSendMsgGPRC
+	}
 
 	return nil
 }
