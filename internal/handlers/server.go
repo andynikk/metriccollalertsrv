@@ -234,6 +234,7 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 }
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
+	fmt.Println("+++++++++++++++001")
 	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
@@ -241,6 +242,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 	bytBody, err := io.ReadAll(rq.Body)
 	if err != nil {
+		fmt.Println("+++++++++++++++002")
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
 		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 		return
@@ -250,6 +252,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	if strings.Contains(contentEncoding, "gzip") {
 		bytBody, err = compression.Decompress(bytBody)
 		if err != nil {
+			fmt.Println("+++++++++++++++003")
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
@@ -257,6 +260,7 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 	header, body, err := HandlerUpdateMetricJSON(bytBody, rs)
 	if err != nil {
+		fmt.Println("+++++++++++++++004")
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
 		http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
 		return
@@ -266,10 +270,12 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		rw.Header().Add(key, val)
 	}
 	if _, err = rw.Write(body); err != nil {
+		fmt.Println("+++++++++++++++005")
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
 		rw.WriteHeader(errs.StatusHTTP(errs.ErrStatusInternalServer))
 		return
 	}
+	fmt.Println("+++++++++++++++005", err)
 	rw.WriteHeader(errs.StatusHTTP(err))
 }
 
