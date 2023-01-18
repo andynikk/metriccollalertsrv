@@ -70,12 +70,10 @@ func (g *Gauge) SetFromText(metValue string) bool {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (c *Counter) Set(v encoding.Metrics) {
-	fmt.Println("++++++006", c)
 	*c = *c + Counter(*v.Delta)
 }
 
 func (c *Counter) SetFromText(metValue string) bool {
-	fmt.Println("++++++006", c)
 	predVal, err := strconv.ParseInt(metValue, 10, 64)
 	if err != nil {
 		constants.Logger.ErrorLog(errors.New("error convert type"))
@@ -95,12 +93,8 @@ func (c *Counter) String() string {
 
 func (c *Counter) GetMetrics(mType string, id string, hashKey string) encoding.Metrics {
 
-	fmt.Println("++++++001", c)
-	fmt.Println("++++++002", *c)
 	delta := int64(*c)
-	fmt.Println("++++++003", delta)
 	msg := fmt.Sprintf("%s:%s:%d", id, mType, delta)
-	fmt.Println("++++++004", *c)
 
 	heshVal := cryptohash.HashSHA256(msg, hashKey)
 
