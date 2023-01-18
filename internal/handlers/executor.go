@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"strings"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
@@ -26,7 +25,10 @@ func HandlerUpdatesMetricJSON(body []byte, rs *RepStore) error {
 	defer rs.Unlock()
 
 	for _, val := range storedData {
-		rs.SetValueInMapJSON(val)
+		err := rs.SetValueInMapJSON(val)
+		if err != nil {
+			return err
+		}
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
 	}
 
@@ -53,7 +55,10 @@ func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (Header, []byte, error) 
 
 	headerRequest := Header{}
 	headerRequest["Content-Type"] = "application/json"
-	res := rs.SetValueInMapJSON(v)
+	err = rs.SetValueInMapJSON(v)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
@@ -62,13 +67,11 @@ func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (Header, []byte, error) 
 		return nil, nil, errs.ErrStatusInternalServer
 	}
 
-	if res == http.StatusOK {
-		var arrMetrics encoding.ArrMetrics
-		arrMetrics = append(arrMetrics, mt)
+	var arrMetrics encoding.ArrMetrics
+	arrMetrics = append(arrMetrics, mt)
 
-		for _, val := range rs.Config.StorageType {
-			val.WriteMetric(arrMetrics)
-		}
+	for _, val := range rs.Config.StorageType {
+		val.WriteMetric(arrMetrics)
 	}
 
 	return headerRequest, metricsJSON, nil
@@ -97,26 +100,18 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	bodyJSON = bytes.NewReader(body)
 
 	acceptEncoding := header[strings.ToLower("Accept-Encoding")]
-	fmt.Println("+++++++++++1", acceptEncoding, len(header))
 	contentEncoding := header[strings.ToLower("Content-Encoding")]
-	fmt.Println("+++++++++++2", contentEncoding, len(header))
-
-	for k, v := range header {
-		fmt.Println("+++++++++++3", k, v)
-	}
 
 	if strings.Contains(contentEncoding, "gzip") {
 		constants.Logger.InfoLog("-- метрика с агента gzip (value)")
 		bytBody, err := io.ReadAll(bodyJSON)
 		if err != nil {
-			fmt.Println("+++++++++++4", err)
 			constants.Logger.ErrorLog(err)
 			return nil, nil, errs.ErrStatusInternalServer
 		}
 
 		arrBody, err := compression.Decompress(bytBody)
 		if err != nil {
-			fmt.Println("+++++++++++5", err)
 			constants.Logger.ErrorLog(err)
 			return nil, nil, errs.ErrStatusInternalServer
 		}
@@ -127,7 +122,6 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	v := encoding.Metrics{}
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
-		fmt.Println("+++++++++++6", err)
 		constants.Logger.ErrorLog(err)
 		return nil, nil, errs.ErrStatusInternalServer
 	}
@@ -138,7 +132,6 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	defer rs.Unlock()
 
 	if _, findKey := rs.MutexRepo[metName]; !findKey {
-		fmt.Println("+++++++++++7", "ERROR")
 		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(rs.MutexRepo), rs.Config.DatabaseDsn))
 		return nil, nil, errs.ErrNotFound
 	}
@@ -146,17 +139,15 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	mt := rs.MutexRepo[metName].GetMetrics(metType, metName, rs.Config.Key)
 	metricsJSON, err := mt.MarshalMetrica()
 	if err != nil {
-		fmt.Println("+++++++++++8", err)
 		constants.Logger.ErrorLog(err)
 		return nil, nil, err
 	}
 
-	var byteMeterics []byte
+	var byteMetrics []byte
 	bt := bytes.NewBuffer(metricsJSON).Bytes()
-	byteMeterics = append(byteMeterics, bt...)
-	compData, err := compression.Compress(byteMeterics)
+	byteMetrics = append(byteMetrics, bt...)
+	compData, err := compression.Compress(byteMetrics)
 	if err != nil {
-		fmt.Println("+++++++++++9", err)
 		constants.Logger.ErrorLog(err)
 	}
 
@@ -165,11 +156,9 @@ func HandlerValueMetricaJSON(header Header, body []byte, rs *RepStore) (Header, 
 	headerOut := Header{}
 	headerOut["Content-Type"] = "application/json"
 	if strings.Contains(acceptEncoding, "gzip") {
-		fmt.Println("+++++++++++10", "gzip")
 		headerOut["Content-Encoding"] = "gzip"
 		bodyBate = compData
 	} else {
-		fmt.Println("+++++++++++11", "no gzip")
 		bodyBate = metricsJSON
 	}
 

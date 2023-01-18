@@ -28,30 +28,4 @@ func main() {
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
 	srv.Shutdown()
-
-	//server := new(server)
-	//handlers.NewRepStore(&server.storege)
-	//fmt.Println(server.storege.Config.Address)
-	//if server.storege.Config.Restore {
-	//	go server.storege.RestoreData()
-	//}
-	//
-	//go server.storege.BackupData()
-	//
-	//go func() {
-	//	s := &http.Server{
-	//		Addr:    server.storege.Config.Address,
-	//		Handler: server.storege.Router}
-	//
-	//	if err := s.ListenAndServe(); err != nil {
-	//		constants.Logger.ErrorLog(err)
-	//		return
-	//	}
-	//}()
-	//
-	//stop := make(chan os.Signal, 1)
-	//signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	//<-stop
-	//Shutdown(&server.storege)
-
 }
