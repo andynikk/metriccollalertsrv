@@ -169,6 +169,7 @@ func (DataBase *DBConnector) SetMetric2DB(storedData encoding.ArrMetrics) error 
 			txtQueryUpdata = txtQueryUpdata + fmt.Sprintf(
 				`UPDATE metrics.store SET "Value"=%s, "Delta"=%s, "Hash"='%s' WHERE	"ID" = '%s'	and "MType" = '%s';`,
 				sValue, sDelta, val.Hash, val.ID, val.MType)
+
 			continue
 		}
 
