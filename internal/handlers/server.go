@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
+	"github.com/andynikk/metriccollalertsrv/internal/middlware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -81,7 +82,7 @@ func NewRepStore(rs *RepStore) {
 	rs.Router.Use(middleware.Recoverer)
 	rs.Router.Use(middleware.StripSlashes)
 
-	//rs.Router.Use(middlware.ChiCheckIP)
+	rs.Router.Use(middlware.ChiCheckIP)
 
 	rs.Router.NotFound(rs.HandlerNotFound)
 	rs.Router.HandleFunc("/", rs.HandleFunc)
@@ -213,10 +214,10 @@ func (rs *RepStore) HandlerGetValue(rw http.ResponseWriter, rq *http.Request) {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	//IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
-	//if IPAddressAllowed == "false" {
-	//	return
-	//}
+	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
+	if IPAddressAllowed == "false" {
+		return
+	}
 
 	rs.Lock()
 	defer rs.Unlock()
@@ -230,10 +231,10 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	//IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
-	//if IPAddressAllowed == "false" {
-	//	return
-	//}
+	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
+	if IPAddressAllowed == "false" {
+		return
+	}
 
 	var bodyJSON io.Reader
 
@@ -295,10 +296,10 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	//IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
-	//if IPAddressAllowed == "false" {
-	//	return
-	//}
+	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
+	if IPAddressAllowed == "false" {
+		return
+	}
 
 	var bodyJSON io.Reader
 	var arrBody []byte
@@ -433,13 +434,18 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 	defer rq.Body.Close()
 	mapTypeStore := rs.Config.StorageType
+	fmt.Println("++++++++++++++01", len(mapTypeStore))
+
 	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
+		fmt.Println("++++++++++++++02", len(mapTypeStore))
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
+		fmt.Println("++++++++++++++03", len(mapTypeStore))
+
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 
@@ -127,11 +128,13 @@ func (sdb *TypeStoreDataDB) GetMetric() ([]encoding.Metrics, error) {
 
 // ConnDB Возвращает соединение с базой данных
 func (sdb *TypeStoreDataDB) ConnDB() *pgxpool.Pool {
+	fmt.Println("++++++++++++++07", sdb.DBC.Pool)
 	return sdb.DBC.Pool
 }
 
 // CreateTable Проверка и создание, если таковых нет, таблиц в базе данных
 func (sdb *TypeStoreDataDB) CreateTable() bool {
+	fmt.Println("++++++++++++++08", sdb.DBC.Pool)
 	ctx := context.Background()
 	conn, err := sdb.DBC.Pool.Acquire(ctx)
 	if err != nil {
@@ -186,12 +189,15 @@ func (f *TypeStoreDataFile) GetMetric() ([]encoding.Metrics, error) {
 
 // ConnDB Возвращает с файлом. Для файла не используется. Возвращает nil
 func (f *TypeStoreDataFile) ConnDB() *pgxpool.Pool {
+	fmt.Println("++++++++++++++04", "file")
 	return nil
 }
 
 // CreateTable Проверка и создание, если нет, файла для хранения метрик
 func (f *TypeStoreDataFile) CreateTable() bool {
+	fmt.Println("++++++++++++++05", f.StoreFile)
 	if _, err := os.Create(f.StoreFile); err != nil {
+		fmt.Println("++++++++++++++06", err)
 		constants.Logger.ErrorLog(err)
 		return false
 	}
