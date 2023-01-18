@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,7 +20,6 @@ import (
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
@@ -137,26 +135,30 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 
 func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 
-	fmt.Println("++++++007", v.ID, v.MType, v.Delta)
-	var heshVal string
+	//var heshVal string
 
 	switch v.MType {
 	case GaugeMetric.String():
-		var valValue float64
-		valValue = *v.Value
-
-		msg := fmt.Sprintf("%s:gauge:%f", v.ID, valValue)
-		heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
+		//var valValue float64
+		//valValue = *v.Value
+		//
+		//msg := fmt.Sprintf("%s:gauge:%f", v.ID, valValue)
+		//heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valG := repository.Gauge(0)
 			rs.MutexRepo[v.ID] = &valG
 		}
 	case CounterMetric.String():
+		fmt.Println("++++++007", v.ID, v.MType, v.Delta)
+		fmt.Println("++++++007-1", v.ID, v.MType, v.Delta)
+
 		var valDelta int64
 		valDelta = *v.Delta
 
-		msg := fmt.Sprintf("%s:counter:%d", v.ID, valDelta)
-		heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
+		fmt.Println("++++++007-2", v.ID, v.MType, valDelta)
+
+		//msg := fmt.Sprintf("%s:counter:%d", v.ID, valDelta)
+		//heshVal = cryptohash.HashSHA256(msg, rs.Config.Key)
 		if _, findKey := rs.MutexRepo[v.ID]; !findKey {
 			valC := repository.Counter(0)
 			rs.MutexRepo[v.ID] = &valC
@@ -168,21 +170,21 @@ func (rs *RepStore) SetValueInMapJSON(v encoding.Metrics) int {
 		return http.StatusNotImplemented
 	}
 
-	hashAgent := []byte(v.Hash)
-	hashServer := []byte(heshVal)
+	//hashAgent := []byte(v.Hash)
+	//hashServer := []byte(heshVal)
 
-	hmacEqual := hmac.Equal(hashServer, hashAgent)
+	//hmacEqual := hmac.Equal(hashServer, hashAgent)
 
 	if v.ID == "PollCount" {
 		fmt.Println("++++++011", v.ID, v.MType, v.Delta)
 		//constants.Logger.InfoLog(fmt.Sprintf("-- %s - %s", v.Hash, heshVal))
 	}
 
-	if v.Hash != "" && !hmacEqual {
-		fmt.Println("++++++012", v.ID, v.MType, v.Delta, "ERROR")
-		constants.Logger.InfoLog(fmt.Sprintf("++ %s - %s", v.Hash, heshVal))
-		return http.StatusBadRequest
-	}
+	//if v.Hash != "" && !hmacEqual {
+	//	fmt.Println("++++++012", v.ID, v.MType, v.Delta, "ERROR")
+	//	constants.Logger.InfoLog(fmt.Sprintf("++ %s - %s", v.Hash, heshVal))
+	//	return http.StatusBadRequest
+	//}
 	//constants.Logger.InfoLog(fmt.Sprintf("** %s %s %v %d", v.ID, v.MType, v.Value, v.Delta))
 
 	rs.MutexRepo[v.ID].Set(v)
