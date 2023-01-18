@@ -270,7 +270,6 @@ func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
 	if agent.KeyEncryption != nil && agent.KeyEncryption.PublicKey != nil {
 		req.Header.Set("Content-Encryption", agent.KeyEncryption.TypeEncryption)
 	}
-
 	defer req.Body.Close()
 
 	client := &http.Client{}
