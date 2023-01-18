@@ -64,12 +64,19 @@ const (
 
 	QuerySchema = `CREATE SCHEMA IF NOT EXISTS metrics`
 
-	QueryTable = `CREATE TABLE IF NOT EXISTS metrics (
-						id text PRIMARY KEY,
-						mtype text NOT NULL,
-						delta bigint,
-						value double precision
-					);`
+	QueryTable = `CREATE TABLE IF NOT EXISTS metrics.store
+					(
+						"ID" character varying COLLATE pg_catalog."default",
+						"MType" character varying COLLATE pg_catalog."default",
+						"Value" double precision NOT NULL DEFAULT 0,
+						"Delta" numeric NOT NULL DEFAULT 0,
+						"Hash" character varying COLLATE pg_catalog."default"
+					)
+					
+					TABLESPACE pg_default;
+					
+					ALTER TABLE IF EXISTS metrics.store
+						OWNER to postgres;`
 
 	SepIPAddress = ";"
 )
