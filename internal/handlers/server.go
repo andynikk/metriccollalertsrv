@@ -135,7 +135,7 @@ func (rs *RepStore) setValueInMap(metType string, metName string, metValue strin
 			rs.MutexRepo[metName] = &valC
 		}
 	default:
-		return errs.ErrStatusInternalServer
+		return errs.ErrNotImplemented
 	}
 
 	return nil
