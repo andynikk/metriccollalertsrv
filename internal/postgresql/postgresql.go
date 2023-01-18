@@ -69,8 +69,12 @@ func PoolDB(dsn string) (*DBConnector, error) {
 		}
 	}
 
+	fmt.Println("++++++++++++++017-1", dsn)
 	dsn = strings.Replace(dsn, "/"+constants.NameDB, "", -1)
-	pool, err = pgxpool.Connect(ctx, dsn+"/"+constants.NameDB)
+	fmt.Println("++++++++++++++017-2", dsn)
+	fmt.Println("++++++++++++++017-3", dsn+"/"+constants.NameDB)
+	//pool, err = pgxpool.Connect(ctx, dsn+"/"+constants.NameDB)
+	pool, err = pgxpool.Connect(ctx, dsn)
 	if err != nil {
 		fmt.Println("++++++++++++++017", err)
 		return nil, err
