@@ -63,20 +63,20 @@ func TestFuncServer(t *testing.T) {
 	t.Run("Checking handlers Update", func(t *testing.T) {
 		tests := []struct {
 			name           string
-			request        UpdateRequest
+			request        *UpdateRequest
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения counter", request: UpdateRequest{MetType: []byte("counter"),
+			{name: "Проверка на установку значения counter", request: &UpdateRequest{MetType: []byte("counter"),
 				MetName: []byte("testSetGet332"), MetValue: []byte("6")}, wantStatusCode: codes.OK},
-			{name: "Проверка на не правильный тип метрики", request: UpdateRequest{MetType: []byte("notcounter"),
+			{name: "Проверка на не правильный тип метрики", request: &UpdateRequest{MetType: []byte("notcounter"),
 				MetName: []byte("testSetGet332"), MetValue: []byte("6")}, wantStatusCode: codes.Unimplemented},
-			{name: "Проверка на не правильное значение метрики", request: UpdateRequest{MetType: []byte("counter"),
+			{name: "Проверка на не правильное значение метрики", request: &UpdateRequest{MetType: []byte("counter"),
 				MetName: []byte("testSetGet332"), MetValue: []byte("non")}, wantStatusCode: codes.PermissionDenied},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				textErr, err := server.UpdateOneMetrics(ctx, &tt.request)
+				textErr, err := server.UpdateOneMetrics(ctx, tt.request)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
 					t.Errorf("Error checking handlers Update (%s). %s", textErr, tt.name)
 				}
@@ -120,7 +120,8 @@ func TestFuncServer(t *testing.T) {
 				})
 
 				req := UpdateStrRequest{Body: gziparrMetrics}
-				ctxValue := context.WithValue(ctx, "content-encoding", "gzip")
+				key := KeyContext("content-encoding")
+				ctxValue := context.WithValue(ctx, key, "gzip")
 				textErr, err := server.UpdateOneMetricsJSON(ctxValue, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
 					t.Errorf("Error checking handlers Update JSON (%s). %s", textErr, tt.name)
@@ -144,7 +145,8 @@ func TestFuncServer(t *testing.T) {
 		}
 
 		req := UpdatesRequest{Body: gziparrMetrics}
-		ctxValue := context.WithValue(ctx, "content-encoding", "gzip")
+		key := KeyContext("content-encoding")
+		ctxValue := context.WithValue(ctx, key, "gzip")
 		_, err = server.UpdatesAllMetricsJSON(ctxValue, &req)
 		if errs.CodeGRPC(err) != codes.OK {
 			t.Errorf("Error checking handlers Update JSON.")
@@ -182,7 +184,8 @@ func TestFuncServer(t *testing.T) {
 				}
 
 				req := UpdatesRequest{Body: gziparrMetrics}
-				ctxValue := context.WithValue(ctx, "content-encoding", "gzip")
+				key := KeyContext("content-encoding")
+				ctxValue := context.WithValue(ctx, key, "gzip")
 				textErr, err := server.GetValueJSON(ctxValue, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
 					t.Errorf("Error checking handlers Value JSON (%s). %s", textErr, tt.name)

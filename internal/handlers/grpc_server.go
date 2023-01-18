@@ -65,6 +65,7 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 
 func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrRequest) (*TextErrResponse, error) {
 	header := FillHeader(ctx)
+
 	contentEncoding := header["content-encoding"]
 	bytBody := req.Body
 	if strings.Contains(contentEncoding, "gzip") {

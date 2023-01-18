@@ -13,6 +13,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+type KeyContext string
+
 type serverHTTP struct {
 	RepStore
 	chi.Router
