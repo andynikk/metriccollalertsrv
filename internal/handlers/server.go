@@ -82,10 +82,6 @@ func NewRepStore(s *ServerHTTP) {
 
 	s.Router.Get("/", rs.HandlerGetAllMetrics)
 
-	//s.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
-	//s.Router.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
-	//s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
-
 	s.Router.Get("/ping", rs.HandlerPingDB)                        //+
 	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue) //+
 	s.Router.Post("/value", rs.HandlerValueMetricaJSON)            //+
@@ -222,11 +218,6 @@ func (rs *RepStore) Shutdown() {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	IPAddressAllowed := rq.Context().Value(KeyContext("IP-Address-Allowed"))
-	if IPAddressAllowed == "false" {
-		return
-	}
-
 	rs.Lock()
 	defer rs.Unlock()
 
@@ -239,10 +230,6 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 }
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
-	IPAddressAllowed := rq.Context().Value(KeyContext("IP-Address-Allowed"))
-	if IPAddressAllowed == "false" {
-		return
-	}
 
 	bytBody, err := io.ReadAll(rq.Body)
 	if err != nil {
@@ -280,18 +267,9 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	IPAddressAllowed := rq.Context().Value(KeyContext("IP-Address-Allowed"))
-	if IPAddressAllowed == "false" {
-		return
-	}
-
-	//var bodyJSON io.Reader
-	//var arrBody []byte
-
 	contentEncoding := rq.Header.Get("Content-Encoding")
 	contentEncryption := rq.Header.Get("Content-Encryption")
 
-	//bodyJSON = rq.Body
 	bodyJSON, err := io.ReadAll(rq.Body)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
@@ -318,7 +296,6 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		bodyJSON = decompressBody
 	}
 
-	//respByte, err := io.ReadAll(bodyJSON)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
