@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net"
 	"net/http"
 	"strings"
@@ -138,13 +137,9 @@ func NewServer(configServer *environment.ServerConfig) Server {
 func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		key := KeyContext("IP-Address-Allowed")
-
 		xRealIP := r.Header.Get("X-Real-IP")
-		ctx := context.WithValue(r.Context(), key, "false")
 		if xRealIP == "" {
-			ctx = context.WithValue(r.Context(), key, "true")
-			next.ServeHTTP(w, r.WithContext(ctx))
+			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -154,7 +149,6 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx = context.WithValue(r.Context(), key, "true")
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }
