@@ -14,12 +14,16 @@ func main() {
 
 	config := environment.InitConfigServer()
 	srv := handlers.NewServer(config)
-	err := srv.Run()
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-		return
-	}
+	go srv.RestoreData()
+	go srv.BackupData()
 
+	go func() {
+		err := srv.Start()
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return
+		}
+	}()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop

@@ -28,7 +28,7 @@ type HServer interface {
 }
 
 type Server interface {
-	Run() error
+	Start() error
 	RestoreData()
 	BackupData()
 	Shutdown()
@@ -52,29 +52,20 @@ func (s *serverHTTP) GetRouter() chi.Router {
 	return s.Router
 }
 
-func (s *serverHTTP) Run() error {
-	go s.RestoreData()
-	go s.BackupData()
+func (s *serverHTTP) Start() error {
+	HTTPServer := &http.Server{
+		Addr:    s.Config.Address,
+		Handler: s.GetRouter(),
+	}
 
-	go func() {
-		_ = func() error {
-			HTTPServer := &http.Server{
-				Addr:    s.Config.Address,
-				Handler: s.GetRouter(),
-			}
-
-			if err := HTTPServer.ListenAndServe(); err != nil {
-				constants.Logger.ErrorLog(err)
-				return err
-			}
-			return nil
-		}()
-	}()
-
+	if err := HTTPServer.ListenAndServe(); err != nil {
+		constants.Logger.ErrorLog(err)
+		return err
+	}
 	return nil
 }
 
-func (s *serverGRPS) Run() error {
+func (s *serverGRPS) Start() error {
 
 	server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
 	srv := &serverGRPS{
