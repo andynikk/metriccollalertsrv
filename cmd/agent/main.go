@@ -249,7 +249,7 @@ func (a *agent) goMakeRequest(ctx context.Context, cancelFunc context.CancelFunc
 func (a *agent) Post2Server(allMetrics []byte) error {
 
 	if a.config.StringTypeServer == constants.TypeSrvGRPC.String() {
-		err := a.Post2ServerHTTP(allMetrics)
+		err := a.Post2ServerGRPC(allMetrics)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 			return err
@@ -257,7 +257,7 @@ func (a *agent) Post2Server(allMetrics []byte) error {
 		return nil
 	}
 
-	err := a.Post2ServerGRPC(allMetrics)
+	err := a.Post2ServerHTTP(allMetrics)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return err
