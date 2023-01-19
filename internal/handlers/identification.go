@@ -28,7 +28,7 @@ type HServer interface {
 }
 
 type Server interface {
-	Start() error
+	Run()
 	RestoreData()
 	BackupData()
 	Shutdown()
@@ -52,37 +52,46 @@ func (s *serverHTTP) GetRouter() chi.Router {
 	return s.Router
 }
 
-func (s *serverHTTP) Start() error {
-	HTTPServer := &http.Server{
-		Addr:    s.Config.Address,
-		Handler: s.GetRouter(),
-	}
+func (s *serverHTTP) Run() {
 
-	if err := HTTPServer.ListenAndServe(); err != nil {
-		constants.Logger.ErrorLog(err)
-		return err
-	}
-	return nil
+	go s.RestoreData()
+	go s.BackupData()
+
+	go func() {
+		HTTPServer := &http.Server{
+			Addr:    s.Config.Address,
+			Handler: s.GetRouter(),
+		}
+
+		if err := HTTPServer.ListenAndServe(); err != nil {
+			constants.Logger.ErrorLog(err)
+			return
+		}
+	}()
 }
 
-func (s *serverGRPS) Start() error {
+func (s *serverGRPS) Run() {
 
-	server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
-	srv := &serverGRPS{
-		RepStore: s.RepStore,
-	}
+	go s.RestoreData()
+	go s.BackupData()
 
-	RegisterMetricCollectorServer(server, srv)
-	l, err := net.Listen("tcp", constants.AddressServer)
-	if err != nil {
-		return err
-	}
+	go func() {
+		server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
+		srv := &serverGRPS{
+			RepStore: s.RepStore,
+		}
 
-	if err = server.Serve(l); err != nil {
-		return err
-	}
+		RegisterMetricCollectorServer(server, srv)
+		l, err := net.Listen("tcp", constants.AddressServer)
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return
+		}
 
-	return nil
+		if err = server.Serve(l); err != nil {
+			return
+		}
+	}()
 }
 
 func (s *serverGRPS) RestoreData() {
