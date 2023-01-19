@@ -10,7 +10,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/middlware"
 	"github.com/andynikk/metriccollalertsrv/internal/networks"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/go-chi/chi/v5"
@@ -68,7 +67,7 @@ func (s *serverGRPS) Run() {
 	go s.BackupData()
 
 	go func() {
-		server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
+		server := grpc.NewServer(s.WithServerUnaryInterceptor())
 		srv := &serverGRPS{
 			RepStore: s.RepStore,
 		}
@@ -150,12 +149,12 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 		}
 
 		ok := networks.AddressAllowed(strings.Split(xRealIP, constants.SepIPAddress), s.Config.TrustedSubnet)
-		if ok {
-			ctx = context.WithValue(r.Context(), key, "true")
-			next.ServeHTTP(w, r.WithContext(ctx))
+		if !ok {
+			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
 			return
 		}
 
-		w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
+		ctx = context.WithValue(r.Context(), key, "true")
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

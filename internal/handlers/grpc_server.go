@@ -10,7 +10,11 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
+	"github.com/andynikk/metriccollalertsrv/internal/networks"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type Header map[string]string
@@ -200,4 +204,29 @@ func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*St
 	HeaderResponse["metrics-val"] = strMetrics
 
 	return &StatusResponse{Result: bodyBate}, nil
+}
+
+func (s *serverGRPS) WithServerUnaryInterceptor() grpc.ServerOption {
+	return grpc.UnaryInterceptor(s.ServerInterceptor)
+}
+
+func (s *serverGRPS) ServerInterceptor(ctx context.Context,
+	req interface{},
+	info *grpc.UnaryServerInfo,
+	handler grpc.UnaryHandler) (interface{}, error) {
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, nil
+	}
+	xRealIP := md[strings.ToLower("X-Real-IP")]
+	for _, val := range xRealIP {
+		ok = networks.AddressAllowed(strings.Split(val, constants.SepIPAddress), s.Config.TrustedSubnet)
+		if !ok {
+			return nil, status.Error(codes.NotFound, fmt.Sprintf("X-Real-Ip is not found: %s", val))
+		}
+	}
+
+	h, _ := handler(ctx, req)
+	return h, nil
 }

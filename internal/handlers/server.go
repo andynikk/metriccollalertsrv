@@ -285,37 +285,46 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		return
 	}
 
-	var bodyJSON io.Reader
-	var arrBody []byte
+	//var bodyJSON io.Reader
+	//var arrBody []byte
 
 	contentEncoding := rq.Header.Get("Content-Encoding")
+	contentEncryption := rq.Header.Get("Content-Encryption")
 
-	bodyJSON = rq.Body
-	if strings.Contains(contentEncoding, "gzip") {
-		bytBody, err := io.ReadAll(rq.Body)
+	//bodyJSON = rq.Body
+	bodyJSON, err := io.ReadAll(rq.Body)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		http.Error(rw, "ошибка на сервере", http.StatusInternalServerError)
+
+	}
+
+	if contentEncryption != "" {
+		bytBodyRsaDecrypt, err := rs.PK.RsaDecrypt(bodyJSON)
 		if err != nil {
-			constants.Logger.ErrorLog(err)
+			constants.Logger.InfoLog(fmt.Sprintf("$$ 2.1 %s", err.Error()))
 			http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
-			return
 		}
+		bodyJSON = bytBodyRsaDecrypt
+	}
 
-		arrBody, err = compression.Decompress(bytBody)
+	if strings.Contains(contentEncoding, "gzip") {
+		decompressBody, err := compression.Decompress(bodyJSON)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
 		}
-
-		bodyJSON = bytes.NewReader(arrBody)
+		bodyJSON = decompressBody
 	}
 
-	respByte, err := io.ReadAll(bodyJSON)
+	//respByte, err := io.ReadAll(bodyJSON)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 	}
 
-	err = HandlerUpdatesMetricJSON(respByte, rs)
+	err = HandlerUpdatesMetricJSON(bodyJSON, rs)
 	rw.WriteHeader(errs.StatusHTTP(err))
 }
 
