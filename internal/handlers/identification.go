@@ -150,5 +150,6 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
+
 	})
 }
