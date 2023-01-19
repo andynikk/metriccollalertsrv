@@ -15,7 +15,7 @@ import (
 
 type KeyContext string
 
-type serverHTTP struct {
+type ServerHTTP struct {
 	*RepStore
 	chi.Router
 }
@@ -32,7 +32,6 @@ type Server interface {
 	RestoreData()
 	BackupData()
 	Shutdown()
-	GetRouter() chi.Router
 	GetRepStore() *RepStore
 }
 
@@ -40,19 +39,11 @@ func (s *serverGRPS) GetRepStore() *RepStore {
 	return s.RepStore
 }
 
-func (s *serverHTTP) GetRepStore() *RepStore {
+func (s *ServerHTTP) GetRepStore() *RepStore {
 	return s.RepStore
 }
 
-func (s *serverGRPS) GetRouter() chi.Router {
-	return nil
-}
-
-func (s *serverHTTP) GetRouter() chi.Router {
-	return s.Router
-}
-
-func (s *serverHTTP) Run() {
+func (s *ServerHTTP) Run() {
 
 	go s.RestoreData()
 	go s.BackupData()
@@ -60,7 +51,7 @@ func (s *serverHTTP) Run() {
 	go func() {
 		HTTPServer := &http.Server{
 			Addr:    s.Config.Address,
-			Handler: s.GetRouter(),
+			Handler: s.Router,
 		}
 
 		if err := HTTPServer.ListenAndServe(); err != nil {
@@ -104,7 +95,7 @@ func (s *serverGRPS) BackupData() {
 	s.RepStore.BackupData()
 }
 
-func (s *serverHTTP) Shutdown() {
+func (s *ServerHTTP) Shutdown() {
 	s.RepStore.Shutdown()
 }
 
@@ -112,9 +103,9 @@ func (s *serverGRPS) Shutdown() {
 	s.RepStore.Shutdown()
 }
 
-func newHTTPServer(configServer *environment.ServerConfig) *serverHTTP {
+func newHTTPServer(configServer *environment.ServerConfig) *ServerHTTP {
 
-	server := new(serverHTTP)
+	server := new(ServerHTTP)
 	server.RepStore = &RepStore{}
 	server.Config = *configServer
 	server.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)

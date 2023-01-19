@@ -28,7 +28,7 @@ func TestFuncServerHTTP(t *testing.T) {
 	config := environment.InitConfigServer()
 	server := handlers.NewServer(config)
 	repStore := server.GetRepStore()
-	router := server.GetRouter()
+	router := server.(*handlers.ServerHTTP).Router
 
 	t.Run("Checking init server", func(t *testing.T) {
 		//rp.Config = environment.InitConfigServer()

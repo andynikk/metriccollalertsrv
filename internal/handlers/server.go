@@ -59,7 +59,7 @@ func (et MetricError) String() string {
 	return [...]string{"Not error", "Error convert", "Error get type"}[et]
 }
 
-func NewRepStore(s *serverHTTP) {
+func NewRepStore(s *ServerHTTP) {
 
 	s.Router = chi.NewRouter()
 	rs := s.RepStore

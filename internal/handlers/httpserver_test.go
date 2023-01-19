@@ -13,7 +13,7 @@ import (
 var srv Server
 
 func ExampleRepStore_HandlerGetAllMetrics() {
-	r := srv.GetRouter()
+	r := srv.(*ServerHTTP).Router
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
@@ -39,7 +39,7 @@ func ExampleRepStore_HandlerGetAllMetrics() {
 
 func ExampleRepStore_HandlerSetMetricaPOST() {
 
-	ts := httptest.NewServer(srv.GetRouter())
+	ts := httptest.NewServer(srv.(*ServerHTTP).Router)
 	defer ts.Close()
 
 	req, err := http.NewRequest("POST", ts.URL+"/update/gauge/TestGauge/0.01", strings.NewReader(""))
@@ -62,7 +62,7 @@ func ExampleRepStore_HandlerSetMetricaPOST() {
 
 func ExampleRepStore_HandlerGetValue() {
 
-	ts := httptest.NewServer(srv.GetRouter())
+	ts := httptest.NewServer(srv.(*ServerHTTP).Router)
 	defer ts.Close()
 
 	req, err := http.NewRequest("GET", ts.URL+"/value/gauge/TestGauge", strings.NewReader(""))
