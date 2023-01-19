@@ -9,7 +9,7 @@ service MetricCollector {
   rpc UpdateOneMetricsJSON(UpdateStrRequest) returns (TextErrResponse) {}
   rpc UpdateOneMetrics(UpdateRequest) returns (TextErrResponse) {}
 
-  rpc PingDataBases(EmptyRequest) returns (TextErrResponse) {}
+  rpc PingDataBase(EmptyRequest) returns (TextErrResponse) {}
 
   rpc GetValueJSON(UpdatesRequest) returns (FullResponse) {}
   rpc GetValue(UpdatesRequest) returns (StatusResponse) {}

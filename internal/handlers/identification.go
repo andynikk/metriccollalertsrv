@@ -28,7 +28,7 @@ type HServer interface {
 }
 
 type Server interface {
-	Start() error
+	Run() error
 	RestoreData()
 	BackupData()
 	Shutdown()
@@ -52,20 +52,29 @@ func (s *serverHTTP) GetRouter() chi.Router {
 	return s.Router
 }
 
-func (s *serverHTTP) Start() error {
-	HTTPServer := &http.Server{
-		Addr:    s.Config.Address,
-		Handler: s.GetRouter(),
-	}
+func (s *serverHTTP) Run() error {
+	go s.RestoreData()
+	go s.BackupData()
 
-	if err := HTTPServer.ListenAndServe(); err != nil {
-		constants.Logger.ErrorLog(err)
-		return err
-	}
+	go func() {
+		_ = func() error {
+			HTTPServer := &http.Server{
+				Addr:    s.Config.Address,
+				Handler: s.GetRouter(),
+			}
+
+			if err := HTTPServer.ListenAndServe(); err != nil {
+				constants.Logger.ErrorLog(err)
+				return err
+			}
+			return nil
+		}()
+	}()
+
 	return nil
 }
 
-func (s *serverGRPS) Start() error {
+func (s *serverGRPS) Run() error {
 
 	server := grpc.NewServer(middlware.WithServerUnaryInterceptor())
 	srv := &serverGRPS{
@@ -116,11 +125,13 @@ func newHTTPServer(configServer *environment.ServerConfig) *serverHTTP {
 }
 
 func newGRPCServer(configServer *environment.ServerConfig) *serverGRPS {
+
 	server := new(serverGRPS)
 	server.RepStore = &RepStore{}
-	server.RepStore.Config = *configServer
-	server.RepStore.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
-	server.RepStore.MutexRepo = make(repository.MutexRepo)
+	server.Config = *configServer
+	server.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
+	server.MutexRepo = make(repository.MutexRepo)
+
 	return server
 }
 

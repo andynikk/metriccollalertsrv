@@ -15,21 +15,20 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/andynikk/metriccollalertsrv/internal/compression"
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
+	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
+	"github.com/andynikk/metriccollalertsrv/internal/encryption"
+	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
-	"github.com/andynikk/metriccollalertsrv/internal/encryption"
-	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
 
 type MetricsGauge map[string]repository.Gauge
@@ -40,13 +39,6 @@ type data struct {
 	sync.RWMutex
 	pollCount    int64
 	metricsGauge MetricsGauge
-}
-
-type ServerHTTP bool
-type ServerGRPC bool
-
-type ServerType interface {
-	Post2Server(agent *agent, allMetrics []byte) error
 }
 
 type agent struct {
@@ -186,8 +178,7 @@ func (a *agent) goPost2Server(metricsButch MapMetricsButch) error {
 			return err
 		}
 
-		srv := GetTypeSrv(a.config.StringTypeServer)
-		if err = srv.Post2Server(a, gzipArrMetrics); err != nil {
+		if err = a.Post2Server(gzipArrMetrics); err != nil {
 			constants.Logger.ErrorLog(err)
 			return err
 		}
@@ -255,9 +246,29 @@ func (a *agent) goMakeRequest(ctx context.Context, cancelFunc context.CancelFunc
 	}
 }
 
-func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
+func (a *agent) Post2Server(allMetrics []byte) error {
 
-	addressPost := fmt.Sprintf("http://%s/updates", agent.config.Address)
+	if a.config.StringTypeServer == constants.TypeSrvGRPC.String() {
+		err := a.Post2ServerHTTP(allMetrics)
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return err
+		}
+		return nil
+	}
+
+	err := a.Post2ServerGRPC(allMetrics)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return err
+	}
+	return nil
+
+}
+
+func (a *agent) Post2ServerHTTP(allMetrics []byte) error {
+
+	addressPost := fmt.Sprintf("http://%s/updates", a.config.Address)
 
 	req, err := http.NewRequest("POST", addressPost, bytes.NewReader(allMetrics))
 	if err != nil {
@@ -267,9 +278,9 @@ func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-	req.Header.Set("X-Real-IP", agent.config.IPAddress)
-	if agent.KeyEncryption != nil && agent.KeyEncryption.PublicKey != nil {
-		req.Header.Set("Content-Encryption", agent.KeyEncryption.TypeEncryption)
+	req.Header.Set("X-Real-IP", a.config.IPAddress)
+	if a.KeyEncryption != nil && a.KeyEncryption.PublicKey != nil {
+		req.Header.Set("Content-Encryption", a.KeyEncryption.TypeEncryption)
 	}
 	defer req.Body.Close()
 
@@ -283,14 +294,14 @@ func (s *ServerHTTP) Post2Server(agent *agent, allMetrics []byte) error {
 	return nil
 }
 
-func (s *ServerGRPC) Post2Server(agent *agent, allMetrics []byte) error {
+func (a *agent) Post2ServerGRPC(allMetrics []byte) error {
 
-	c := handlers.NewMetricCollectorClient(agent.GRPCClientConn)
+	c := handlers.NewMetricCollectorClient(a.GRPCClientConn)
 	mHeader := map[string]string{"Content-Type": "application/json",
 		"Content-Encoding": "gzip",
-		"X-Real-IP":        agent.config.IPAddress}
-	if agent.KeyEncryption != nil && agent.KeyEncryption.PublicKey != nil {
-		mHeader["Content-Encryption"] = agent.KeyEncryption.TypeEncryption
+		"X-Real-IP":        a.config.IPAddress}
+	if a.KeyEncryption != nil && a.KeyEncryption.PublicKey != nil {
+		mHeader["Content-Encryption"] = a.KeyEncryption.TypeEncryption
 	}
 
 	md := metadata.New(mHeader)
@@ -308,14 +319,6 @@ func (s *ServerGRPC) Post2Server(agent *agent, allMetrics []byte) error {
 	}
 
 	return nil
-}
-
-func GetTypeSrv(stringTypeServer string) ServerType {
-	if stringTypeServer == constants.TypeSrvGRPC.String() {
-		return new(ServerGRPC)
-	}
-
-	return new(ServerHTTP)
 }
 
 func main() {
