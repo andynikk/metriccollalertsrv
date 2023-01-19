@@ -16,7 +16,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
-	"github.com/andynikk/metriccollalertsrv/internal/middlware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -70,16 +69,22 @@ func NewRepStore(s *ServerHTTP) {
 	s.Router.Use(middleware.Recoverer)
 	s.Router.Use(middleware.StripSlashes)
 
-	s.Router.Use(middlware.ChiCheckIP)
+	s.Router.Group(func(r chi.Router) {
+		r.Use(s.ChiCheckIP)
+
+		r.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
+		r.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
+		r.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
+	})
 
 	s.Router.NotFound(rs.HandlerNotFound)
 	s.Router.HandleFunc("/", rs.HandleFunc)
 
 	s.Router.Get("/", rs.HandlerGetAllMetrics)
 
-	s.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
-	s.Router.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
-	s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
+	//s.Router.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
+	//s.Router.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
+	//s.Router.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
 
 	s.Router.Get("/ping", rs.HandlerPingDB)                        //+
 	s.Router.Get("/value/{metType}/{metName}", rs.HandlerGetValue) //+
@@ -217,7 +222,7 @@ func (rs *RepStore) Shutdown() {
 
 func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Request) {
 
-	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
+	IPAddressAllowed := rq.Context().Value(KeyContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}
@@ -234,15 +239,13 @@ func (rs *RepStore) HandlerSetMetricaPOST(rw http.ResponseWriter, rq *http.Reque
 }
 
 func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Request) {
-	fmt.Println("+++++++++++++++001")
-	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
+	IPAddressAllowed := rq.Context().Value(KeyContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}
 
 	bytBody, err := io.ReadAll(rq.Body)
 	if err != nil {
-		fmt.Println("+++++++++++++++002")
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 1 %s", err.Error()))
 		http.Error(rw, "Ошибка получения Content-Encoding", http.StatusInternalServerError)
 		return
@@ -252,7 +255,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	if strings.Contains(contentEncoding, "gzip") {
 		bytBody, err = compression.Decompress(bytBody)
 		if err != nil {
-			fmt.Println("+++++++++++++++003")
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
 			http.Error(rw, "Ошибка распаковки", http.StatusInternalServerError)
 			return
@@ -260,7 +262,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	}
 	header, body, err := HandlerUpdateMetricJSON(bytBody, rs)
 	if err != nil {
-		fmt.Println("+++++++++++++++004")
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
 		http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
 		return
@@ -270,18 +271,16 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 		rw.Header().Add(key, val)
 	}
 	if _, err = rw.Write(body); err != nil {
-		fmt.Println("+++++++++++++++005")
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
 		rw.WriteHeader(errs.StatusHTTP(errs.ErrStatusInternalServer))
 		return
 	}
-	fmt.Println("+++++++++++++++005", err)
 	rw.WriteHeader(errs.StatusHTTP(err))
 }
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	IPAddressAllowed := rq.Context().Value(middlware.KeyValueContext("IP-Address-Allowed"))
+	IPAddressAllowed := rq.Context().Value(KeyContext("IP-Address-Allowed"))
 	if IPAddressAllowed == "false" {
 		return
 	}

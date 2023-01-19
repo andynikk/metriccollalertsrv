@@ -26,6 +26,7 @@ var ErrNotFound = errors.New("not found")
 var ErrBadRequest = errors.New("bad request")
 var ErrNotImplemented = errors.New("not implemented")
 var ErrIPAddressAllowed = errors.New("not IP address allowed")
+var ErrForbidden = errors.New("forbidden")
 
 func StatusHTTP(e error) int {
 	switch e {
@@ -49,6 +50,8 @@ func StatusHTTP(e error) int {
 		return http.StatusBadRequest
 	case ErrNotImplemented:
 		return http.StatusNotImplemented
+	case ErrForbidden:
+		return http.StatusForbidden
 	default:
 		return http.StatusInternalServerError
 	}
@@ -76,6 +79,8 @@ func CodeGRPC(e error) codes.Code {
 		return codes.PermissionDenied
 	case ErrNotImplemented:
 		return codes.Unimplemented
+	case ErrForbidden:
+		return codes.PermissionDenied
 	default:
 		return codes.Internal
 

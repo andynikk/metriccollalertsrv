@@ -6,8 +6,8 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 )
 
-func AddressAllowed(IPs []string) bool {
-	_, ipv4Net, _ := net.ParseCIDR(constants.TrustedSubnet)
+func AddressAllowed(IPs []string, AllowedIP string) bool {
+	_, ipv4Net, _ := net.ParseCIDR(AllowedIP)
 
 	if ipv4Net == nil {
 		return true

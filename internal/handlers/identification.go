@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/middlware"
+	"github.com/andynikk/metriccollalertsrv/internal/networks"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"google.golang.org/grpc"
@@ -22,9 +26,6 @@ type ServerHTTP struct {
 
 type serverGRPS struct {
 	*RepStore
-}
-
-type HServer interface {
 }
 
 type Server interface {
@@ -133,4 +134,28 @@ func NewServer(configServer *environment.ServerConfig) Server {
 	}
 
 	return newHTTPServer(configServer)
+}
+
+func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		key := KeyContext("IP-Address-Allowed")
+
+		xRealIP := r.Header.Get("X-Real-IP")
+		ctx := context.WithValue(r.Context(), key, "false")
+		if xRealIP == "" {
+			ctx = context.WithValue(r.Context(), key, "true")
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		ok := networks.AddressAllowed(strings.Split(xRealIP, constants.SepIPAddress), s.Config.TrustedSubnet)
+		if ok {
+			ctx = context.WithValue(r.Context(), key, "true")
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
+	})
 }
