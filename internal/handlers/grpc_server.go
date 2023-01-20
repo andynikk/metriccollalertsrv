@@ -44,7 +44,7 @@ func (s *serverGRPS) mustEmbedUnimplementedMetricCollectorServer() {
 	panic("implement me")
 }
 
-func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequest) (*TextErrResponse, error) {
+func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequest) (*EmptyRequest, error) {
 
 	header := FillHeader(ctx)
 	contentEncoding := header["content-encoding"]
@@ -56,7 +56,7 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 		bytBodyRsaDecrypt, err := s.PK.RsaDecrypt(bytBody)
 		if err != nil {
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 2.1 %s", err.Error()))
-			return &TextErrResponse{Result: []byte(err.Error())}, err
+			return nil, err
 		}
 		bytBody = bytBodyRsaDecrypt
 	}
@@ -65,7 +65,7 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 		bytBodyDecompress, err := compression.Decompress(bytBody)
 		if err != nil {
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
-			return &TextErrResponse{Result: []byte(err.Error())}, err
+			return nil, err
 		}
 		bytBody = bytBodyDecompress
 	}
@@ -73,13 +73,13 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 	rp := s.GetRepStore()
 	err := HandlerUpdatesMetricJSON(bytBody, rp)
 	if err != nil {
-		return &TextErrResponse{Result: []byte(err.Error())}, err
+		return nil, err
 	}
 
-	return &TextErrResponse{Result: []byte("")}, nil
+	return &EmptyRequest{}, nil
 }
 
-func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrRequest) (*TextErrResponse, error) {
+func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrRequest) (*EmptyRequest, error) {
 	header := FillHeader(ctx)
 
 	contentEncoding := header["content-encoding"]
@@ -88,30 +88,30 @@ func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrReq
 		bytBodyDecompress, err := compression.Decompress(req.Body)
 		if err != nil {
 			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
-			return &TextErrResponse{Result: []byte(err.Error())}, err
+			return nil, err
 		}
 		bytBody = bytBodyDecompress
 	}
 	_, _, err := HandlerUpdateMetricJSON(bytBody, s.GetRepStore())
 	if err != nil {
-		return &TextErrResponse{Result: []byte(err.Error())}, err
+		return nil, err
 	}
 
-	return &TextErrResponse{Result: []byte("")}, nil
+	return &EmptyRequest{}, nil
 }
 
-func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (*TextErrResponse, error) {
+func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (*EmptyRequest, error) {
 
 	rp := s.GetRepStore()
 	err := rp.setValueInMap(string(req.MetType), string(req.MetName), string(req.MetValue))
 	if err != nil {
-		return &TextErrResponse{Result: []byte(err.Error())}, err
+		return nil, err
 	}
 
-	return &TextErrResponse{Result: []byte("")}, nil
+	return &EmptyRequest{}, nil
 }
 
-func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*TextErrResponse, error) {
+func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*EmptyRequest, error) {
 
 	if s.Config.Storage == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
@@ -123,7 +123,7 @@ func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*Text
 		return nil, errs.ErrStatusInternalServer
 	}
 
-	return &TextErrResponse{Result: []byte("")}, nil
+	return &EmptyRequest{}, nil
 }
 
 func (s *serverGRPS) GetValue(ctx context.Context, req *UpdatesRequest) (*StatusResponse, error) {
@@ -149,7 +149,7 @@ func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*Fu
 		hdr += fmt.Sprintf("%s:%s\n", k, v)
 	}
 
-	return &FullResponse{Header: []byte(hdr), Body: bodyOut, Result: true}, nil
+	return &FullResponse{Header: []byte(hdr), Body: bodyOut}, nil
 }
 
 func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*StatusResponse, error) {

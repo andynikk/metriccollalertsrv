@@ -5,11 +5,11 @@ package handlers;
 option go_package = "./";
 
 service MetricCollector {
-  rpc UpdatesAllMetricsJSON(UpdatesRequest) returns (TextErrResponse) {}
-  rpc UpdateOneMetricsJSON(UpdateStrRequest) returns (TextErrResponse) {}
-  rpc UpdateOneMetrics(UpdateRequest) returns (TextErrResponse) {}
+  rpc UpdatesAllMetricsJSON(UpdatesRequest) returns (EmptyRequest) {}
+  rpc UpdateOneMetricsJSON(UpdateStrRequest) returns (EmptyRequest) {}
+  rpc UpdateOneMetrics(UpdateRequest) returns (EmptyRequest) {}
 
-  rpc PingDataBase(EmptyRequest) returns (TextErrResponse) {}
+  rpc PingDataBase(EmptyRequest) returns (EmptyRequest) {}
 
   rpc GetValueJSON(UpdatesRequest) returns (FullResponse) {}
   rpc GetValue(UpdatesRequest) returns (StatusResponse) {}
@@ -52,5 +52,4 @@ message StatusResponse {
 message FullResponse {
   bytes header = 1;
   bytes body = 2;
-  bool result = 3;
 }

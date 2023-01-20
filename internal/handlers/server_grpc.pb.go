@@ -22,10 +22,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetricCollectorClient interface {
-	UpdatesAllMetricsJSON(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
-	UpdateOneMetricsJSON(ctx context.Context, in *UpdateStrRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
-	UpdateOneMetrics(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
-	PingDataBase(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
+	UpdatesAllMetricsJSON(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*EmptyRequest, error)
+	UpdateOneMetricsJSON(ctx context.Context, in *UpdateStrRequest, opts ...grpc.CallOption) (*EmptyRequest, error)
+	UpdateOneMetrics(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*EmptyRequest, error)
+	PingDataBase(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*EmptyRequest, error)
 	GetValueJSON(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*FullResponse, error)
 	GetValue(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	GetListMetrics(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*StatusResponse, error)
@@ -39,8 +39,8 @@ func NewMetricCollectorClient(cc grpc.ClientConnInterface) MetricCollectorClient
 	return &metricCollectorClient{cc}
 }
 
-func (c *metricCollectorClient) UpdatesAllMetricsJSON(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*TextErrResponse, error) {
-	out := new(TextErrResponse)
+func (c *metricCollectorClient) UpdatesAllMetricsJSON(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*EmptyRequest, error) {
+	out := new(EmptyRequest)
 	err := c.cc.Invoke(ctx, "/handlers.MetricCollector/UpdatesAllMetricsJSON", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -48,8 +48,8 @@ func (c *metricCollectorClient) UpdatesAllMetricsJSON(ctx context.Context, in *U
 	return out, nil
 }
 
-func (c *metricCollectorClient) UpdateOneMetricsJSON(ctx context.Context, in *UpdateStrRequest, opts ...grpc.CallOption) (*TextErrResponse, error) {
-	out := new(TextErrResponse)
+func (c *metricCollectorClient) UpdateOneMetricsJSON(ctx context.Context, in *UpdateStrRequest, opts ...grpc.CallOption) (*EmptyRequest, error) {
+	out := new(EmptyRequest)
 	err := c.cc.Invoke(ctx, "/handlers.MetricCollector/UpdateOneMetricsJSON", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -57,8 +57,8 @@ func (c *metricCollectorClient) UpdateOneMetricsJSON(ctx context.Context, in *Up
 	return out, nil
 }
 
-func (c *metricCollectorClient) UpdateOneMetrics(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*TextErrResponse, error) {
-	out := new(TextErrResponse)
+func (c *metricCollectorClient) UpdateOneMetrics(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*EmptyRequest, error) {
+	out := new(EmptyRequest)
 	err := c.cc.Invoke(ctx, "/handlers.MetricCollector/UpdateOneMetrics", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -66,8 +66,8 @@ func (c *metricCollectorClient) UpdateOneMetrics(ctx context.Context, in *Update
 	return out, nil
 }
 
-func (c *metricCollectorClient) PingDataBase(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*TextErrResponse, error) {
-	out := new(TextErrResponse)
+func (c *metricCollectorClient) PingDataBase(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*EmptyRequest, error) {
+	out := new(EmptyRequest)
 	err := c.cc.Invoke(ctx, "/handlers.MetricCollector/PingDataBase", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -106,10 +106,10 @@ func (c *metricCollectorClient) GetListMetrics(ctx context.Context, in *EmptyReq
 // All implementations must embed UnimplementedMetricCollectorServer
 // for forward compatibility
 type MetricCollectorServer interface {
-	UpdatesAllMetricsJSON(context.Context, *UpdatesRequest) (*TextErrResponse, error)
-	UpdateOneMetricsJSON(context.Context, *UpdateStrRequest) (*TextErrResponse, error)
-	UpdateOneMetrics(context.Context, *UpdateRequest) (*TextErrResponse, error)
-	PingDataBase(context.Context, *EmptyRequest) (*TextErrResponse, error)
+	UpdatesAllMetricsJSON(context.Context, *UpdatesRequest) (*EmptyRequest, error)
+	UpdateOneMetricsJSON(context.Context, *UpdateStrRequest) (*EmptyRequest, error)
+	UpdateOneMetrics(context.Context, *UpdateRequest) (*EmptyRequest, error)
+	PingDataBase(context.Context, *EmptyRequest) (*EmptyRequest, error)
 	GetValueJSON(context.Context, *UpdatesRequest) (*FullResponse, error)
 	GetValue(context.Context, *UpdatesRequest) (*StatusResponse, error)
 	GetListMetrics(context.Context, *EmptyRequest) (*StatusResponse, error)
@@ -120,16 +120,16 @@ type MetricCollectorServer interface {
 type UnimplementedMetricCollectorServer struct {
 }
 
-func (UnimplementedMetricCollectorServer) UpdatesAllMetricsJSON(context.Context, *UpdatesRequest) (*TextErrResponse, error) {
+func (UnimplementedMetricCollectorServer) UpdatesAllMetricsJSON(context.Context, *UpdatesRequest) (*EmptyRequest, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatesAllMetricsJSON not implemented")
 }
-func (UnimplementedMetricCollectorServer) UpdateOneMetricsJSON(context.Context, *UpdateStrRequest) (*TextErrResponse, error) {
+func (UnimplementedMetricCollectorServer) UpdateOneMetricsJSON(context.Context, *UpdateStrRequest) (*EmptyRequest, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateOneMetricsJSON not implemented")
 }
-func (UnimplementedMetricCollectorServer) UpdateOneMetrics(context.Context, *UpdateRequest) (*TextErrResponse, error) {
+func (UnimplementedMetricCollectorServer) UpdateOneMetrics(context.Context, *UpdateRequest) (*EmptyRequest, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateOneMetrics not implemented")
 }
-func (UnimplementedMetricCollectorServer) PingDataBase(context.Context, *EmptyRequest) (*TextErrResponse, error) {
+func (UnimplementedMetricCollectorServer) PingDataBase(context.Context, *EmptyRequest) (*EmptyRequest, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PingDataBase not implemented")
 }
 func (UnimplementedMetricCollectorServer) GetValueJSON(context.Context, *UpdatesRequest) (*FullResponse, error) {

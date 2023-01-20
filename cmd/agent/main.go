@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -306,16 +305,10 @@ func (a *agent) Post2ServerGRPC(allMetrics []byte) error {
 
 	md := metadata.New(mHeader)
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	res, err := c.UpdatesAllMetricsJSON(ctx, &handlers.UpdatesRequest{Body: allMetrics})
+	_, err := c.UpdatesAllMetricsJSON(ctx, &handlers.UpdatesRequest{Body: allMetrics})
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return err
-	}
-
-	textErr := string(res.GetResult())
-	if textErr != "" {
-		constants.Logger.ErrorLog(errors.New(textErr))
-		return errs.ErrSendMsgGPRC
 	}
 
 	return nil
