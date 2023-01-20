@@ -65,7 +65,6 @@ func (a *AgentGRPC) Post2Server(metricsButch MapMetricsButch) {
 			constants.Logger.ErrorLog(err)
 			return
 		}
-
 		c := handlers.NewMetricCollectorClient(a.GRPCClientConn)
 		mHeader := map[string]string{"Content-Type": "application/json",
 			"Content-Encoding": "gzip",
