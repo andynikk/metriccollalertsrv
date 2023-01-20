@@ -59,7 +59,6 @@ func (a *AgentGRPC) Stop() {
 func (a *AgentGRPC) Post2Server(metricsButch MapMetricsButch) {
 
 	for _, metrics := range metricsButch {
-
 		gzipArrMetrics, err := metrics.PrepareMetrics(a.KeyEncryption)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
