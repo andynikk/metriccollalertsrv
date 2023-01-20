@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 )
 
@@ -17,18 +16,18 @@ type AgentHTTP struct {
 }
 
 func newAgentHTTP(configAgent *environment.AgentConfig) *AgentHTTP {
-	pk, err := encryption.InitPublicKey(configAgent.CryptoKey)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-		return nil
-	}
+	//pk, err := encryption.InitPublicKey(configAgent.CryptoKey)
+	//if err != nil {
+	//	constants.Logger.ErrorLog(err)
+	//	return nil
+	//}
 
 	a := AgentHTTP{
 		GeneralAgent: GeneralAgent{
-			Config:        configAgent,
-			PollCount:     0,
-			MetricsGauge:  make(MetricsGauge),
-			KeyEncryption: pk,
+			Config:       configAgent,
+			PollCount:    0,
+			MetricsGauge: make(MetricsGauge),
+			//KeyEncryption: pk,
 		},
 	}
 
