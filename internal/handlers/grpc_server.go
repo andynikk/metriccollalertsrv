@@ -111,7 +111,7 @@ func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (
 	return &TextErrResponse{Result: []byte("")}, nil
 }
 
-func (s *serverGRPS) PingDataBases(ctx context.Context, req *EmptyRequest) (*TextErrResponse, error) {
+func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*TextErrResponse, error) {
 
 	if s.Config.Storage == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))

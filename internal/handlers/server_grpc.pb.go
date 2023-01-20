@@ -25,7 +25,7 @@ type MetricCollectorClient interface {
 	UpdatesAllMetricsJSON(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
 	UpdateOneMetricsJSON(ctx context.Context, in *UpdateStrRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
 	UpdateOneMetrics(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
-	PingDataBases(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
+	PingDataBase(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*TextErrResponse, error)
 	GetValueJSON(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*FullResponse, error)
 	GetValue(ctx context.Context, in *UpdatesRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	GetListMetrics(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*StatusResponse, error)
@@ -66,9 +66,9 @@ func (c *metricCollectorClient) UpdateOneMetrics(ctx context.Context, in *Update
 	return out, nil
 }
 
-func (c *metricCollectorClient) PingDataBases(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*TextErrResponse, error) {
+func (c *metricCollectorClient) PingDataBase(ctx context.Context, in *EmptyRequest, opts ...grpc.CallOption) (*TextErrResponse, error) {
 	out := new(TextErrResponse)
-	err := c.cc.Invoke(ctx, "/handlers.MetricCollector/PingDataBases", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/handlers.MetricCollector/PingDataBase", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ type MetricCollectorServer interface {
 	UpdatesAllMetricsJSON(context.Context, *UpdatesRequest) (*TextErrResponse, error)
 	UpdateOneMetricsJSON(context.Context, *UpdateStrRequest) (*TextErrResponse, error)
 	UpdateOneMetrics(context.Context, *UpdateRequest) (*TextErrResponse, error)
-	PingDataBases(context.Context, *EmptyRequest) (*TextErrResponse, error)
+	PingDataBase(context.Context, *EmptyRequest) (*TextErrResponse, error)
 	GetValueJSON(context.Context, *UpdatesRequest) (*FullResponse, error)
 	GetValue(context.Context, *UpdatesRequest) (*StatusResponse, error)
 	GetListMetrics(context.Context, *EmptyRequest) (*StatusResponse, error)
@@ -129,8 +129,8 @@ func (UnimplementedMetricCollectorServer) UpdateOneMetricsJSON(context.Context, 
 func (UnimplementedMetricCollectorServer) UpdateOneMetrics(context.Context, *UpdateRequest) (*TextErrResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateOneMetrics not implemented")
 }
-func (UnimplementedMetricCollectorServer) PingDataBases(context.Context, *EmptyRequest) (*TextErrResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PingDataBases not implemented")
+func (UnimplementedMetricCollectorServer) PingDataBase(context.Context, *EmptyRequest) (*TextErrResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PingDataBase not implemented")
 }
 func (UnimplementedMetricCollectorServer) GetValueJSON(context.Context, *UpdatesRequest) (*FullResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetValueJSON not implemented")
@@ -208,20 +208,20 @@ func _MetricCollector_UpdateOneMetrics_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MetricCollector_PingDataBases_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MetricCollector_PingDataBase_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(EmptyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricCollectorServer).PingDataBases(ctx, in)
+		return srv.(MetricCollectorServer).PingDataBase(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/handlers.MetricCollector/PingDataBases",
+		FullMethod: "/handlers.MetricCollector/PingDataBase",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricCollectorServer).PingDataBases(ctx, req.(*EmptyRequest))
+		return srv.(MetricCollectorServer).PingDataBase(ctx, req.(*EmptyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -300,8 +300,8 @@ var MetricCollector_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MetricCollector_UpdateOneMetrics_Handler,
 		},
 		{
-			MethodName: "PingDataBases",
-			Handler:    _MetricCollector_PingDataBases_Handler,
+			MethodName: "PingDataBase",
+			Handler:    _MetricCollector_PingDataBase_Handler,
 		},
 		{
 			MethodName: "GetValueJSON",

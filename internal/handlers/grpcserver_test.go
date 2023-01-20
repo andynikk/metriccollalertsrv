@@ -54,7 +54,7 @@ func TestFuncServer(t *testing.T) {
 
 	t.Run("Checking handlers PING", func(t *testing.T) {
 		req := EmptyRequest{}
-		textErr, err := server.PingDataBases(ctx, &req)
+		textErr, err := server.PingDataBase(ctx, &req)
 		if errs.CodeGRPC(err) != codes.OK && server.Config.Storage == nil {
 			t.Errorf("Error checking handlers PING. %s", textErr)
 		}

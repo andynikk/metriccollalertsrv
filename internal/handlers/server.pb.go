@@ -523,14 +523,14 @@ var file_server_proto_depIdxs = []int32{
 	1, // 0: handlers.MetricCollector.UpdatesAllMetricsJSON:input_type -> handlers.UpdatesRequest
 	3, // 1: handlers.MetricCollector.UpdateOneMetricsJSON:input_type -> handlers.UpdateStrRequest
 	0, // 2: handlers.MetricCollector.UpdateOneMetrics:input_type -> handlers.UpdateRequest
-	2, // 3: handlers.MetricCollector.PingDataBases:input_type -> handlers.EmptyRequest
+	2, // 3: handlers.MetricCollector.PingDataBase:input_type -> handlers.EmptyRequest
 	1, // 4: handlers.MetricCollector.GetValueJSON:input_type -> handlers.UpdatesRequest
 	1, // 5: handlers.MetricCollector.GetValue:input_type -> handlers.UpdatesRequest
 	2, // 6: handlers.MetricCollector.GetListMetrics:input_type -> handlers.EmptyRequest
 	5, // 7: handlers.MetricCollector.UpdatesAllMetricsJSON:output_type -> handlers.TextErrResponse
 	5, // 8: handlers.MetricCollector.UpdateOneMetricsJSON:output_type -> handlers.TextErrResponse
 	5, // 9: handlers.MetricCollector.UpdateOneMetrics:output_type -> handlers.TextErrResponse
-	5, // 10: handlers.MetricCollector.PingDataBases:output_type -> handlers.TextErrResponse
+	5, // 10: handlers.MetricCollector.PingDataBase:output_type -> handlers.TextErrResponse
 	7, // 11: handlers.MetricCollector.GetValueJSON:output_type -> handlers.FullResponse
 	6, // 12: handlers.MetricCollector.GetValue:output_type -> handlers.StatusResponse
 	6, // 13: handlers.MetricCollector.GetListMetrics:output_type -> handlers.StatusResponse
