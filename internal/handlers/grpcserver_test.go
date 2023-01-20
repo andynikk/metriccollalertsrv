@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
@@ -41,8 +40,7 @@ func TestFuncServer(t *testing.T) {
 	})
 
 	mHeader := map[string]string{"Content-Type": "application/json",
-		"Content-Encoding": "gzip",
-		"X-Real-IP":        constants.TrustedSubnet}
+		"Content-Encoding": "gzip"}
 	if server.PK != nil && server.PK.PrivateKey != nil && server.PK.PublicKey != nil {
 		mHeader["Content-Encryption"] = server.PK.TypeEncryption
 	}
