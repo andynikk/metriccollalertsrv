@@ -90,9 +90,8 @@ func TestFuncServerHTTP(t *testing.T) {
 
 	t.Run("Checking connect DB", func(t *testing.T) {
 		t.Run("Checking create DB table", func(t *testing.T) {
-			storage := repository.NewStorage(config.DatabaseDsn, config.StoreFile)
-			if storage != nil {
-				repStore.Config.Storage = storage
+			if config.DatabaseDsn != "" || config.StoreFile != "" {
+				repStore.Config.Storage = repository.NewStorage(config.DatabaseDsn, config.StoreFile)
 				t.Run("Checking handlers /ping GET", func(t *testing.T) {
 					if repStore.Config.Storage.ConnDB() == nil {
 						t.Errorf("Error handlers 1 /ping GET")
