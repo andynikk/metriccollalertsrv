@@ -33,7 +33,7 @@ type StorageFile struct {
 type Storage interface {
 	WriteMetric(storedData encoding.ArrMetrics)
 	GetMetric() ([]encoding.Metrics, error)
-	CreateTable() bool
+	CreateTable() error
 	ConnDB() *pgxpool.Pool
 }
 
@@ -86,7 +86,7 @@ func InitStoreDB(store string) (*StorageDB, error) {
 	storageDB := &StorageDB{
 		DBC: *dbc, Ctx: ctx, DBDsn: store,
 	}
-	if ok := storageDB.CreateTable(); !ok {
+	if err = storageDB.CreateTable(); err != nil {
 		return nil, err
 	}
 
@@ -151,28 +151,28 @@ func (s *StorageDB) ConnDB() *pgxpool.Pool {
 }
 
 // CreateTable Проверка и создание, если таковых нет, таблиц в базе данных
-func (s *StorageDB) CreateTable() bool {
+func (s *StorageDB) CreateTable() error {
 	ctx := context.Background()
 	conn, err := s.DBC.Pool.Acquire(ctx)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
-		return false
+		return err
 	}
 	defer conn.Release()
-	if _, err := conn.Exec(s.Ctx, constants.QuerySchema); err != nil {
+	if _, err = conn.Exec(s.Ctx, constants.QuerySchema); err != nil {
 		conn.Release()
 		constants.Logger.ErrorLog(err)
-		return false
+		return err
 	}
-	if _, err := conn.Exec(s.Ctx, constants.QueryTable); err != nil {
+	if _, err = conn.Exec(s.Ctx, constants.QueryTable); err != nil {
 		conn.Release()
 		constants.Logger.ErrorLog(err)
-		return false
+		return err
 	}
 	conn.Release()
 	ctx.Done()
 
-	return true
+	return nil
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -210,11 +210,11 @@ func (f *StorageFile) ConnDB() *pgxpool.Pool {
 }
 
 // CreateTable Проверка и создание, если нет, файла для хранения метрик
-func (f *StorageFile) CreateTable() bool {
+func (f *StorageFile) CreateTable() error {
 	if _, err := os.Create(f.StoreFile); err != nil {
 		constants.Logger.ErrorLog(err)
-		return false
+		return err
 	}
 
-	return true
+	return nil
 }
