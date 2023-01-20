@@ -10,16 +10,15 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/andynikk/metriccollalertsrv/internal/agent"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-func TestmakeMsg(adresServer string, memStats MetricsGauge) string {
+func TestmakeMsg(adresServer string, memStats agent.MetricsGauge) string {
 
 	const msgFormat = "http://%s/update/%s/%s/%v"
 
@@ -35,8 +34,16 @@ func TestmakeMsg(adresServer string, memStats MetricsGauge) string {
 }
 
 func TestFuncAgen(t *testing.T) {
-	a := agent{}
-	a.data.metricsGauge = make(MetricsGauge)
+	config := environment.AgentConfig{}
+	config.InitConfigAgentENV()
+	config.InitConfigAgentFile()
+	config.InitConfigAgentDefault()
+
+	a := agent.GeneralAgent{
+		Config:       &config,
+		PollCount:    0,
+		MetricsGauge: make(agent.MetricsGauge),
+	}
 
 	var argErr = "err"
 
@@ -44,24 +51,24 @@ func TestFuncAgen(t *testing.T) {
 	runtime.ReadMemStats(&mem)
 
 	t.Run("Checking init config", func(t *testing.T) {
-		a.config = environment.InitConfigAgent()
-		if a.config.Address == "" {
+		a.Config = environment.InitConfigAgent()
+		if a.Config.Address == "" {
 			t.Errorf("Error checking init config")
 		}
 	})
 
 	t.Run("Checking the structure creation", func(t *testing.T) {
 
-		var realResult MetricsGauge
+		var realResult agent.MetricsGauge
 
-		if a.data.metricsGauge["Alloc"] != realResult["Alloc"] &&
-			a.data.metricsGauge["RandomValue"] != realResult["RandomValue"] {
+		if a.MetricsGauge["Alloc"] != realResult["Alloc"] &&
+			a.MetricsGauge["RandomValue"] != realResult["RandomValue"] {
 
 			//t.Errorf("Structure creation error", resultMS, realResult)
 			t.Errorf("Structure creation error (%s)", argErr)
 		}
 		t.Run("Creating a submission line", func(t *testing.T) {
-			adressServer := a.config.Address
+			adressServer := a.Config.Address
 			var resultStr = fmt.Sprintf("http://%s/update/gauge/Alloc/0.1"+
 				"\nhttp://%s/update/gauge/BuckHashSys/0.002", adressServer, adressServer)
 
@@ -74,8 +81,8 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Checking rsa crypt", func(t *testing.T) {
 		t.Run("Checking init crypto key", func(t *testing.T) {
-			a.KeyEncryption, _ = encryption.InitPublicKey(a.config.CryptoKey)
-			if a.config.CryptoKey != "" && a.KeyEncryption.PublicKey == nil {
+			a.KeyEncryption, _ = encryption.InitPublicKey(a.Config.CryptoKey)
+			if a.Config.CryptoKey != "" && a.KeyEncryption.PublicKey == nil {
 				t.Errorf("Error checking init crypto key")
 			}
 			t.Run("Checking rsa encrypt", func(t *testing.T) {
@@ -89,13 +96,13 @@ func TestFuncAgen(t *testing.T) {
 	})
 
 	t.Run("Checking the filling of metrics", func(t *testing.T) {
-		a.fillMetric()
-		if len(a.metricsGauge) == 0 || a.pollCount == 0 {
+		a.FillMetric()
+		if len(a.MetricsGauge) == 0 || a.PollCount == 0 {
 			t.Errorf("Error checking the filling of metrics")
 		}
 		t.Run("Checking the filling of other metrics", func(t *testing.T) {
-			a.metrixOtherScan()
-			if _, ok := a.metricsGauge["TotalMemory"]; !ok {
+			a.MetricsOtherScan()
+			if _, ok := a.MetricsGauge["TotalMemory"]; !ok {
 				t.Errorf("Error checking the filling of other metrics")
 			}
 		})
@@ -103,14 +110,14 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Checking the filling of metrics Gauge", func(t *testing.T) {
 
-		val := a.data.metricsGauge["Frees"]
+		val := a.MetricsGauge["Frees"]
 		if val.Type() != "gauge" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Gauge")
 		}
 	})
 
 	t.Run("Checking the metrics value Gauge", func(t *testing.T) {
-		if a.data.metricsGauge["Alloc"] == 0 {
+		if a.MetricsGauge["Alloc"] == 0 {
 			t.Errorf("The metric %s a value of %v", "Alloc", 0)
 		}
 
@@ -124,14 +131,14 @@ func TestFuncAgen(t *testing.T) {
 		t.Run("Send metrics to server", func(t *testing.T) {
 			for _, allMetrics := range mapMetricsButch {
 
-				gziparrMetrics, err := allMetrics.prepareMetrics(a.KeyEncryption)
+				gziparrMetrics, err := allMetrics.PrepareMetrics(a.KeyEncryption)
 				if err != nil {
 					constants.Logger.ErrorLog(err)
 					t.Errorf("Send metrics to server")
 				}
 
 				resp := httptest.NewRecorder()
-				req, err := http.NewRequest("POST", fmt.Sprintf("%s/updates", a.config.Address),
+				req, err := http.NewRequest("POST", fmt.Sprintf("%s/updates", a.Config.Address),
 					strings.NewReader(string(gziparrMetrics)))
 				if err != nil {
 					t.Fatal(err)
@@ -150,14 +157,14 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Checking the filling of metrics PollCount", func(t *testing.T) {
 
-		val := repository.Counter(a.data.pollCount)
+		val := repository.Counter(a.PollCount)
 		if val.Type() != "counter" {
 			t.Errorf("Metric %s is not a type %s", "Frees", "Counter")
 		}
 	})
 
 	t.Run("Checking the metrics value PollCount", func(t *testing.T) {
-		if a.data.pollCount == 0 {
+		if a.PollCount == 0 {
 			t.Errorf("The metric %s a value of %v", "PollCount", 0)
 		}
 
@@ -165,7 +172,7 @@ func TestFuncAgen(t *testing.T) {
 
 	t.Run("Increasing the metric PollCount", func(t *testing.T) {
 		var res = int64(1)
-		if a.data.pollCount != res {
+		if a.PollCount != res {
 			t.Errorf("The metric %s has not increased by %v", "PollCount", res)
 		}
 
@@ -173,28 +180,19 @@ func TestFuncAgen(t *testing.T) {
 
 }
 
+type Sender interface {
+	GoPost2Server(mapMetricsButch agent.MapMetricsButch)
+}
+
 func BenchmarkSendMetrics(b *testing.B) {
-	a := agent{}
-	a.config = environment.InitConfigAgent()
-	if a.config.Address == "" {
-		return
-	}
 
-	if a.config.StringTypeServer == constants.TypeSrvGRPC.String() {
-		conn, err := grpc.Dial(constants.AddressServer, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			return
-		}
-		a.GRPCClientConn = conn
-	}
-
-	certPublicKey, _ := encryption.InitPublicKey(a.config.CryptoKey)
-	a.KeyEncryption = certPublicKey
+	config := environment.InitConfigAgent()
+	a := agent.NewAgent(config)
 
 	wg := sync.WaitGroup{}
 	for i := 0; i < 10000; i++ {
-		var allMetrics emptyArrMetrics
-		mapMetricsButch := MapMetricsButch{}
+		var allMetrics agent.EmptyArrMetrics
+		mapMetricsButch := agent.MapMetricsButch{}
 
 		val := repository.Gauge(0)
 		for j := 0; j < 10; j++ {
@@ -208,7 +206,11 @@ func BenchmarkSendMetrics(b *testing.B) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			a.goPost2Server(mapMetricsButch)
+			if config.StringTypeServer == constants.TypeSrvGRPC.String() {
+				a.(*agent.AgentGRPC).Post2Server(mapMetricsButch)
+			} else {
+				a.(*agent.AgentHTTP).Post2Server(mapMetricsButch)
+			}
 		}()
 	}
 	wg.Wait()
