@@ -139,20 +139,19 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 
 		xRealIP := r.Header.Get("X-Real-IP")
 		if xRealIP == "" {
-			//next.ServeHTTP(w, r)
-			//return
 			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
 			return
 		}
 
-		addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
-		allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
-		if !allowed {
-			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
-			return
+		if s.Config.TrustedSubnet != "" {
+			addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
+			allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
+			if !allowed {
+				w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)
-
 	})
 }

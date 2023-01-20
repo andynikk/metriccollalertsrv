@@ -214,11 +214,13 @@ func (s *serverGRPS) ServerInterceptor(ctx context.Context,
 	}
 	xRealIP := md.Get(strings.ToLower("X-Real-IP"))[0]
 
-	addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
-	allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
+	if s.Config.TrustedSubnet != "" {
+		addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
+		allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
 
-	if !allowed {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("X-Real-Ip is not found: %s", xRealIP))
+		if !allowed {
+			return nil, status.Error(codes.NotFound, fmt.Sprintf("X-Real-Ip is not found: %s", xRealIP))
+		}
 	}
 
 	h, _ := handler(ctx, req)
