@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -137,13 +138,18 @@ func NewServer(configServer *environment.ServerConfig) Server {
 func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		fmt.Println("+++++++++++++++++", 1)
 		xRealIP := r.Header.Get("X-Real-IP")
+		fmt.Println("+++++++++++++++++", 2, xRealIP)
 		if xRealIP == "" {
+			fmt.Println("+++++++++++++++++", 3, xRealIP)
 			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
 			return
 		}
 
+		fmt.Println("+++++++++++++++++", 4, xRealIP)
 		if s.Config.TrustedSubnet != "" {
+			fmt.Println("+++++++++++++++++", 5, xRealIP)
 			addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
 			allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
 			if !allowed {
@@ -152,6 +158,7 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 			}
 		}
 
+		fmt.Println("+++++++++++++++++", 6, xRealIP)
 		next.ServeHTTP(w, r)
 	})
 }
