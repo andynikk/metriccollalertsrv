@@ -145,8 +145,9 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 			return
 		}
 
-		ok := networks.AddressAllowed(strings.Split(xRealIP, constants.SepIPAddress), s.Config.TrustedSubnet)
-		if !ok {
+		addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
+		allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
+		if !allowed {
 			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
 			return
 		}
