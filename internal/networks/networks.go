@@ -9,10 +9,6 @@ import (
 func AddressAllowed(IPs []string, AllowedIP string) bool {
 	_, ipv4Net, _ := net.ParseCIDR(AllowedIP)
 
-	if ipv4Net == nil {
-		return true
-	}
-
 	for _, sIP := range IPs {
 		ip := net.ParseIP(sIP)
 
