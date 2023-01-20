@@ -2,12 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-
-	"github.com/andynikk/metriccollalertsrv/internal/agent"
-	"github.com/andynikk/metriccollalertsrv/internal/environment"
 )
 
 var buildVersion = "N/A"
@@ -21,19 +15,19 @@ func main() {
 	fmt.Printf("Build commit: %s\n", buildCommit)
 
 	fmt.Println("+++++++++++++++ start agent", 2)
-	config := environment.InitConfigAgent()
-	fmt.Println("+++++++++++++++ start agent", 3)
-	a := agent.NewAgent(config)
-	fmt.Println("+++++++++++++++ start agent", 4)
-	a.Run()
-	fmt.Println("+++++++++++++++ start agent", 5)
-
-	stop := make(chan os.Signal, 1)
-	fmt.Println("+++++++++++++++ start agent", 6)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	fmt.Println("+++++++++++++++ start agent", 7)
-	<-stop
-	fmt.Println("+++++++++++++++ start agent", 8)
-
-	a.Stop()
+	//config := environment.InitConfigAgent()
+	//fmt.Println("+++++++++++++++ start agent", 3)
+	//a := agent.NewAgent(config)
+	//fmt.Println("+++++++++++++++ start agent", 4)
+	//a.Run()
+	//fmt.Println("+++++++++++++++ start agent", 5)
+	//
+	//stop := make(chan os.Signal, 1)
+	//fmt.Println("+++++++++++++++ start agent", 6)
+	//signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	//fmt.Println("+++++++++++++++ start agent", 7)
+	//<-stop
+	//fmt.Println("+++++++++++++++ start agent", 8)
+	//
+	//a.Stop()
 }
