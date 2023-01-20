@@ -71,7 +71,6 @@ func NewRepStore(s *ServerHTTP) {
 
 	s.Router.Group(func(r chi.Router) {
 		r.Use(s.ChiCheckIP)
-
 		r.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
 		r.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
 		r.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
