@@ -208,19 +208,22 @@ func (s *serverGRPS) ServerInterceptor(ctx context.Context,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
 
+	if s.Config.TrustedSubnet == "" {
+		h, _ := handler(ctx, req)
+		return h, nil
+	}
+
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, nil
 	}
 	xRealIP := md.Get(strings.ToLower("X-Real-IP"))[0]
 
-	if s.Config.TrustedSubnet != "" {
-		addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
-		allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
+	addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
+	allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
 
-		if !allowed {
-			return nil, status.Error(codes.NotFound, fmt.Sprintf("X-Real-Ip is not found: %s", xRealIP))
-		}
+	if !allowed {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("X-Real-Ip is not found: %s", xRealIP))
 	}
 
 	h, _ := handler(ctx, req)
