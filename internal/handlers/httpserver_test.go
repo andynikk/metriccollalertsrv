@@ -90,8 +90,7 @@ func init() {
 	config.InitConfigServerFile()
 	config.InitConfigServerDefault()
 
-	config.StorageType, _ = repository.InitStoreDB(config.StorageType, config.DatabaseDsn)
-	config.StorageType, _ = repository.InitStoreFile(config.StorageType, config.StoreFile)
+	config.Storage = repository.NewStorage(config.DatabaseDsn, config.StoreFile)
 
 	srv = NewServer(&config)
 	rp := srv.GetRepStore()

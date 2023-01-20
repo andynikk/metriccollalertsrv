@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
-	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
@@ -91,20 +90,12 @@ func TestFuncServerHTTP(t *testing.T) {
 
 	t.Run("Checking connect DB", func(t *testing.T) {
 		t.Run("Checking create DB table", func(t *testing.T) {
-			storageType, err := repository.InitStoreDB(repStore.Config.StorageType, repStore.Config.DatabaseDsn)
-			if err != nil {
-				t.Errorf(fmt.Sprintf("Error create DB table: %s", err.Error()))
-			}
-			if len(storageType) != 0 {
-				repStore.Config.StorageType = storageType
+			storage := repository.NewStorage(config.DatabaseDsn, config.StoreFile)
+			if storage != nil {
+				repStore.Config.Storage = storage
 				t.Run("Checking handlers /ping GET", func(t *testing.T) {
-					mapTypeStore := repStore.Config.StorageType
-					if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
-						t.Errorf("Error handlers 1 /ping GET (%d)", len(mapTypeStore))
-					}
-
-					if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
-						t.Errorf("Error handlers 2 /ping GET")
+					if repStore.Config.Storage.ConnDB() == nil {
+						t.Errorf("Error handlers 1 /ping GET")
 					}
 				})
 			}

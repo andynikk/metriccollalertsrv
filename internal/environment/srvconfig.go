@@ -34,7 +34,7 @@ type ServerConfig struct {
 	Address        string
 	Key            string
 	DatabaseDsn    string
-	StorageType    repository.MapTypeStore
+	Storage        repository.Storage
 	CryptoKey      string
 	ConfigFilePath string
 	TypeServer     string
@@ -83,8 +83,7 @@ func InitConfigServer() *ServerConfig {
 	sc.InitConfigServerFile()
 	sc.InitConfigServerDefault()
 
-	sc.StorageType, _ = repository.InitStoreDB(sc.StorageType, sc.DatabaseDsn)
-	sc.StorageType, _ = repository.InitStoreFile(sc.StorageType, sc.StoreFile)
+	sc.Storage = repository.NewStorage(sc.DatabaseDsn, sc.StoreFile)
 
 	return &sc
 }
@@ -147,22 +146,12 @@ func (sc *ServerConfig) InitConfigServerENV() {
 		typeSrv = cfgENV.TypeServer
 	}
 
-	MapTypeStore := make(repository.MapTypeStore)
-	if databaseDsn != "" {
-		typeDB := repository.TypeStoreDataDB{}
-		MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
-	} else if storeFileMetrics != "" {
-		typeFile := repository.TypeStoreDataFile{}
-		MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
-	}
-
 	sc.StoreInterval = storeIntervalMetrics
 	sc.StoreFile = storeFileMetrics
 	sc.Restore = restoreMetric
 	sc.Address = addressServ
 	sc.Key = keyHash
 	sc.DatabaseDsn = databaseDsn
-	sc.StorageType = MapTypeStore
 	sc.CryptoKey = patchCryptoKey
 	sc.ConfigFilePath = patchFileConfig
 	sc.TypeServer = typeSrv
@@ -215,21 +204,6 @@ func (sc *ServerConfig) InitConfigServerFlag() {
 	if sc.ConfigFilePath == "" {
 		sc.ConfigFilePath = pathFileCfg
 	}
-	if len(sc.StorageType) == 0 {
-
-		MapTypeStore := make(repository.MapTypeStore)
-		if len(sc.StorageType) == 0 {
-			if *keyDatabaseDsn != "" {
-				typeDB := repository.TypeStoreDataDB{}
-				MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
-			} else if *cryptoKeyFlag != "" {
-				typeFile := repository.TypeStoreDataFile{}
-				MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
-			}
-		}
-
-		sc.StorageType = MapTypeStore
-	}
 	if sc.TrustedSubnet == "" {
 		sc.TrustedSubnet = *trustedSubnet
 	}
@@ -270,19 +244,6 @@ func (sc *ServerConfig) InitConfigServerFile() {
 		sc.CryptoKey = patchCryptoKey
 	}
 
-	if len(sc.StorageType) == 0 {
-		MapTypeStore := make(repository.MapTypeStore)
-		if len(sc.StorageType) == 0 {
-			if databaseDsn != "" {
-				typeDB := repository.TypeStoreDataDB{}
-				MapTypeStore[constants.MetricsStorageDB.String()] = &typeDB
-			} else if storeFileMetrics != "" {
-				typeFile := repository.TypeStoreDataFile{}
-				MapTypeStore[constants.MetricsStorageFile.String()] = &typeFile
-			}
-		}
-		sc.StorageType = MapTypeStore
-	}
 	if sc.TrustedSubnet == "" {
 		sc.TrustedSubnet = trustedSubnet
 	}

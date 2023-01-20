@@ -113,14 +113,12 @@ func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (
 
 func (s *serverGRPS) PingDataBases(ctx context.Context, req *EmptyRequest) (*TextErrResponse, error) {
 
-	mapTypeStore := s.Config.StorageType
-
-	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
+	if s.Config.Storage == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		return nil, errs.ErrStatusInternalServer
 	}
 
-	if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
+	if s.Config.Storage.ConnDB() == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		return nil, errs.ErrStatusInternalServer
 	}

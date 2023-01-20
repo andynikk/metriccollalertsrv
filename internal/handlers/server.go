@@ -210,9 +210,7 @@ func (rs *RepStore) Shutdown() {
 	rs.Lock()
 	defer rs.Unlock()
 
-	for _, val := range rs.Config.StorageType {
-		val.WriteMetric(rs.PrepareDataBuckUp())
-	}
+	rs.Config.Storage.WriteMetric(rs.PrepareDataBuckUp())
 	constants.Logger.InfoLog("server stopped")
 }
 
@@ -342,15 +340,14 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 	defer rq.Body.Close()
-	mapTypeStore := rs.Config.StorageType
 
-	if _, findKey := mapTypeStore[constants.MetricsStorageDB.String()]; !findKey {
+	if rs.Config.Storage == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if mapTypeStore[constants.MetricsStorageDB.String()].ConnDB() == nil {
+	if rs.Config.Storage.ConnDB() == nil {
 
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -433,15 +430,16 @@ func (rs *RepStore) RestoreData() {
 	rs.Lock()
 	defer rs.Unlock()
 
-	for _, val := range rs.Config.StorageType {
-		arrMetrics, err := val.GetMetric()
-		if err != nil {
+	arrMetrics, err := rs.Config.Storage.GetMetric()
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return
+	}
+
+	for _, val := range arrMetrics {
+		if err = rs.SetValueInMapJSON(val); err != nil {
 			constants.Logger.ErrorLog(err)
 			continue
-		}
-
-		for _, val := range arrMetrics {
-			rs.SetValueInMapJSON(val)
 		}
 	}
 }
@@ -454,9 +452,7 @@ func (rs *RepStore) BackupData() {
 		select {
 		case <-saveTicker.C:
 
-			for _, val := range rs.Config.StorageType {
-				val.WriteMetric(rs.PrepareDataBuckUp())
-			}
+			rs.Config.Storage.WriteMetric(rs.PrepareDataBuckUp())
 
 		case <-ctx.Done():
 			cancelFunc()

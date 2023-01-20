@@ -32,9 +32,7 @@ func HandlerUpdatesMetricJSON(body []byte, rs *RepStore) error {
 		rs.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, rs.Config.Key)
 	}
 
-	for _, val := range rs.Config.StorageType {
-		val.WriteMetric(storedData)
-	}
+	rs.Config.Storage.WriteMetric(storedData)
 
 	return nil
 }
@@ -70,9 +68,7 @@ func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (Header, []byte, error) 
 	var arrMetrics encoding.ArrMetrics
 	arrMetrics = append(arrMetrics, mt)
 
-	for _, val := range rs.Config.StorageType {
-		val.WriteMetric(arrMetrics)
-	}
+	rs.Config.Storage.WriteMetric(arrMetrics)
 
 	return headerRequest, metricsJSON, nil
 }
