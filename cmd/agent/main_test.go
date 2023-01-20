@@ -209,7 +209,7 @@ func BenchmarkSendMetrics(b *testing.B) {
 			if config.StringTypeServer == constants.TypeSrvGRPC.String() {
 				a.(*agent.AgentGRPC).Post2Server(mapMetricsButch)
 			} else {
-				a.(*agent.AgentHTTP).Post2Server(mapMetricsButch)
+				a.(*agent.HTTPAgent).Post2Server(mapMetricsButch)
 			}
 		}()
 	}

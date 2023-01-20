@@ -11,18 +11,18 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 )
 
-type AgentHTTP struct {
+type HTTPAgent struct {
 	GeneralAgent
 }
 
-func newAgentHTTP(configAgent *environment.AgentConfig) *AgentHTTP {
+func newAgentHTTP(configAgent *environment.AgentConfig) *HTTPAgent {
 	//pk, err := encryption.InitPublicKey(configAgent.CryptoKey)
 	//if err != nil {
 	//	constants.Logger.ErrorLog(err)
 	//	return nil
 	//}
 
-	a := AgentHTTP{
+	a := HTTPAgent{
 		GeneralAgent: GeneralAgent{
 			Config:       configAgent,
 			PollCount:    0,
@@ -30,11 +30,10 @@ func newAgentHTTP(configAgent *environment.AgentConfig) *AgentHTTP {
 			//KeyEncryption: pk,
 		},
 	}
-
 	return &a
 }
 
-func (a *AgentHTTP) Run() {
+func (a *HTTPAgent) Run() {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	go a.GeneralAgent.GoMetricsScan(ctx, cancelFunc)
@@ -42,12 +41,12 @@ func (a *AgentHTTP) Run() {
 	go a.GoMakeRequest(ctx, cancelFunc)
 }
 
-func (a *AgentHTTP) Stop() {
+func (a *HTTPAgent) Stop() {
 	mapMetricsButch, _ := a.SendMetricsServer()
 	a.Post2Server(mapMetricsButch)
 }
 
-func (a *AgentHTTP) Post2Server(metricsButch MapMetricsButch) {
+func (a *HTTPAgent) Post2Server(metricsButch MapMetricsButch) {
 
 	for _, metrics := range metricsButch {
 
@@ -82,7 +81,7 @@ func (a *AgentHTTP) Post2Server(metricsButch MapMetricsButch) {
 	}
 }
 
-func (a *AgentHTTP) GoMakeRequest(ctx context.Context, cancelFunc context.CancelFunc) {
+func (a *HTTPAgent) GoMakeRequest(ctx context.Context, cancelFunc context.CancelFunc) {
 
 	reportTicker := time.NewTicker(a.Config.ReportInterval)
 
