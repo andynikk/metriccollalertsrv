@@ -19,7 +19,7 @@ import (
 
 type Header map[string]string
 
-func FillHeader(ctx context.Context) Header {
+func FillMetadata(ctx context.Context) Header {
 	mHeader := make(Header)
 
 	mdI, _ := metadata.FromIncomingContext(ctx)
@@ -46,7 +46,7 @@ func (s *serverGRPS) mustEmbedUnimplementedMetricCollectorServer() {
 
 func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequest) (*EmptyRequest, error) {
 
-	header := FillHeader(ctx)
+	header := FillMetadata(ctx)
 	contentEncoding := header["content-encoding"]
 	contentEncryption := header["content-encryption"]
 
@@ -80,7 +80,7 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 }
 
 func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrRequest) (*EmptyRequest, error) {
-	header := FillHeader(ctx)
+	header := FillMetadata(ctx)
 
 	contentEncoding := header["content-encoding"]
 	bytBody := req.Body
@@ -113,11 +113,6 @@ func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (
 
 func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*EmptyRequest, error) {
 
-	if s.Config.Storage == nil {
-		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
-		return nil, errs.ErrStatusInternalServer
-	}
-
 	if s.Config.Storage.ConnDB() == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		return nil, errs.ErrStatusInternalServer
@@ -138,7 +133,7 @@ func (s *serverGRPS) GetValue(ctx context.Context, req *UpdatesRequest) (*Status
 
 func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*FullResponse, error) {
 
-	headerIn := FillHeader(ctx)
+	headerIn := FillMetadata(ctx)
 	headerOut, bodyOut, err := HandlerValueMetricaJSON(headerIn, req.Body, s.RepStore)
 	if err != nil {
 		return nil, err
@@ -153,7 +148,7 @@ func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*Fu
 }
 
 func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*StatusResponse, error) {
-	h := FillHeader(ctx)
+	h := FillMetadata(ctx)
 
 	arrMetricsAndValue := s.RepStore.TextMetricsAndValue()
 
@@ -218,8 +213,11 @@ func (s *serverGRPS) ServerInterceptor(ctx context.Context,
 		return nil, nil
 	}
 	xRealIP := md.Get(strings.ToLower("X-Real-IP"))[0]
-	ok = networks.AddressAllowed(strings.Split(xRealIP, constants.SepIPAddress), s.Config.TrustedSubnet)
-	if !ok {
+
+	addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
+	allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
+
+	if !allowed {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("X-Real-Ip is not found: %s", xRealIP))
 	}
 
