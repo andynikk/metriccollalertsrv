@@ -67,6 +67,7 @@ func (a *HTTPAgent) Post2Server(metricsButch MapMetricsButch) {
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Content-Encoding", "gzip")
+		fmt.Println("+++++++++++++++++", 7, a.Config.IPAddress)
 		req.Header.Set("X-Real-IP", a.Config.IPAddress)
 		if a.KeyEncryption != nil && a.KeyEncryption.PublicKey != nil {
 			req.Header.Set("Content-Encryption", a.KeyEncryption.TypeEncryption)
