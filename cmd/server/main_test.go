@@ -91,7 +91,7 @@ func TestFuncServerHTTP(t *testing.T) {
 	t.Run("Checking connect DB", func(t *testing.T) {
 		t.Run("Checking create DB table", func(t *testing.T) {
 			fmt.Println("++++++++ ping GET", config.DatabaseDsn, config.StoreFile)
-			if config.DatabaseDsn != "" || config.StoreFile != "" {
+			if config.DatabaseDsn != "" {
 				repStore.Config.Storage = repository.NewStorage(config.DatabaseDsn, config.StoreFile)
 				t.Run("Checking handlers /ping GET", func(t *testing.T) {
 					if repStore.Config.Storage.ConnDB() == nil {
