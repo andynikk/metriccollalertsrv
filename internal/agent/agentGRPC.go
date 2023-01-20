@@ -24,20 +24,21 @@ func newAgentGRPC(configAgent *environment.AgentConfig) *AgentGRPC {
 		constants.Logger.ErrorLog(err)
 		return nil
 	}
-	pk, err := encryption.InitPublicKey(configAgent.CryptoKey)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-		return nil
-	}
-
 	a := AgentGRPC{
 		GeneralAgent: GeneralAgent{
-			Config:        configAgent,
-			PollCount:     0,
-			MetricsGauge:  make(MetricsGauge),
-			KeyEncryption: pk,
+			Config:       configAgent,
+			PollCount:    0,
+			MetricsGauge: make(MetricsGauge),
 		},
 		GRPCClientConn: conn,
+	}
+	if configAgent.CryptoKey != "" {
+		pk, err := encryption.InitPublicKey(configAgent.CryptoKey)
+		if err != nil {
+			constants.Logger.ErrorLog(err)
+			return nil
+		}
+		a.KeyEncryption = pk
 	}
 
 	return &a
