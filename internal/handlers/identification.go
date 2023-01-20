@@ -139,7 +139,9 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 
 		xRealIP := r.Header.Get("X-Real-IP")
 		if xRealIP == "" {
-			next.ServeHTTP(w, r)
+			//next.ServeHTTP(w, r)
+			//return
+			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
 			return
 		}
 
