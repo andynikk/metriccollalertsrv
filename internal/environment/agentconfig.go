@@ -3,6 +3,7 @@ package environment
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -213,7 +214,11 @@ func (ac *AgentConfig) InitConfigAgentDefault() {
 		ac.StringTypeServer = typeSrv
 	}
 
+	fmt.Println("+++++++++++++++", 1)
 	hn, _ := os.Hostname()
+	fmt.Println("+++++++++++++++", 2, hn)
 	IPs, _ := net.LookupIP(hn)
+	fmt.Println("+++++++++++++++", 3, IPs)
 	ac.IPAddress = networks.IPv4RangesToStr(IPs)
+	fmt.Println("+++++++++++++++", 4, ac.IPAddress)
 }
