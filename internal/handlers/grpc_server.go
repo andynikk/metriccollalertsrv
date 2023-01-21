@@ -95,6 +95,15 @@ func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *RequestUpdat
 	if err != nil {
 		return nil, err
 	}
+	if arrMetrics[0].Value == nil {
+		var zero float64 = 0
+		arrMetrics[0].Value = &zero
+	}
+	if arrMetrics[0].Delta == nil {
+		var zero int64 = 0
+		arrMetrics[0].Delta = &zero
+	}
+
 	mi := &Metrics_Info{
 		ID:    arrMetrics[0].ID,
 		MType: arrMetrics[0].MType,
@@ -158,6 +167,14 @@ func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*Re
 	var arrM []*Metrics
 	for key, val := range s.MutexRepo {
 		data := val.GetMetrics(val.Type(), key, s.Config.Key)
+		if data.Value == nil {
+			var zero float64 = 0
+			data.Value = &zero
+		}
+		if data.Delta == nil {
+			var zero int64 = 0
+			data.Delta = &zero
+		}
 		mi := &Metrics_Info{
 			ID:    data.ID,
 			MType: data.MType,
