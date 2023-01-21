@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -44,7 +43,7 @@ func (s *serverGRPS) mustEmbedUnimplementedMetricCollectorServer() {
 	panic("implement me")
 }
 
-func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequest) (*EmptyRequest, error) {
+func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *RequestUpdateByte) (*EmptyAnswer, error) {
 
 	header := FillMetadata(ctx)
 	contentEncoding := header["content-encoding"]
@@ -76,10 +75,10 @@ func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *UpdatesRequ
 		return nil, err
 	}
 
-	return &EmptyRequest{}, nil
+	return &EmptyAnswer{}, nil
 }
 
-func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrRequest) (*EmptyRequest, error) {
+func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *RequestUpdateByte) (*ResponseMetrics, error) {
 	header := FillMetadata(ctx)
 
 	contentEncoding := header["content-encoding"]
@@ -92,15 +91,22 @@ func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *UpdateStrReq
 		}
 		bytBody = bytBodyDecompress
 	}
-	_, _, err := HandlerUpdateMetricJSON(bytBody, s.GetRepStore())
+	arrMetrics, err := HandlerUpdateMetricJSON(bytBody, s.GetRepStore())
 	if err != nil {
 		return nil, err
 	}
-
-	return &EmptyRequest{}, nil
+	mi := &Metrics_Info{
+		ID:    arrMetrics[0].ID,
+		MType: arrMetrics[0].MType,
+		Delta: *arrMetrics[0].Delta,
+		Value: *arrMetrics[0].Value,
+		Hash:  arrMetrics[0].Hash,
+	}
+	arrM := []*Metrics{{Info: mi}}
+	return &ResponseMetrics{Metrics: arrM}, nil
 }
 
-func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (*EmptyRequest, error) {
+func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *ResponseProperties) (*EmptyAnswer, error) {
 
 	rp := s.GetRepStore()
 	err := rp.setValueInMap(string(req.MetType), string(req.MetName), string(req.MetValue))
@@ -108,30 +114,30 @@ func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *UpdateRequest) (
 		return nil, err
 	}
 
-	return &EmptyRequest{}, nil
+	return &EmptyAnswer{}, nil
 }
 
-func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*EmptyRequest, error) {
+func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*EmptyAnswer, error) {
 
 	if s.Config.Storage.ConnDB() == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		return nil, errs.ErrStatusInternalServer
 	}
 
-	return &EmptyRequest{}, nil
+	return &EmptyAnswer{}, nil
 }
 
-func (s *serverGRPS) GetValue(ctx context.Context, req *UpdatesRequest) (*StatusResponse, error) {
+func (s *serverGRPS) GetValue(ctx context.Context, req *ResponseProperties) (*ResponseStatus, error) {
 
-	strMetric, err := HandlerGetValue(req.Body, s.RepStore)
+	strMetric, err := HandlerGetValue(req.MetName, s.RepStore)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return nil, err
 	}
-	return &StatusResponse{Result: []byte(strMetric)}, nil
+	return &ResponseStatus{Result: []byte(strMetric)}, nil
 }
 
-func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*FullResponse, error) {
+func (s *serverGRPS) GetValueJSON(ctx context.Context, req *RequestByte) (*ResponseFull, error) {
 
 	headerIn := FillMetadata(ctx)
 	headerOut, bodyOut, err := HandlerValueMetricaJSON(headerIn, req.Body, s.RepStore)
@@ -144,59 +150,24 @@ func (s *serverGRPS) GetValueJSON(ctx context.Context, req *UpdatesRequest) (*Fu
 		hdr += fmt.Sprintf("%s:%s\n", k, v)
 	}
 
-	return &FullResponse{Header: []byte(hdr), Body: bodyOut}, nil
+	return &ResponseFull{Header: []byte(hdr), Body: bodyOut}, nil
 }
 
-func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*StatusResponse, error) {
-	h := FillMetadata(ctx)
+func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*ResponseMetrics, error) {
 
-	arrMetricsAndValue := s.RepStore.TextMetricsAndValue()
-
-	var strMetrics string
-	content := `<!DOCTYPE html>
-				<html>
-				<head>
-  					<meta charset="UTF-8">
-  					<title>МЕТРИКИ</title>
-				</head>
-				<body>
-				<h1>МЕТРИКИ</h1>
-				<ul>
-				`
-	for _, val := range arrMetricsAndValue {
-		content = content + `<li><b>` + val + `</b></li>` + "\n"
-		if strMetrics != "" {
-			strMetrics = strMetrics + ";"
+	var arrM []*Metrics
+	for key, val := range s.MutexRepo {
+		data := val.GetMetrics(val.Type(), key, s.Config.Key)
+		mi := &Metrics_Info{
+			ID:    data.ID,
+			MType: data.MType,
+			Delta: *data.Delta,
+			Value: *data.Value,
+			Hash:  data.Hash,
 		}
-		strMetrics = strMetrics + val
+		arrM = append(arrM, &Metrics{Info: mi})
 	}
-	content = content + `</ul>
-						</body>
-						</html>`
-
-	acceptEncoding := h["Accept-Encoding"]
-
-	metricsHTML := []byte(content)
-	byteMeterics := bytes.NewBuffer(metricsHTML).Bytes()
-	compData, err := compression.Compress(byteMeterics)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-	}
-
-	HeaderResponse := Header{}
-
-	var bodyBate []byte
-	if strings.Contains(acceptEncoding, "gzip") {
-		HeaderResponse["content-encoding"] = "gzip"
-		bodyBate = compData
-	} else {
-		bodyBate = metricsHTML
-	}
-
-	HeaderResponse["content-type"] = "text/html"
-	HeaderResponse["metrics-val"] = strMetrics
-
-	return &StatusResponse{Result: bodyBate}, nil
+	return &ResponseMetrics{Metrics: arrM}, nil
 }
 
 func (s *serverGRPS) WithServerUnaryInterceptor() grpc.ServerOption {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
@@ -61,14 +60,14 @@ func TestFuncServer(t *testing.T) {
 	t.Run("Checking handlers Update", func(t *testing.T) {
 		tests := []struct {
 			name           string
-			request        *UpdateRequest
+			request        *ResponseProperties
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения counter", request: &UpdateRequest{MetType: []byte("counter"),
+			{name: "Проверка на установку значения counter", request: &ResponseProperties{MetType: []byte("counter"),
 				MetName: []byte("testSetGet332"), MetValue: []byte("6")}, wantStatusCode: codes.OK},
-			{name: "Проверка на не правильный тип метрики", request: &UpdateRequest{MetType: []byte("notcounter"),
+			{name: "Проверка на не правильный тип метрики", request: &ResponseProperties{MetType: []byte("notcounter"),
 				MetName: []byte("testSetGet332"), MetValue: []byte("6")}, wantStatusCode: codes.Unimplemented},
-			{name: "Проверка на не правильное значение метрики", request: &UpdateRequest{MetType: []byte("counter"),
+			{name: "Проверка на не правильное значение метрики", request: &ResponseProperties{MetType: []byte("counter"),
 				MetName: []byte("testSetGet332"), MetValue: []byte("non")}, wantStatusCode: codes.PermissionDenied},
 		}
 
@@ -88,13 +87,13 @@ func TestFuncServer(t *testing.T) {
 			request        encoding.Metrics
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения gauge", request: testMericGouge(server.Config.Key),
+			{name: "Проверка на установку значения gauge", request: testMetricsGouge(server.Config.Key),
 				wantStatusCode: codes.OK},
-			{name: "Проверка на установку значения counter", request: testMericCaunter(server.Config.Key),
+			{name: "Проверка на установку значения counter", request: testMetricsCaunter(server.Config.Key),
 				wantStatusCode: codes.OK},
-			{name: "Проверка на не правильный тип метрики gauge", request: testMericNoGouge(server.Config.Key),
+			{name: "Проверка на не правильный тип метрики gauge", request: testMetricsNoGouge(server.Config.Key),
 				wantStatusCode: codes.Unimplemented},
-			{name: "Проверка на не правильный тип метрики counter", request: testMericNoCounter(server.Config.Key),
+			{name: "Проверка на не правильный тип метрики counter", request: testMetricsNoCounter(server.Config.Key),
 				wantStatusCode: codes.Unimplemented},
 		}
 
@@ -117,12 +116,12 @@ func TestFuncServer(t *testing.T) {
 
 				})
 
-				req := UpdateStrRequest{Body: gziparrMetrics}
+				req := RequestUpdateByte{Body: gziparrMetrics}
 				key := KeyContext("content-encoding")
 				ctxValue := context.WithValue(ctx, key, "gzip")
-				textErr, err := server.UpdateOneMetricsJSON(ctxValue, &req)
+				_, err := server.UpdateOneMetricsJSON(ctxValue, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
-					t.Errorf("Error checking handlers Update JSON (%s). %s", textErr, tt.name)
+					t.Errorf("Error checking handlers Update JSON. %s", tt.name)
 				}
 			})
 		}
@@ -130,8 +129,8 @@ func TestFuncServer(t *testing.T) {
 
 	t.Run("Checking handlers Updates JSON", func(t *testing.T) {
 		var storedData encoding.ArrMetrics
-		storedData = append(storedData, testMericGouge(server.Config.Key))
-		storedData = append(storedData, testMericCaunter(server.Config.Key))
+		storedData = append(storedData, testMetricsGouge(server.Config.Key))
+		storedData = append(storedData, testMetricsCaunter(server.Config.Key))
 
 		arrMetrics, err := json.MarshalIndent(storedData, "", " ")
 		if err != nil {
@@ -142,7 +141,7 @@ func TestFuncServer(t *testing.T) {
 			t.Errorf("Error checking gzip. %s", "Updates JSON")
 		}
 
-		req := UpdatesRequest{Body: gziparrMetrics}
+		req := RequestUpdateByte{Body: gziparrMetrics}
 		key := KeyContext("content-encoding")
 		ctxValue := context.WithValue(ctx, key, "gzip")
 		_, err = server.UpdatesAllMetricsJSON(ctxValue, &req)
@@ -158,13 +157,13 @@ func TestFuncServer(t *testing.T) {
 			request        encoding.Metrics
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения gauge", request: testMericGouge(server.Config.Key),
+			{name: "Проверка на установку значения gauge", request: testMetricsGouge(server.Config.Key),
 				wantStatusCode: codes.OK},
-			{name: "Проверка на установку значения counter", request: testMericCaunter(server.Config.Key),
+			{name: "Проверка на установку значения counter", request: testMetricsCaunter(server.Config.Key),
 				wantStatusCode: codes.OK},
-			{name: "Проверка на не правильное значение метрики gauge", request: testMericWrongGouge(server.Config.Key),
+			{name: "Проверка на не правильное значение метрики gauge", request: testMetricsWrongGouge(server.Config.Key),
 				wantStatusCode: codes.NotFound},
-			{name: "Проверка на не правильное значение метрики counter", request: testMericWrongCounter(server.Config.Key),
+			{name: "Проверка на не правильное значение метрики counter", request: testMetricsWrongCounter(server.Config.Key),
 				wantStatusCode: codes.NotFound},
 		}
 
@@ -181,7 +180,7 @@ func TestFuncServer(t *testing.T) {
 					t.Errorf("Error checking gzip. %s", tt.name)
 				}
 
-				req := UpdatesRequest{Body: gziparrMetrics}
+				req := RequestByte{Body: gziparrMetrics}
 				key := KeyContext("content-encoding")
 				ctxValue := context.WithValue(ctx, key, "gzip")
 				textErr, err := server.GetValueJSON(ctxValue, &req)
@@ -199,20 +198,20 @@ func TestFuncServer(t *testing.T) {
 			request        string
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения gauge", request: testMericGouge(server.Config.Key).ID,
+			{name: "Проверка на установку значения gauge", request: testMetricsGouge(server.Config.Key).ID,
 				wantStatusCode: codes.OK},
-			{name: "Проверка на установку значения counter", request: testMericCaunter(server.Config.Key).ID,
+			{name: "Проверка на установку значения counter", request: testMetricsCaunter(server.Config.Key).ID,
 				wantStatusCode: codes.OK},
-			{name: "Проверка на не правильное значение метрики gauge", request: testMericWrongGouge(server.Config.Key).ID,
+			{name: "Проверка на не правильное значение метрики gauge", request: testMetricsWrongGouge(server.Config.Key).ID,
 				wantStatusCode: codes.NotFound},
-			{name: "Проверка на не правильное значение метрики counter", request: testMericWrongCounter(server.Config.Key).ID,
+			{name: "Проверка на не правильное значение метрики counter", request: testMetricsWrongCounter(server.Config.Key).ID,
 				wantStatusCode: codes.NotFound},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 
-				req := UpdatesRequest{Body: []byte(tt.request)}
+				req := ResponseProperties{MetName: []byte(tt.request)}
 				textErr, err := server.GetValue(ctx, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
 					t.Errorf("Error checking handlers Value (%s). %s", textErr, tt.name)
@@ -224,17 +223,16 @@ func TestFuncServer(t *testing.T) {
 	t.Run("Checking handlers ListMetrics", func(t *testing.T) {
 
 		req := EmptyRequest{}
-		res, _ := server.GetListMetrics(ctx, &req)
+		res, err := server.GetListMetrics(ctx, &req)
 
-		if !strings.Contains(string(res.Result), "TestGauge") ||
-			!strings.Contains(string(res.Result), "TestCounter") {
+		if err != nil || res == nil {
 			t.Errorf("Error checking handlers ListMetrics.")
 		}
 	})
 
 }
 
-func testMericGouge(configKey string) encoding.Metrics {
+func testMetricsGouge(configKey string) encoding.Metrics {
 
 	var fValue = 0.001
 
@@ -247,7 +245,7 @@ func testMericGouge(configKey string) encoding.Metrics {
 	return mGauge
 }
 
-func testMericWrongGouge(configKey string) encoding.Metrics {
+func testMetricsWrongGouge(configKey string) encoding.Metrics {
 
 	var fValue = 0.001
 
@@ -260,7 +258,7 @@ func testMericWrongGouge(configKey string) encoding.Metrics {
 	return mGauge
 }
 
-func testMericNoGouge(configKey string) encoding.Metrics {
+func testMetricsNoGouge(configKey string) encoding.Metrics {
 
 	var fValue = 0.001
 
@@ -273,7 +271,7 @@ func testMericNoGouge(configKey string) encoding.Metrics {
 	return mGauge
 }
 
-func testMericCaunter(configKey string) encoding.Metrics {
+func testMetricsCaunter(configKey string) encoding.Metrics {
 	var iDelta int64 = 10
 
 	var mCounter encoding.Metrics
@@ -285,7 +283,7 @@ func testMericCaunter(configKey string) encoding.Metrics {
 	return mCounter
 }
 
-func testMericNoCounter(configKey string) encoding.Metrics {
+func testMetricsNoCounter(configKey string) encoding.Metrics {
 	var iDelta int64 = 10
 
 	var mCounter encoding.Metrics
@@ -297,7 +295,7 @@ func testMericNoCounter(configKey string) encoding.Metrics {
 	return mCounter
 }
 
-func testMericWrongCounter(configKey string) encoding.Metrics {
+func testMetricsWrongCounter(configKey string) encoding.Metrics {
 	var iDelta int64 = 10
 
 	var mCounter encoding.Metrics

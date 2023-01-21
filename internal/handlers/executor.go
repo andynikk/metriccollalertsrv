@@ -37,7 +37,7 @@ func HandlerUpdatesMetricJSON(body []byte, rs *RepStore) error {
 	return nil
 }
 
-func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (Header, []byte, error) {
+func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (encoding.ArrMetrics, error) {
 
 	bodyJSON := bytes.NewReader(body)
 
@@ -45,7 +45,7 @@ func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (Header, []byte, error) 
 	err := json.NewDecoder(bodyJSON).Decode(&v)
 	if err != nil {
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
-		return nil, nil, errs.ErrStatusInternalServer
+		return nil, errs.ErrStatusInternalServer
 	}
 
 	rs.Lock()
@@ -55,22 +55,22 @@ func HandlerUpdateMetricJSON(body []byte, rs *RepStore) (Header, []byte, error) 
 	headerRequest["Content-Type"] = "application/json"
 	err = rs.SetValueInMapJSON(v)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	mt := rs.MutexRepo[v.ID].GetMetrics(v.MType, v.ID, rs.Config.Key)
-	metricsJSON, err := mt.MarshalMetrica()
-	if err != nil {
-		constants.Logger.InfoLog(fmt.Sprintf("$$ 4 %s", err.Error()))
-		return nil, nil, errs.ErrStatusInternalServer
-	}
+	//metricsJSON, err := mt.MarshalMetrica()
+	//if err != nil {
+	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 4 %s", err.Error()))
+	//	return "", errs.ErrStatusInternalServer
+	//}
 
 	var arrMetrics encoding.ArrMetrics
 	arrMetrics = append(arrMetrics, mt)
 
 	rs.Config.Storage.WriteMetric(arrMetrics)
 
-	return headerRequest, metricsJSON, nil
+	return arrMetrics, nil
 }
 
 func HandlerGetValue(body []byte, rs *RepStore) (string, error) {

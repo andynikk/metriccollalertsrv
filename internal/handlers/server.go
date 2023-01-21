@@ -244,17 +244,33 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 			return
 		}
 	}
-	header, body, err := HandlerUpdateMetricJSON(bytBody, rs)
+	//body, err := HandlerUpdateMetricJSON(bytBody, rs)
+	//if err != nil {
+	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
+	//	http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
+	//	return
+	//}
+	//if _, err = rw.Write([]byte(body)); err != nil {
+	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
+	//	rw.WriteHeader(errs.StatusHTTP(errs.ErrStatusInternalServer))
+	//	return
+	//}
+
+	arrMetrics, err := HandlerUpdateMetricJSON(bytBody, rs)
 	if err != nil {
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
 		http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
 		return
 	}
 
-	for key, val := range header {
-		rw.Header().Add(key, val)
+	metricsJSON, err := arrMetrics[0].MarshalMetrica()
+	if err != nil {
+		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
+		http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
+		return
 	}
-	if _, err = rw.Write(body); err != nil {
+
+	if _, err = rw.Write(metricsJSON); err != nil {
 		constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
 		rw.WriteHeader(errs.StatusHTTP(errs.ErrStatusInternalServer))
 		return

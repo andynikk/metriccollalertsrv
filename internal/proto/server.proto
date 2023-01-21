@@ -5,25 +5,25 @@ package handlers;
 option go_package = "./";
 
 service MetricCollector {
-  rpc UpdatesAllMetricsJSON(UpdatesRequest) returns (EmptyRequest) {}
-  rpc UpdateOneMetricsJSON(UpdateStrRequest) returns (EmptyRequest) {}
-  rpc UpdateOneMetrics(UpdateRequest) returns (EmptyRequest) {}
+  rpc UpdatesAllMetricsJSON(RequestUpdateByte) returns (EmptyAnswer) {}
+  rpc UpdateOneMetricsJSON(RequestUpdateByte) returns (ResponseMetrics) {}
+  rpc UpdateOneMetrics(ResponseProperties) returns (EmptyAnswer) {}
 
-  rpc PingDataBase(EmptyRequest) returns (EmptyRequest) {}
+  rpc PingDataBase(EmptyRequest) returns (EmptyAnswer) {}
 
-  rpc GetValueJSON(UpdatesRequest) returns (FullResponse) {}
-  rpc GetValue(UpdatesRequest) returns (StatusResponse) {}
+  rpc GetValueJSON(RequestByte) returns (ResponseFull) {}
+  rpc GetValue(ResponseProperties) returns (ResponseStatus) {}
 
-  rpc GetListMetrics(EmptyRequest) returns (StatusResponse) {}
+  rpc GetListMetrics(EmptyRequest) returns (ResponseMetrics) {}
 }
 
-message UpdateRequest {
+message ResponseProperties {
   bytes metType = 1;
   bytes metName = 2;
   bytes metValue = 3;
 }
 
-message UpdatesRequest {
+message RequestByte {
   bytes body = 1;
 }
 
@@ -31,25 +31,47 @@ message EmptyRequest {
 
 }
 
-message UpdateStrRequest {
+message RequestUpdateByte {
   bytes body = 1;
 }
 
-message ValueRequest {
+message RequestValue {
   bytes metType = 1;
   bytes metName = 2;
 }
 
 /////////////////////////Response///////////////////////
-message TextErrResponse {
+message ResponseByteErr {
   bytes result = 1;
 }
 
-message StatusResponse {
+message ResponseStatus {
   bytes result = 1;
 }
 
-message FullResponse {
+message ResponseFull {
   bytes header = 1;
   bytes body = 2;
+}
+
+message ResponseString {
+  string result = 1;
+}
+
+message EmptyAnswer {
+}
+
+message Metrics {
+  message Info {
+    string ID = 1;
+    string MType = 2;
+    int64 Delta = 3;
+    double Value = 4;
+    string Hash = 5;
+  }
+  Info info = 1;
+}
+
+message ResponseMetrics {
+  repeated Metrics metrics = 1;
 }
