@@ -183,9 +183,9 @@ func TestFuncServer(t *testing.T) {
 				req := RequestByte{Body: gziparrMetrics}
 				key := KeyContext("content-encoding")
 				ctxValue := context.WithValue(ctx, key, "gzip")
-				textErr, err := server.GetValueJSON(ctxValue, &req)
+				_, err = server.GetValueJSON(ctxValue, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
-					t.Errorf("Error checking handlers Value JSON (%s). %s", textErr, tt.name)
+					t.Errorf("Error checking handlers Value JSON. %s", tt.name)
 				}
 			})
 		}
@@ -212,9 +212,9 @@ func TestFuncServer(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 
 				req := ResponseProperties{MetName: []byte(tt.request)}
-				textErr, err := server.GetValue(ctx, &req)
+				rep, err := server.GetValue(ctx, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
-					t.Errorf("Error checking handlers Value (%s). %s", textErr, tt.name)
+					t.Errorf("Error checking handlers Value (%s). %s", rep.Result, tt.name)
 				}
 			})
 		}

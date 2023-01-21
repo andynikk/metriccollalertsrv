@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
+	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/networks"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -103,14 +106,14 @@ func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *RequestUpdat
 		var zero int64 = 0
 		arrMetrics[0].Delta = &zero
 	}
-	mi := &Metrics_Info{
+	mGRPC := &MetricsGRPC{
 		ID:    arrMetrics[0].ID,
 		MType: arrMetrics[0].MType,
 		Delta: *arrMetrics[0].Delta,
 		Value: *arrMetrics[0].Value,
 		Hash:  arrMetrics[0].Hash,
 	}
-	arrM := []*Metrics{{Info: mi}}
+	arrM := []*MetricsGRPC{mGRPC}
 	return &ResponseMetrics{Metrics: arrM}, nil
 }
 
@@ -135,17 +138,17 @@ func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*Empt
 	return &EmptyAnswer{}, nil
 }
 
-func (s *serverGRPS) GetValue(ctx context.Context, req *ResponseProperties) (*ResponseStatus, error) {
+func (s *serverGRPS) GetValue(ctx context.Context, req *ResponseProperties) (*ResponseString, error) {
 
 	strMetric, err := HandlerGetValue(req.MetName, s.RepStore)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 		return nil, err
 	}
-	return &ResponseStatus{Result: []byte(strMetric)}, nil
+	return &ResponseString{Result: strMetric}, nil
 }
 
-func (s *serverGRPS) GetValueJSON(ctx context.Context, req *RequestByte) (*ResponseFull, error) {
+func (s *serverGRPS) GetValueJSON(ctx context.Context, req *RequestByte) (*ResponseHeaderMetrics, error) {
 
 	headerIn := FillMetadata(ctx)
 	headerOut, bodyOut, err := HandlerValueMetricaJSON(headerIn, req.Body, s.RepStore)
@@ -153,17 +156,43 @@ func (s *serverGRPS) GetValueJSON(ctx context.Context, req *RequestByte) (*Respo
 		return nil, err
 	}
 
-	var hdr string
+	var hGRPC []*HeaderGRPC
 	for k, v := range headerOut {
-		hdr += fmt.Sprintf("%s:%s\n", k, v)
+		hGRPC = append(hGRPC, &HeaderGRPC{Key: k, Value: v})
+		if k == "gzip" {
+			dataDecompress, err := compression.Decompress(bodyOut)
+			if err != nil {
+				constants.Logger.ErrorLog(err)
+				continue
+			}
+			bodyOut = dataDecompress
+		}
 	}
 
-	return &ResponseFull{Header: []byte(hdr), Body: bodyOut}, nil
+	m := encoding.Metrics{}
+	bodyJSON := bytes.NewReader(bodyOut)
+	err = json.NewDecoder(bodyJSON).Decode(&m)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return nil, err
+	}
+	if m.Value == nil {
+		var zero float64 = 0
+		m.Value = &zero
+	}
+	if m.Delta == nil {
+		var zero int64 = 0
+		m.Delta = &zero
+	}
+
+	var mGRPC []*MetricsGRPC
+	mGRPC = append(mGRPC, &MetricsGRPC{ID: m.ID, MType: m.MType, Value: *m.Value, Delta: *m.Delta, Hash: m.Hash})
+	return &ResponseHeaderMetrics{Header: hGRPC, Metrics: mGRPC}, nil
 }
 
 func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*ResponseMetrics, error) {
 
-	var arrM []*Metrics
+	var arrM []*MetricsGRPC
 	for key, val := range s.MutexRepo {
 		data := val.GetMetrics(val.Type(), key, s.Config.Key)
 		if data.Value == nil {
@@ -174,14 +203,11 @@ func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*Re
 			var zero int64 = 0
 			data.Delta = &zero
 		}
-		mi := &Metrics_Info{
-			ID:    data.ID,
+		arrM = append(arrM, &MetricsGRPC{ID: data.ID,
 			MType: data.MType,
 			Delta: *data.Delta,
 			Value: *data.Value,
-			Hash:  data.Hash,
-		}
-		arrM = append(arrM, &Metrics{Info: mi})
+			Hash:  data.Hash})
 	}
 	return &ResponseMetrics{Metrics: arrM}, nil
 }
