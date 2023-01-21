@@ -98,19 +98,11 @@ func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *RequestUpdat
 	if err != nil {
 		return nil, err
 	}
-	if arrMetrics[0].Value == nil {
-		var zero float64 = 0
-		arrMetrics[0].Value = &zero
-	}
-	if arrMetrics[0].Delta == nil {
-		var zero int64 = 0
-		arrMetrics[0].Delta = &zero
-	}
 	mGRPC := &MetricsGRPC{
 		ID:    arrMetrics[0].ID,
 		MType: arrMetrics[0].MType,
-		Delta: *arrMetrics[0].Delta,
-		Value: *arrMetrics[0].Value,
+		Delta: arrMetrics[0].Delta,
+		Value: arrMetrics[0].Value,
 		Hash:  arrMetrics[0].Hash,
 	}
 	arrM := []*MetricsGRPC{mGRPC}
@@ -176,17 +168,9 @@ func (s *serverGRPS) GetValueJSON(ctx context.Context, req *RequestByte) (*Respo
 		constants.Logger.ErrorLog(err)
 		return nil, err
 	}
-	if m.Value == nil {
-		var zero float64 = 0
-		m.Value = &zero
-	}
-	if m.Delta == nil {
-		var zero int64 = 0
-		m.Delta = &zero
-	}
 
 	var mGRPC []*MetricsGRPC
-	mGRPC = append(mGRPC, &MetricsGRPC{ID: m.ID, MType: m.MType, Value: *m.Value, Delta: *m.Delta, Hash: m.Hash})
+	mGRPC = append(mGRPC, &MetricsGRPC{ID: m.ID, MType: m.MType, Value: m.Value, Delta: m.Delta, Hash: m.Hash})
 	return &ResponseHeaderMetrics{Header: hGRPC, Metrics: mGRPC}, nil
 }
 
@@ -195,18 +179,11 @@ func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*Re
 	var arrM []*MetricsGRPC
 	for key, val := range s.MutexRepo {
 		data := val.GetMetrics(val.Type(), key, s.Config.Key)
-		if data.Value == nil {
-			var zero float64 = 0
-			data.Value = &zero
-		}
-		if data.Delta == nil {
-			var zero int64 = 0
-			data.Delta = &zero
-		}
+
 		arrM = append(arrM, &MetricsGRPC{ID: data.ID,
 			MType: data.MType,
-			Delta: *data.Delta,
-			Value: *data.Value,
+			Delta: data.Delta,
+			Value: data.Value,
 			Hash:  data.Hash})
 	}
 	return &ResponseMetrics{Metrics: arrM}, nil

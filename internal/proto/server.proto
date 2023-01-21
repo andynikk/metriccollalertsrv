@@ -60,8 +60,8 @@ message EmptyAnswer {
 message MetricsGRPC {
     string ID = 1;
     string MType = 2;
-    int64 Delta = 3;
-    double Value = 4;
+    optional int64 Delta = 3;
+    optional double Value = 4;
     string Hash = 5;
 }
 
