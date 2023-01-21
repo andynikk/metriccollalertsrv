@@ -103,7 +103,6 @@ func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *RequestUpdat
 		var zero int64 = 0
 		arrMetrics[0].Delta = &zero
 	}
-
 	mi := &Metrics_Info{
 		ID:    arrMetrics[0].ID,
 		MType: arrMetrics[0].MType,
