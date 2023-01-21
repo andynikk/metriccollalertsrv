@@ -75,7 +75,7 @@ func (a *AgentGRPC) Post2Server(metricsButch MapMetricsButch) {
 
 		md := metadata.New(mHeader)
 		ctx := metadata.NewOutgoingContext(context.Background(), md)
-		_, err = c.UpdatesAllMetricsJSON(ctx, &handlers.UpdatesRequest{Body: gzipArrMetrics})
+		_, err = c.UpdatesAllMetricsJSON(ctx, &handlers.RequestUpdateByte{Body: gzipArrMetrics})
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 			return

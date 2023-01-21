@@ -3,7 +3,6 @@ package environment
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -215,13 +214,9 @@ func (ac *AgentConfig) InitConfigAgentDefault() {
 	}
 
 	hn, _ := os.Hostname()
-	fmt.Println("+++++++++++++++++", 8, hn)
 	IPs, _ := net.LookupIP(hn)
-	fmt.Println("+++++++++++++++++", 9, IPs)
 	ac.IPAddress = networks.IPv4RangesToStr(IPs)
-	fmt.Println("+++++++++++++++++", 10, ac.IPAddress)
 	if ac.IPAddress == "" {
-		fmt.Println("+++++++++++++++++", 11)
 		ac.IPAddress = "192.168.0.1"
 	}
 }
