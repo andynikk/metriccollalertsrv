@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,7 +31,12 @@ func ExampleRepStore_HandlerGetAllMetrics() {
 	}
 	defer resp.Body.Close()
 
-	msg := fmt.Sprintf("Metrics: %s. HTTP-Status: %d", resp.Header.Get("Metric-Val"), resp.StatusCode)
+	testText := "TestGauge = 0.001"
+	body, _ := io.ReadAll(resp.Body)
+	msg := ""
+	if strings.Contains(string(body), testText) {
+		msg = fmt.Sprintf("Metrics: %s. HTTP-Status: %d", testText, resp.StatusCode)
+	}
 	fmt.Println(msg)
 
 	// Output:

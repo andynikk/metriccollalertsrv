@@ -107,10 +107,11 @@ func (a *GeneralAgent) MetricsOtherScan() {
 	swapMemory, err := mem.SwapMemoryWithContext(ctx)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
+		return
 	}
-	CPUutilization1 := repository.Gauge(0)
+	CPUUtilization1 := repository.Gauge(0)
 	for _, val := range cpuUtilization {
-		CPUutilization1 = repository.Gauge(val)
+		CPUUtilization1 = repository.Gauge(val)
 		break
 	}
 	a.Lock()
@@ -118,8 +119,7 @@ func (a *GeneralAgent) MetricsOtherScan() {
 
 	a.MetricsGauge["TotalMemory"] = repository.Gauge(swapMemory.Total)
 	a.MetricsGauge["FreeMemory"] = repository.Gauge(swapMemory.Free) + repository.Gauge(rand.Float64())
-	a.MetricsGauge["CPUutilization1"] = CPUutilization1
-
+	a.MetricsGauge["CPUutilization1"] = CPUUtilization1
 }
 
 func (a *GeneralAgent) SendMetricsServer() (MapMetricsButch, error) {

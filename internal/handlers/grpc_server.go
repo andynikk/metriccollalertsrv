@@ -11,6 +11,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/networks"
 	"github.com/andynikk/metriccollalertsrv/internal/pb"
+	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -26,23 +27,21 @@ func (s *ServerGRPS) MustEmbedUnimplementedMetricCollectorServer() {
 func (s *ServerGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *pb.RequestListMetrics) (*emptypb.Empty, error) {
 
 	var storedData encoding.ArrMetrics
-
 	s.Lock()
 	defer s.Unlock()
-
 	for _, val := range req.Metrics {
 		metrics := encoding.Metrics{ID: val.Id, MType: val.Mtype, Value: val.Value, Delta: val.Delta, Hash: val.Hash}
 		err := s.SetValueInMapJSON(metrics)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
-			return nil, err
+			return &emptypb.Empty{}, err
 		}
 		s.MutexRepo[val.Id].GetMetrics(val.Mtype, val.Id, s.Config.Key)
 
 		storedData = append(storedData, metrics)
 	}
 	s.Config.Storage.WriteMetric(storedData)
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }
 
 func (s *ServerGRPS) UpdateOneMetricsJSON(ctx context.Context, req *pb.RequestMetrics) (*emptypb.Empty, error) {
@@ -52,7 +51,7 @@ func (s *ServerGRPS) UpdateOneMetricsJSON(ctx context.Context, req *pb.RequestMe
 
 	err := s.SetValueInMapJSON(metrics)
 	if err != nil {
-		return nil, err
+		return &emptypb.Empty{}, err
 	}
 
 	mt := s.MutexRepo[metrics.ID].GetMetrics(metrics.MType, metrics.ID, s.Config.Key)
@@ -61,7 +60,7 @@ func (s *ServerGRPS) UpdateOneMetricsJSON(ctx context.Context, req *pb.RequestMe
 	arrMetrics = append(arrMetrics, mt)
 
 	s.Config.Storage.WriteMetric(arrMetrics)
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }
 
 func (s *ServerGRPS) UpdateOneMetrics(ctx context.Context, req *pb.RequestMetricsString) (*emptypb.Empty, error) {
@@ -69,20 +68,20 @@ func (s *ServerGRPS) UpdateOneMetrics(ctx context.Context, req *pb.RequestMetric
 	rp := s.GetRepStore()
 	err := rp.setValueInMap(req.MetricsType, req.MetricsName, req.MetricsValue)
 	if err != nil {
-		return nil, err
+		return &emptypb.Empty{}, err
 	}
 
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }
 
 func (s *ServerGRPS) PingDataBase(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 
-	if s.Config.Storage.ConnDB() == nil {
+	if repository.ConnDB(s.Config.Storage) == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
-		return nil, errs.ErrStatusInternalServer
+		return &emptypb.Empty{}, errs.ErrStatusInternalServer
 	}
 
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }
 
 func (s *ServerGRPS) GetValue(ctx context.Context, req *pb.RequestMetricsName) (*pb.ResponseString, error) {

@@ -66,7 +66,9 @@ func NewRepStore(s *ServerHTTP) {
 	s.Router.Use(middleware.StripSlashes)
 
 	s.Router.Group(func(r chi.Router) {
-		r.Use(s.ChiCheckIP)
+		if s.Config.TrustedSubnet != nil {
+			r.Use(s.ChiCheckIP)
+		}
 		r.Post("/update/{metType}/{metName}/{metValue}", rs.HandlerSetMetricaPOST) //+
 		r.Post("/update", rs.HandlerUpdateMetricJSON)                              //+
 		r.Post("/updates", rs.HandlerUpdatesMetricJSON)                            //+
@@ -435,7 +437,7 @@ func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	if rs.Config.Storage.ConnDB() == nil {
+	if repository.ConnDB(rs.Config.Storage) == nil {
 
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -492,7 +494,6 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		bodyBate = compData
 	}
 
-	rw.Header().Add("Content-Type", "text/html")
 	rw.Header().Add("Metric-Val", strMetrics)
 	if _, err = rw.Write(bodyBate); err != nil {
 		constants.Logger.ErrorLog(err)

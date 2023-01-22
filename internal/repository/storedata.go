@@ -7,11 +7,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/jackc/pgx/v4/pgxpool"
-
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // StorageDB Структура хранения настроек БД
@@ -33,12 +32,24 @@ type Storage interface {
 	WriteMetric(storedData encoding.ArrMetrics)
 	GetMetric() ([]encoding.Metrics, error)
 	CreateTable() error
-	ConnDB() *pgxpool.Pool
 }
 
 type SyncMapMetrics struct {
 	sync.Mutex
 	MapMetrics
+}
+
+// NewStorage реализует фабричный метод.
+func NewStorage(databaseDsn string, storeFile string) Storage {
+	if databaseDsn != "" {
+		return newDBStorage(databaseDsn)
+	}
+
+	if storeFile != "" {
+		return newFileStorage(storeFile)
+	}
+
+	return nil
 }
 
 func newDBStorage(databaseDsn string) *StorageDB {
@@ -57,19 +68,6 @@ func newFileStorage(storeFile string) *StorageFile {
 		return nil
 	}
 	return storageFile
-}
-
-// NewStorage реализует фабричный метод.
-func NewStorage(databaseDsn string, storeFile string) Storage {
-	if databaseDsn != "" {
-		return newDBStorage(databaseDsn)
-	}
-
-	if storeFile != "" {
-		return newFileStorage(storeFile)
-	}
-
-	return nil
 }
 
 // InitStoreDB инициализация хранилища БД
@@ -142,11 +140,6 @@ func (s *StorageDB) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatrics, nil
 }
 
-// ConnDB Возвращает соединение с базой данных
-func (s *StorageDB) ConnDB() *pgxpool.Pool {
-	return s.DBC.Pool
-}
-
 // CreateTable Проверка и создание, если таковых нет, таблиц в базе данных
 func (s *StorageDB) CreateTable() error {
 	ctx := context.Background()
@@ -202,11 +195,6 @@ func (f *StorageFile) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatric, nil
 }
 
-// ConnDB Возвращает с файлом. Для файла не используется. Возвращает nil
-func (f *StorageFile) ConnDB() *pgxpool.Pool {
-	return nil
-}
-
 // CreateTable Проверка и создание, если нет, файла для хранения метрик
 func (f *StorageFile) CreateTable() error {
 	if _, err := os.Create(f.StoreFile); err != nil {
@@ -215,4 +203,11 @@ func (f *StorageFile) CreateTable() error {
 	}
 
 	return nil
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ConnDB Возвращает соединение с базой данных
+func ConnDB(s Storage) *pgxpool.Pool {
+	return s.(*StorageDB).DBC.Pool
 }

@@ -69,8 +69,8 @@ message GetMetrics {
   string id = 1;
 
   enum MType {
-    gauge = 0;
-    counter = 1;
+    GAUGE = 0;
+    COUNTER = 1;
   }
   MType mtype = 2;
 }

@@ -146,11 +146,6 @@ func NewServer(configServer *environment.ServerConfig) (Server, error) {
 func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		if s.Config.TrustedSubnet == nil {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		xRealIP := r.Header.Get("X-Real-IP")
 		if xRealIP == "" {
 			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
