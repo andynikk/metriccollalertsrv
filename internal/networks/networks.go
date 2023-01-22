@@ -7,14 +7,8 @@ import (
 )
 
 func AddressAllowed(IPAgent string, ipv4Net *net.IPNet) bool {
-
 	ip := net.ParseIP(IPAgent)
-
-	if ipv4Net.Contains(ip) {
-		return true
-	}
-
-	return false
+	return ipv4Net.Contains(ip)
 }
 
 func IPv4RangesToStr(IPs []net.IP) string {
