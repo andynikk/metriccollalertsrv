@@ -437,8 +437,8 @@ func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	if !repository.ConnDB(rs.Config.Storage) {
-
+	err := rs.Config.Storage.ConnDB()
+	if err != nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
 		return

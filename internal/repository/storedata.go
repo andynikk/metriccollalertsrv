@@ -31,6 +31,7 @@ type Storage interface {
 	WriteMetric(storedData encoding.ArrMetrics)
 	GetMetric() ([]encoding.Metrics, error)
 	CreateTable() error
+	ConnDB() error
 }
 
 type SyncMapMetrics struct {
@@ -139,6 +140,14 @@ func (s *StorageDB) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatrics, nil
 }
 
+// ConnDB Возвращает ошибку соедениения с БД
+func (s *StorageDB) ConnDB() error {
+	if s.DBC.Pool == nil {
+		return errors.New("нет соединения с БД")
+	}
+	return nil
+}
+
 // CreateTable Проверка и создание, если таковых нет, таблиц в базе данных
 func (s *StorageDB) CreateTable() error {
 	ctx := context.Background()
@@ -194,6 +203,11 @@ func (f *StorageFile) GetMetric() ([]encoding.Metrics, error) {
 	return arrMatric, nil
 }
 
+// ConnDB Возвращает ошибку соедениения с файлом
+func (f *StorageFile) ConnDB() error {
+	return nil
+}
+
 // CreateTable Проверка и создание, если нет, файла для хранения метрик
 func (f *StorageFile) CreateTable() error {
 	if _, err := os.Create(f.StoreFile); err != nil {
@@ -202,11 +216,4 @@ func (f *StorageFile) CreateTable() error {
 	}
 
 	return nil
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// ConnDB Возвращает соединение с базой данных
-func ConnDB(s Storage) bool {
-	return s.(*StorageDB).DBC.Pool == nil
 }

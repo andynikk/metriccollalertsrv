@@ -11,7 +11,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/networks"
 	"github.com/andynikk/metriccollalertsrv/internal/pb"
-	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -76,7 +75,8 @@ func (s *ServerGRPS) UpdateOneMetrics(ctx context.Context, req *pb.RequestMetric
 
 func (s *ServerGRPS) PingDataBase(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 
-	if !repository.ConnDB(s.Config.Storage) {
+	err := s.Config.Storage.ConnDB()
+	if err != nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		return &emptypb.Empty{}, errs.ErrStatusInternalServer
 	}

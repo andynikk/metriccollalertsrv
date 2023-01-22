@@ -97,7 +97,8 @@ func TestFuncServerHTTP(t *testing.T) {
 			if config.DatabaseDsn != "" {
 				repStore.Config.Storage = repository.NewStorage(config.DatabaseDsn, config.StoreFile)
 				t.Run("Checking handlers /ping GET", func(t *testing.T) {
-					if !repository.ConnDB(config.Storage) {
+					err = config.Storage.ConnDB()
+					if err != nil {
 						t.Errorf("Error handlers 1 /ping GET")
 					}
 				})
