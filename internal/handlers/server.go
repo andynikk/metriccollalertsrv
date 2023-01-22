@@ -390,7 +390,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 
-	metricsHTML := []byte(content)
+	metricsHTML := []byte(strMetrics)
 	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
 	compData, err := compression.Compress(byteMterics)
 	if err != nil {
