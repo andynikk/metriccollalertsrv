@@ -3,7 +3,6 @@ package handlers
 import (
 	"net"
 	"net/http"
-	"strings"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
@@ -137,7 +136,7 @@ func NewServer(configServer *environment.ServerConfig) Server {
 func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		if s.Config.TrustedSubnet == "" {
+		if s.Config.TrustedSubnet == nil {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -148,8 +147,7 @@ func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
 			return
 		}
 
-		addressRanges := strings.Split(xRealIP, constants.SepIPAddress)
-		allowed := networks.AddressAllowed(addressRanges, s.Config.TrustedSubnet)
+		allowed := networks.AddressAllowed(xRealIP, s.Config.TrustedSubnet)
 		if !allowed {
 			w.WriteHeader(errs.StatusHTTP(errs.ErrForbidden))
 			return

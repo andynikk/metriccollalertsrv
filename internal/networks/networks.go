@@ -6,19 +6,12 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 )
 
-func AddressAllowed(IPs []string, AllowedIP string) bool {
-	_, ipv4Net, _ := net.ParseCIDR(AllowedIP)
+func AddressAllowed(IPAgent string, ipv4Net *net.IPNet) bool {
 
-	for _, sIP := range IPs {
-		ip := net.ParseIP(sIP)
+	ip := net.ParseIP(IPAgent)
 
-		if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-			return false
-		}
-
-		if ipv4Net.Contains(ip) {
-			return true
-		}
+	if ipv4Net.Contains(ip) {
+		return true
 	}
 
 	return false

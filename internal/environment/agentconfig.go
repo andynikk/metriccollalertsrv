@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"log"
-	"net"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
-	"github.com/andynikk/metriccollalertsrv/internal/networks"
 	"github.com/caarlos0/env/v6"
 )
 
@@ -213,10 +211,9 @@ func (ac *AgentConfig) InitConfigAgentDefault() {
 		ac.StringTypeServer = typeSrv
 	}
 
-	hn, _ := os.Hostname()
-	IPs, _ := net.LookupIP(hn)
-	ac.IPAddress = networks.IPv4RangesToStr(IPs)
-	if ac.IPAddress == "" {
-		ac.IPAddress = "192.168.0.1"
+	ipLocal, err := getLocalIPAddress(addressServ)
+	if err != nil {
+		ac.IPAddress = constants.IPAddress
 	}
+	ac.IPAddress = ipLocal
 }

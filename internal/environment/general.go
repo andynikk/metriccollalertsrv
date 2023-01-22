@@ -2,8 +2,11 @@ package environment
 
 import (
 	"bytes"
+	"net"
 	"os/exec"
 	"strings"
+
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 )
 
 func isOSWindows() bool {
@@ -42,4 +45,18 @@ func ParseConfigBytes(res []byte) bytes.Buffer {
 		}
 	}
 	return out
+}
+
+func getLocalIPAddress(address string) (string, error) {
+
+	conn, err := net.Dial("udp4", address)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return "", err
+	}
+	defer conn.Close()
+
+	IPAddress := strings.Split(conn.LocalAddr().String(), ":")[0]
+	return IPAddress, nil
+
 }

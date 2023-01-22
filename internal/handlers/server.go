@@ -34,11 +34,6 @@ const (
 	CounterMetric
 )
 
-type HTMLParam struct {
-	Title       string
-	TextMetrics []string
-}
-
 type MutexRepStore struct {
 	sync.Mutex
 	repository.MapMetrics
@@ -244,17 +239,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 			return
 		}
 	}
-	//body, err := HandlerUpdateMetricJSON(bytBody, rs)
-	//if err != nil {
-	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
-	//	http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
-	//	return
-	//}
-	//if _, err = rw.Write([]byte(body)); err != nil {
-	//	constants.Logger.InfoLog(fmt.Sprintf("$$ 5 %s", err.Error()))
-	//	rw.WriteHeader(errs.StatusHTTP(errs.ErrStatusInternalServer))
-	//	return
-	//}
 
 	arrMetrics, err := HandlerUpdateMetricJSON(bytBody, rs)
 	if err != nil {
@@ -422,8 +406,6 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	}
 
 	rw.Header().Add("Content-Type", "text/html")
-	rw.Header().Add("Metrics-Val", strMetrics)
-
 	if _, err = rw.Write(bodyBate); err != nil {
 		constants.Logger.ErrorLog(err)
 		return

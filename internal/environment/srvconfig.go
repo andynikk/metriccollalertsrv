@@ -3,6 +3,7 @@ package environment
 import (
 	"encoding/json"
 	"flag"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -38,7 +39,7 @@ type ServerConfig struct {
 	CryptoKey      string
 	ConfigFilePath string
 	TypeServer     string
-	TrustedSubnet  string
+	TrustedSubnet  *net.IPNet
 }
 
 type ServerConfigFile struct {
@@ -155,7 +156,11 @@ func (sc *ServerConfig) InitConfigServerENV() {
 	sc.CryptoKey = patchCryptoKey
 	sc.ConfigFilePath = patchFileConfig
 	sc.TypeServer = typeSrv
-	sc.TrustedSubnet = trustedSubnet
+
+	_, ipv4Net, err := net.ParseCIDR(trustedSubnet)
+	if err == nil {
+		sc.TrustedSubnet = ipv4Net
+	}
 }
 
 func (sc *ServerConfig) InitConfigServerFlag() {
@@ -204,8 +209,12 @@ func (sc *ServerConfig) InitConfigServerFlag() {
 	if sc.ConfigFilePath == "" {
 		sc.ConfigFilePath = pathFileCfg
 	}
-	if sc.TrustedSubnet == "" {
-		sc.TrustedSubnet = *trustedSubnet
+
+	if sc.TrustedSubnet == nil {
+		_, ipv4Net, err := net.ParseCIDR(*trustedSubnet)
+		if err == nil {
+			sc.TrustedSubnet = ipv4Net
+		}
 	}
 }
 
@@ -244,8 +253,11 @@ func (sc *ServerConfig) InitConfigServerFile() {
 		sc.CryptoKey = patchCryptoKey
 	}
 
-	if sc.TrustedSubnet == "" {
-		sc.TrustedSubnet = trustedSubnet
+	if sc.TrustedSubnet == nil {
+		_, ipv4Net, err := net.ParseCIDR(trustedSubnet)
+		if err == nil {
+			sc.TrustedSubnet = ipv4Net
+		}
 	}
 }
 

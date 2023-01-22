@@ -55,6 +55,7 @@ const (
 						OWNER to postgres;`
 
 	SepIPAddress = ";"
+	IPAddress    = "192.168.0.1"
 )
 
 func (st StorageType) String() string {
