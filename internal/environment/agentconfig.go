@@ -211,7 +211,7 @@ func (ac *AgentConfig) InitConfigAgentDefault() {
 		ac.StringTypeServer = typeSrv
 	}
 
-	ipLocal, err := getLocalIPAddress(addressServ)
+	ipLocal, err := GetLocalIPAddress(addressServ)
 	if err != nil {
 		ac.IPAddress = constants.IPAddress
 	}

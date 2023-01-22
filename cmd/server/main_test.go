@@ -25,7 +25,11 @@ func TestFuncServerHTTP(t *testing.T) {
 	var iDelta int64 = 10
 
 	config := environment.InitConfigServer()
-	server := handlers.NewServer(config)
+	server, err := handlers.NewServer(config)
+	if err != nil {
+		fmt.Println("not create server")
+		return
+	}
 	repStore := server.GetRepStore()
 	router := server.(*handlers.ServerHTTP).Router
 

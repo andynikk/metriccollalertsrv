@@ -47,7 +47,7 @@ func ParseConfigBytes(res []byte) bytes.Buffer {
 	return out
 }
 
-func getLocalIPAddress(address string) (string, error) {
+func GetLocalIPAddress(address string) (string, error) {
 
 	conn, err := net.Dial("udp4", address)
 	if err != nil {

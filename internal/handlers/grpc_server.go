@@ -103,7 +103,7 @@ func (s *ServerGRPS) GetValue(ctx context.Context, req *pb.RequestMetricsName) (
 
 func (s *ServerGRPS) GetValueJSON(ctx context.Context, req *pb.RequestGetMetrics) (*pb.ResponseMetrics, error) {
 
-	v := encoding.Metrics{ID: req.Metrics.ID, MType: req.Metrics.MType}
+	v := encoding.Metrics{ID: req.Metrics.Id, MType: req.Metrics.Mtype.String()}
 	metType := v.MType
 	metName := v.ID
 

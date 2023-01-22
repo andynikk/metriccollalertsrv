@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 )
@@ -92,7 +93,11 @@ func init() {
 
 	config.Storage = repository.NewStorage(config.DatabaseDsn, config.StoreFile)
 
-	srv = NewServer(&config)
+	srv, err := NewServer(&config)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return
+	}
 	rp := srv.GetRepStore()
 
 	valG := repository.Gauge(0)

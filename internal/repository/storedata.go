@@ -182,7 +182,7 @@ func (f *StorageFile) WriteMetric(storedData encoding.ArrMetrics) {
 		constants.Logger.ErrorLog(err)
 		return
 	}
-	if err := os.WriteFile(f.StoreFile, arrJSON, 0777); err != nil {
+	if err := os.WriteFile(f.StoreFile, arrJSON, 0664); err != nil {
 		constants.Logger.ErrorLog(err)
 		return
 	}

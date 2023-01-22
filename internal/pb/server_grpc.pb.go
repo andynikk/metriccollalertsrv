@@ -115,7 +115,7 @@ type MetricCollectorServer interface {
 	GetValue(context.Context, *RequestMetricsName) (*ResponseString, error)
 	GetValueJSON(context.Context, *RequestGetMetrics) (*ResponseMetrics, error)
 	GetListMetrics(context.Context, *emptypb.Empty) (*ResponseListMetrics, error)
-	MustEmbedUnimplementedMetricCollectorServer()
+	mustEmbedUnimplementedMetricCollectorServer()
 }
 
 // UnimplementedMetricCollectorServer must be embedded to have forward compatible implementations.
@@ -143,13 +143,13 @@ func (UnimplementedMetricCollectorServer) GetValueJSON(context.Context, *Request
 func (UnimplementedMetricCollectorServer) GetListMetrics(context.Context, *emptypb.Empty) (*ResponseListMetrics, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetListMetrics not implemented")
 }
-func (UnimplementedMetricCollectorServer) MustEmbedUnimplementedMetricCollectorServer() {}
+func (UnimplementedMetricCollectorServer) mustEmbedUnimplementedMetricCollectorServer() {}
 
 // UnsafeMetricCollectorServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to MetricCollectorServer will
 // result in compilation errors.
 type UnsafeMetricCollectorServer interface {
-	MustEmbedUnimplementedMetricCollectorServer()
+	mustEmbedUnimplementedMetricCollectorServer()
 }
 
 func RegisterMetricCollectorServer(s grpc.ServiceRegistrar, srv MetricCollectorServer) {

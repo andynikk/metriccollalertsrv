@@ -287,9 +287,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 
 func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Request) {
 
-	contentEncoding := rq.Header.Get("Content-Encoding")
-	contentEncryption := rq.Header.Get("Content-Encryption")
-
 	bodyJSON, err := io.ReadAll(rq.Body)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
@@ -297,6 +294,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 
 	}
 
+	contentEncryption := rq.Header.Get("Content-Encryption")
 	if contentEncryption != "" {
 		bytBodyRsaDecrypt, err := rs.PK.RsaDecrypt(bodyJSON)
 		if err != nil {
@@ -306,6 +304,7 @@ func (rs *RepStore) HandlerUpdatesMetricJSON(rw http.ResponseWriter, rq *http.Re
 		bodyJSON = bytBodyRsaDecrypt
 	}
 
+	contentEncoding := rq.Header.Get("Content-Encoding")
 	if strings.Contains(contentEncoding, "gzip") {
 		decompressBody, err := compression.Decompress(bodyJSON)
 		if err != nil {
@@ -356,9 +355,7 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 	var bodyJSON io.Reader
 	bodyJSON = bytes.NewReader(bytBody)
 
-	acceptEncoding := rq.Header.Get(strings.ToLower("Accept-Encoding"))
 	contentEncoding := rq.Header.Get(strings.ToLower("Content-Encoding"))
-
 	if strings.Contains(contentEncoding, "gzip") {
 		constants.Logger.InfoLog("-- метрика с агента gzip (value)")
 		bytBody, err = io.ReadAll(bodyJSON)
@@ -413,14 +410,13 @@ func (rs *RepStore) HandlerValueMetricaJSON(rw http.ResponseWriter, rq *http.Req
 		constants.Logger.ErrorLog(err)
 	}
 
-	var bodyBate []byte
-
 	rw.Header().Add("Content-Type", "application/json")
+	bodyBate := metricsJSON
+
+	acceptEncoding := rq.Header.Get(strings.ToLower("Accept-Encoding"))
 	if strings.Contains(acceptEncoding, "gzip") {
 		rw.Header().Add("Content-Encoding", "gzip")
 		bodyBate = compData
-	} else {
-		bodyBate = metricsJSON
 	}
 
 	if _, err = rw.Write(bodyBate); err != nil {
@@ -484,18 +480,16 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	acceptEncoding := rq.Header.Get("Accept-Encoding")
 
 	metricsHTML := []byte(content)
-	byteMterics := bytes.NewBuffer(metricsHTML).Bytes()
-	compData, err := compression.Compress(byteMterics)
+	byteMetrics := bytes.NewBuffer(metricsHTML).Bytes()
+	compData, err := compression.Compress(byteMetrics)
 	if err != nil {
 		constants.Logger.ErrorLog(err)
 	}
 
-	var bodyBate []byte
+	bodyBate := metricsHTML
 	if strings.Contains(acceptEncoding, "gzip") {
 		rw.Header().Add("Content-Encoding", "gzip")
 		bodyBate = compData
-	} else {
-		bodyBate = metricsHTML
 	}
 
 	rw.Header().Add("Content-Type", "text/html")

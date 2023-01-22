@@ -2,19 +2,18 @@ package handlers
 
 import (
 	"context"
-	"net"
-	"os"
 	"testing"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/networks"
 	"github.com/andynikk/metriccollalertsrv/internal/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+type KeyContext string
 
 func TestFuncServer(t *testing.T) {
 
@@ -27,12 +26,9 @@ func TestFuncServer(t *testing.T) {
 		}
 	})
 
-	var IPAddress string
 	t.Run("Checking get current IP", func(t *testing.T) {
-		hn, _ := os.Hostname()
-		IPs, _ := net.LookupIP(hn)
-		IPAddress = networks.IPv4RangesToStr(IPs)
-		if IPAddress == "" {
+		IPAddress, err := environment.GetLocalIPAddress(config.Address)
+		if err != nil && IPAddress == "" {
 			t.Errorf("Error checking get current IP")
 		}
 	})
@@ -98,21 +94,6 @@ func TestFuncServer(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				//var gziparrMetrics []byte
-				//
-				//t.Run("Checking gzip", func(t *testing.T) {
-				//	arrMetrics, err := json.MarshalIndent(tt.request, "", " ")
-				//	if err != nil {
-				//		t.Errorf("Error checking gzip. %s", tt.name)
-				//	}
-				//
-				//	gziparrMetrics, err = compression.Compress(arrMetrics)
-				//	if err != nil {
-				//		t.Errorf("Error checking gzip. %s", tt.name)
-				//	}
-				//
-				//})
-
 				req := pb.RequestMetrics{Metrics: tt.request}
 				key := KeyContext("content-encoding")
 				ctxValue := context.WithValue(ctx, key, "gzip")
@@ -128,15 +109,6 @@ func TestFuncServer(t *testing.T) {
 		var storedData []*pb.Metrics
 		storedData = append(storedData, testMetricsGouge(server.Config.Key))
 		storedData = append(storedData, testMetricsCaunter(server.Config.Key))
-
-		//arrMetrics, err := json.MarshalIndent(storedData, "", " ")
-		//if err != nil {
-		//	t.Errorf("Error checking gzip. %s", "Updates JSON")
-		//}
-		//gziparrMetrics, err := compression.Compress(arrMetrics)
-		//if err != nil {
-		//	t.Errorf("Error checking gzip. %s", "Updates JSON")
-		//}
 
 		req := pb.RequestListMetrics{Metrics: storedData}
 		key := KeyContext("content-encoding")
@@ -222,8 +194,8 @@ func TestFuncServer(t *testing.T) {
 func testGetMetricsGouge() *pb.GetMetrics {
 
 	var mGauge pb.GetMetrics
-	mGauge.ID = "TestGauge"
-	mGauge.MType = "gauge"
+	mGauge.Id = "TestGauge"
+	mGauge.Mtype = pb.GetMetrics_MType(0)
 
 	return &mGauge
 }
@@ -244,8 +216,8 @@ func testMetricsGouge(configKey string) *pb.Metrics {
 func testGetMetricsWrongGouge() *pb.GetMetrics {
 
 	var mGauge pb.GetMetrics
-	mGauge.ID = "TestGauge322"
-	mGauge.MType = "gauge"
+	mGauge.Id = "TestGauge322"
+	mGauge.Mtype = pb.GetMetrics_MType(0)
 
 	return &mGauge
 }
@@ -279,8 +251,8 @@ func testMetricsNoGouge(configKey string) *pb.Metrics {
 func testGetMetricsCaunter() *pb.GetMetrics {
 
 	var mCounter pb.GetMetrics
-	mCounter.ID = "TestCounter"
-	mCounter.MType = "counter"
+	mCounter.Id = "TestCounter"
+	mCounter.Mtype = pb.GetMetrics_MType(2)
 
 	return &mCounter
 }
@@ -312,8 +284,8 @@ func testMetricsNoCounter(configKey string) *pb.Metrics {
 func testGetMetricsWrongCounter() *pb.GetMetrics {
 
 	var mCounter pb.GetMetrics
-	mCounter.ID = "TestCounter322"
-	mCounter.MType = "counter"
+	mCounter.Id = "TestCounter322"
+	mCounter.Mtype = pb.GetMetrics_MType(2)
 
 	return &mCounter
 }

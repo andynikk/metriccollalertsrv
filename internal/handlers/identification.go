@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net"
 	"net/http"
 
@@ -15,7 +16,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-type KeyContext string
+type Server interface {
+	Run()
+	RestoreData()
+	BackupData()
+	Shutdown()
+	GetRepStore() *RepStore
+}
 
 type ServerHTTP struct {
 	*RepStore
@@ -25,14 +32,6 @@ type ServerHTTP struct {
 type ServerGRPS struct {
 	*RepStore
 	pb.UnimplementedMetricCollectorServer
-}
-
-type Server interface {
-	Run()
-	RestoreData()
-	BackupData()
-	Shutdown()
-	GetRepStore() *RepStore
 }
 
 func (s *ServerGRPS) GetRepStore() *RepStore {
@@ -133,12 +132,15 @@ func newGRPCServer(configServer *environment.ServerConfig) *ServerGRPS {
 }
 
 // NewServer реализует фабричный метод.
-func NewServer(configServer *environment.ServerConfig) Server {
-	if configServer.TypeServer == constants.TypeSrvGRPC.String() {
-		return newGRPCServer(configServer)
+func NewServer(configServer *environment.ServerConfig) (Server, error) {
+	switch configServer.TypeServer {
+	case constants.TypeSrvGRPC.String():
+		return newGRPCServer(configServer), nil
+	case constants.TypeSrvHTTP.String():
+		return newHTTPServer(configServer), nil
+	default:
+		return nil, errors.New("ошибка определения типа сервера")
 	}
-
-	return newHTTPServer(configServer)
 }
 
 func (s *ServerHTTP) ChiCheckIP(next http.Handler) http.Handler {
