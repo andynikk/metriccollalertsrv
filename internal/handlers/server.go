@@ -269,11 +269,6 @@ func (rs *RepStore) HandlerUpdateMetricJSON(rw http.ResponseWriter, rq *http.Req
 	arrMetrics = append(arrMetrics, mt)
 
 	rs.Config.Storage.WriteMetric(arrMetrics)
-	if err != nil {
-		constants.Logger.InfoLog(fmt.Sprintf("$$ 3 %s", err.Error()))
-		http.Error(rw, "Ошибка получения JSON", errs.StatusHTTP(err))
-		return
-	}
 
 	metricsJSON, err := arrMetrics[0].MarshalMetrica()
 	if err != nil {
