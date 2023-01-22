@@ -58,12 +58,12 @@ func TestFuncServer(t *testing.T) {
 			request        *pb.RequestMetricsString
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения counter", request: &pb.RequestMetricsString{MetType: "counter",
-				MetName: "testSetGet332", MetValue: "6"}, wantStatusCode: codes.OK},
-			{name: "Проверка на не правильный тип метрики", request: &pb.RequestMetricsString{MetType: "notcounter",
-				MetName: "testSetGet332", MetValue: "6"}, wantStatusCode: codes.Unimplemented},
-			{name: "Проверка на не правильное значение метрики", request: &pb.RequestMetricsString{MetType: "counter",
-				MetName: "testSetGet332", MetValue: "non"}, wantStatusCode: codes.PermissionDenied},
+			{name: "Проверка на установку значения counter", request: &pb.RequestMetricsString{MetricsType: "counter",
+				MetricsName: "testSetGet332", MetricsValue: "6"}, wantStatusCode: codes.OK},
+			{name: "Проверка на не правильный тип метрики", request: &pb.RequestMetricsString{MetricsType: "notcounter",
+				MetricsName: "testSetGet332", MetricsValue: "6"}, wantStatusCode: codes.Unimplemented},
+			{name: "Проверка на не правильное значение метрики", request: &pb.RequestMetricsString{MetricsType: "counter",
+				MetricsName: "testSetGet332", MetricsValue: "non"}, wantStatusCode: codes.PermissionDenied},
 		}
 
 		for _, tt := range tests {
@@ -157,20 +157,20 @@ func TestFuncServer(t *testing.T) {
 			request        string
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения gauge", request: testMetricsGouge(server.Config.Key).ID,
+			{name: "Проверка на установку значения gauge", request: testMetricsGouge(server.Config.Key).Id,
 				wantStatusCode: codes.OK},
-			{name: "Проверка на установку значения counter", request: testMetricsCaunter(server.Config.Key).ID,
+			{name: "Проверка на установку значения counter", request: testMetricsCaunter(server.Config.Key).Id,
 				wantStatusCode: codes.OK},
-			{name: "Проверка на не правильное значение метрики gauge", request: testMetricsWrongGouge(server.Config.Key).ID,
+			{name: "Проверка на не правильное значение метрики gauge", request: testMetricsWrongGouge(server.Config.Key).Id,
 				wantStatusCode: codes.NotFound},
-			{name: "Проверка на не правильное значение метрики counter", request: testMetricsWrongCounter(server.Config.Key).ID,
+			{name: "Проверка на не правильное значение метрики counter", request: testMetricsWrongCounter(server.Config.Key).Id,
 				wantStatusCode: codes.NotFound},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 
-				req := pb.RequestMetricsName{MetName: tt.request}
+				req := pb.RequestMetricsName{MetricsName: tt.request}
 				rep, err := server.GetValue(ctx, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
 					t.Errorf("Error checking handlers Value (%s). %s", rep.Result, tt.name)
@@ -205,10 +205,10 @@ func testMetricsGouge(configKey string) *pb.Metrics {
 	var fValue = 0.001
 
 	var mGauge pb.Metrics
-	mGauge.ID = "TestGauge"
-	mGauge.MType = "gauge"
+	mGauge.Id = "TestGauge"
+	mGauge.Mtype = "gauge"
 	mGauge.Value = &fValue
-	mGauge.Hash = cryptohash.HashSHA256(mGauge.ID, configKey)
+	mGauge.Hash = cryptohash.HashSHA256(mGauge.Id, configKey)
 
 	return &mGauge
 }
@@ -227,10 +227,10 @@ func testMetricsWrongGouge(configKey string) *pb.Metrics {
 	var fValue = 0.001
 
 	var mGauge pb.Metrics
-	mGauge.ID = "TestGauge322"
-	mGauge.MType = "gauge"
+	mGauge.Id = "TestGauge322"
+	mGauge.Mtype = "gauge"
 	mGauge.Value = &fValue
-	mGauge.Hash = cryptohash.HashSHA256(mGauge.ID, configKey)
+	mGauge.Hash = cryptohash.HashSHA256(mGauge.Id, configKey)
 
 	return &mGauge
 }
@@ -240,10 +240,10 @@ func testMetricsNoGouge(configKey string) *pb.Metrics {
 	var fValue = 0.001
 
 	var mGauge pb.Metrics
-	mGauge.ID = "TestGauge"
-	mGauge.MType = "nogauge"
+	mGauge.Id = "TestGauge"
+	mGauge.Mtype = "nogauge"
 	mGauge.Value = &fValue
-	mGauge.Hash = cryptohash.HashSHA256(mGauge.ID, configKey)
+	mGauge.Hash = cryptohash.HashSHA256(mGauge.Id, configKey)
 
 	return &mGauge
 }
@@ -261,10 +261,10 @@ func testMetricsCaunter(configKey string) *pb.Metrics {
 	var iDelta int64 = 10
 
 	var mCounter pb.Metrics
-	mCounter.ID = "TestCounter"
-	mCounter.MType = "counter"
+	mCounter.Id = "TestCounter"
+	mCounter.Mtype = "counter"
 	mCounter.Delta = &iDelta
-	mCounter.Hash = cryptohash.HashSHA256(mCounter.ID, configKey)
+	mCounter.Hash = cryptohash.HashSHA256(mCounter.Id, configKey)
 
 	return &mCounter
 }
@@ -273,10 +273,10 @@ func testMetricsNoCounter(configKey string) *pb.Metrics {
 	var iDelta int64 = 10
 
 	var mCounter pb.Metrics
-	mCounter.ID = "TestCounter"
-	mCounter.MType = "nocounter"
+	mCounter.Id = "TestCounter"
+	mCounter.Mtype = "nocounter"
 	mCounter.Delta = &iDelta
-	mCounter.Hash = cryptohash.HashSHA256(mCounter.ID, configKey)
+	mCounter.Hash = cryptohash.HashSHA256(mCounter.Id, configKey)
 
 	return &mCounter
 }
@@ -294,10 +294,10 @@ func testMetricsWrongCounter(configKey string) *pb.Metrics {
 	var iDelta int64 = 10
 
 	var mCounter pb.Metrics
-	mCounter.ID = "TestCounter322"
-	mCounter.MType = "counter"
+	mCounter.Id = "TestCounter322"
+	mCounter.Mtype = "counter"
 	mCounter.Delta = &iDelta
-	mCounter.Hash = cryptohash.HashSHA256(mCounter.ID, configKey)
+	mCounter.Hash = cryptohash.HashSHA256(mCounter.Id, configKey)
 
 	return &mCounter
 }

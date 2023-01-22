@@ -31,13 +31,13 @@ func (s *ServerGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *pb.RequestL
 	defer s.Unlock()
 
 	for _, val := range req.Metrics {
-		metrics := encoding.Metrics{ID: val.ID, MType: val.MType, Value: val.Value, Delta: val.Delta, Hash: val.Hash}
+		metrics := encoding.Metrics{ID: val.Id, MType: val.Mtype, Value: val.Value, Delta: val.Delta, Hash: val.Hash}
 		err := s.SetValueInMapJSON(metrics)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
 			return nil, err
 		}
-		s.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, s.Config.Key)
+		s.MutexRepo[val.Id].GetMetrics(val.Mtype, val.Id, s.Config.Key)
 
 		storedData = append(storedData, metrics)
 	}
@@ -47,7 +47,7 @@ func (s *ServerGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *pb.RequestL
 
 func (s *ServerGRPS) UpdateOneMetricsJSON(ctx context.Context, req *pb.RequestMetrics) (*emptypb.Empty, error) {
 
-	metrics := encoding.Metrics{ID: req.Metrics.ID, MType: req.Metrics.MType, Value: req.Metrics.Value,
+	metrics := encoding.Metrics{ID: req.Metrics.Id, MType: req.Metrics.Mtype, Value: req.Metrics.Value,
 		Delta: req.Metrics.Delta, Hash: req.Metrics.Hash}
 
 	err := s.SetValueInMapJSON(metrics)
@@ -67,7 +67,7 @@ func (s *ServerGRPS) UpdateOneMetricsJSON(ctx context.Context, req *pb.RequestMe
 func (s *ServerGRPS) UpdateOneMetrics(ctx context.Context, req *pb.RequestMetricsString) (*emptypb.Empty, error) {
 
 	rp := s.GetRepStore()
-	err := rp.setValueInMap(req.MetType, req.MetName, req.MetValue)
+	err := rp.setValueInMap(req.MetricsType, req.MetricsName, req.MetricsValue)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (s *ServerGRPS) GetValue(ctx context.Context, req *pb.RequestMetricsName) (
 	s.Lock()
 	defer s.Unlock()
 
-	metName := req.MetName
+	metName := req.MetricsName
 	if _, findKey := s.MutexRepo[metName]; !findKey {
 		constants.Logger.InfoLog(fmt.Sprintf("== %d", 3))
 		return nil, errs.ErrNotFound
@@ -116,7 +116,7 @@ func (s *ServerGRPS) GetValueJSON(ctx context.Context, req *pb.RequestGetMetrics
 	}
 
 	mt := s.MutexRepo[metName].GetMetrics(metType, metName, s.Config.Key)
-	metricsJSON := &pb.Metrics{ID: mt.ID, MType: mt.MType, Value: mt.Value, Delta: mt.Delta, Hash: mt.Hash}
+	metricsJSON := &pb.Metrics{Id: mt.ID, Mtype: mt.MType, Value: mt.Value, Delta: mt.Delta, Hash: mt.Hash}
 	return &pb.ResponseMetrics{Metrics: metricsJSON}, nil
 
 }
@@ -127,8 +127,8 @@ func (s *ServerGRPS) GetListMetrics(ctx context.Context, req *emptypb.Empty) (*p
 	for key, val := range s.MutexRepo {
 		data := val.GetMetrics(val.Type(), key, s.Config.Key)
 
-		arrM = append(arrM, &pb.Metrics{ID: data.ID,
-			MType: data.MType,
+		arrM = append(arrM, &pb.Metrics{Id: data.ID,
+			Mtype: data.MType,
 			Delta: data.Delta,
 			Value: data.Value,
 			Hash:  data.Hash})

@@ -62,7 +62,7 @@ func (a *AgentGRPC) Post2Server(metricsButch MapMetricsButch) {
 	for _, metricButch := range metricsButch {
 		var arrMetrics []*pb.Metrics
 		for _, metrics := range metricButch {
-			arrMetrics = append(arrMetrics, &pb.Metrics{ID: metrics.ID, MType: metrics.MType, Value: metrics.Value,
+			arrMetrics = append(arrMetrics, &pb.Metrics{Id: metrics.ID, Mtype: metrics.MType, Value: metrics.Value,
 				Delta: metrics.Delta, Hash: metrics.Hash})
 		}
 		mHeader := map[string]string{"X-Real-IP": a.Config.IPAddress}
