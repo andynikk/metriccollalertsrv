@@ -76,7 +76,7 @@ func (s *ServerGRPS) UpdateOneMetrics(ctx context.Context, req *pb.RequestMetric
 
 func (s *ServerGRPS) PingDataBase(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 
-	if repository.ConnDB(s.Config.Storage) == nil {
+	if !repository.ConnDB(s.Config.Storage) {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		return &emptypb.Empty{}, errs.ErrStatusInternalServer
 	}

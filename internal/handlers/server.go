@@ -437,7 +437,7 @@ func (rs *RepStore) HandlerPingDB(rw http.ResponseWriter, rq *http.Request) {
 		return
 	}
 
-	if repository.ConnDB(rs.Config.Storage) == nil {
+	if !repository.ConnDB(rs.Config.Storage) {
 
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -494,7 +494,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 		bodyBate = compData
 	}
 
-	rw.Header().Add("Metric-Val", strMetrics)
+	rw.Header().Add("Content-Type", "text/plain")
 	if _, err = rw.Write(bodyBate); err != nil {
 		constants.Logger.ErrorLog(err)
 		return

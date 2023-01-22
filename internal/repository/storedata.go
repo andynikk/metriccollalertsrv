@@ -10,7 +10,6 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/postgresql"
-	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // StorageDB Структура хранения настроек БД
@@ -208,6 +207,6 @@ func (f *StorageFile) CreateTable() error {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ConnDB Возвращает соединение с базой данных
-func ConnDB(s Storage) *pgxpool.Pool {
-	return s.(*StorageDB).DBC.Pool
+func ConnDB(s Storage) bool {
+	return s.(*StorageDB).DBC.Pool == nil
 }
