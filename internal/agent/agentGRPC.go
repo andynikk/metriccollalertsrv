@@ -7,7 +7,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
-	"github.com/andynikk/metriccollalertsrv/internal/handlers"
+	"github.com/andynikk/metriccollalertsrv/internal/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -59,28 +59,47 @@ func (a *AgentGRPC) Stop() {
 
 func (a *AgentGRPC) Post2Server(metricsButch MapMetricsButch) {
 
-	for _, metrics := range metricsButch {
-		gzipArrMetrics, err := metrics.PrepareMetrics(a.KeyEncryption)
-		if err != nil {
-			constants.Logger.ErrorLog(err)
-			return
+	for _, metricButch := range metricsButch {
+		var arrMetrics []*pb.Metrics
+		for _, metrics := range metricButch {
+			arrMetrics = append(arrMetrics, &pb.Metrics{ID: metrics.ID, MType: metrics.MType, Value: metrics.Value,
+				Delta: metrics.Delta, Hash: metrics.Hash})
 		}
-		c := handlers.NewMetricCollectorClient(a.GRPCClientConn)
-		mHeader := map[string]string{"Content-Type": "application/json",
-			"Content-Encoding": "gzip",
-			"X-Real-IP":        a.Config.IPAddress}
-		if a.KeyEncryption != nil && a.KeyEncryption.PublicKey != nil {
-			mHeader["Content-Encryption"] = a.KeyEncryption.TypeEncryption
-		}
-
+		mHeader := map[string]string{"X-Real-IP": a.Config.IPAddress}
 		md := metadata.New(mHeader)
 		ctx := metadata.NewOutgoingContext(context.Background(), md)
-		_, err = c.UpdatesAllMetricsJSON(ctx, &handlers.RequestUpdateByte{Body: gzipArrMetrics})
+
+		c := pb.NewMetricCollectorClient(a.GRPCClientConn)
+		_, err := c.UpdatesAllMetricsJSON(ctx, &pb.RequestListMetrics{Metrics: arrMetrics})
 		if err != nil {
 			constants.Logger.ErrorLog(err)
-			return
 		}
 	}
+
+	//for _, metrics := range metricsButch {
+	//	gzipArrMetrics, err := metrics.PrepareMetrics(a.KeyEncryption)
+	//	if err != nil {
+	//		constants.Logger.ErrorLog(err)
+	//		return
+	//	}
+	//	c := handlers.NewMetricCollectorClient(a.GRPCClientConn)
+	//	mHeader := map[string]string{"Content-Type": "application/json",
+	//		"Content-Encoding": "gzip",
+	//		"X-Real-IP":        a.Config.IPAddress}
+	//	if a.KeyEncryption != nil && a.KeyEncryption.PublicKey != nil {
+	//		mHeader["Content-Encryption"] = a.KeyEncryption.TypeEncryption
+	//	}
+	//
+	//	md := metadata.New(mHeader)
+	//	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	//
+	//	}
+	//	_, err = c.UpdatesAllMetricsJSON(ctx, &pb.RequestListMetrics{Body: gzipArrMetrics})
+	//	if err != nil {
+	//		constants.Logger.ErrorLog(err)
+	//		return
+	//	}
+	//}
 }
 
 func (a *AgentGRPC) GoMakeRequest(ctx context.Context, cancelFunc context.CancelFunc) {

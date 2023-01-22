@@ -33,7 +33,7 @@ func TestmakeMsg(adresServer string, memStats agent.MetricsGauge) string {
 	return strings.Join(msg, "\n")
 }
 
-func TestFuncAgen(t *testing.T) {
+func TestFuncAgent(t *testing.T) {
 	config := environment.AgentConfig{}
 	config.InitConfigAgentENV()
 	config.InitConfigAgentFile()

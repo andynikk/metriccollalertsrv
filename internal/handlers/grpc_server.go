@@ -1,199 +1,146 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/networks"
+	"github.com/andynikk/metriccollalertsrv/internal/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type Header map[string]string
-
-func FillMetadata(ctx context.Context) Header {
-	mHeader := make(Header)
-
-	mdI, _ := metadata.FromIncomingContext(ctx)
-	for key, valMD := range mdI {
-		for _, val := range valMD {
-			mHeader[key] = val
-		}
-	}
-
-	mdO, _ := metadata.FromOutgoingContext(ctx)
-	for key, valMD := range mdO {
-		for _, val := range valMD {
-			mHeader[key] = val
-		}
-	}
-
-	return mHeader
-}
-
-func (s *serverGRPS) mustEmbedUnimplementedMetricCollectorServer() {
+func (s *ServerGRPS) MustEmbedUnimplementedMetricCollectorServer() {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *serverGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *RequestUpdateByte) (*EmptyAnswer, error) {
+func (s *ServerGRPS) UpdatesAllMetricsJSON(ctx context.Context, req *pb.RequestListMetrics) (*emptypb.Empty, error) {
 
-	header := FillMetadata(ctx)
-	contentEncoding := header["content-encoding"]
-	contentEncryption := header["content-encryption"]
+	var storedData encoding.ArrMetrics
 
-	bytBody := req.Body
+	s.Lock()
+	defer s.Unlock()
 
-	if contentEncryption != "" {
-		bytBodyRsaDecrypt, err := s.PK.RsaDecrypt(bytBody)
+	for _, val := range req.Metrics {
+		metrics := encoding.Metrics{ID: val.ID, MType: val.MType, Value: val.Value, Delta: val.Delta, Hash: val.Hash}
+		err := s.SetValueInMapJSON(metrics)
 		if err != nil {
-			constants.Logger.InfoLog(fmt.Sprintf("$$ 2.1 %s", err.Error()))
+			constants.Logger.ErrorLog(err)
 			return nil, err
 		}
-		bytBody = bytBodyRsaDecrypt
+		s.MutexRepo[val.ID].GetMetrics(val.MType, val.ID, s.Config.Key)
+
+		storedData = append(storedData, metrics)
+	}
+	s.Config.Storage.WriteMetric(storedData)
+	return nil, nil
+}
+
+func (s *ServerGRPS) UpdateOneMetricsJSON(ctx context.Context, req *pb.RequestMetrics) (*emptypb.Empty, error) {
+
+	metrics := encoding.Metrics{ID: req.Metrics.ID, MType: req.Metrics.MType, Value: req.Metrics.Value,
+		Delta: req.Metrics.Delta, Hash: req.Metrics.Hash}
+
+	err := s.SetValueInMapJSON(metrics)
+	if err != nil {
+		return nil, err
 	}
 
-	if strings.Contains(contentEncoding, "gzip") {
-		bytBodyDecompress, err := compression.Decompress(bytBody)
-		if err != nil {
-			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
-			return nil, err
-		}
-		bytBody = bytBodyDecompress
-	}
+	mt := s.MutexRepo[metrics.ID].GetMetrics(metrics.MType, metrics.ID, s.Config.Key)
+
+	var arrMetrics encoding.ArrMetrics
+	arrMetrics = append(arrMetrics, mt)
+
+	s.Config.Storage.WriteMetric(arrMetrics)
+	return nil, nil
+}
+
+func (s *ServerGRPS) UpdateOneMetrics(ctx context.Context, req *pb.RequestMetricsString) (*emptypb.Empty, error) {
 
 	rp := s.GetRepStore()
-	err := HandlerUpdatesMetricJSON(bytBody, rp)
+	err := rp.setValueInMap(req.MetType, req.MetName, req.MetValue)
 	if err != nil {
 		return nil, err
 	}
 
-	return &EmptyAnswer{}, nil
+	return nil, nil
 }
 
-func (s *serverGRPS) UpdateOneMetricsJSON(ctx context.Context, req *RequestUpdateByte) (*ResponseMetrics, error) {
-	header := FillMetadata(ctx)
-
-	contentEncoding := header["content-encoding"]
-	bytBody := req.Body
-	if strings.Contains(contentEncoding, "gzip") {
-		bytBodyDecompress, err := compression.Decompress(req.Body)
-		if err != nil {
-			constants.Logger.InfoLog(fmt.Sprintf("$$ 2 %s", err.Error()))
-			return nil, err
-		}
-		bytBody = bytBodyDecompress
-	}
-	arrMetrics, err := HandlerUpdateMetricJSON(bytBody, s.GetRepStore())
-	if err != nil {
-		return nil, err
-	}
-	mGRPC := &MetricsGRPC{
-		ID:    arrMetrics[0].ID,
-		MType: arrMetrics[0].MType,
-		Delta: arrMetrics[0].Delta,
-		Value: arrMetrics[0].Value,
-		Hash:  arrMetrics[0].Hash,
-	}
-	arrM := []*MetricsGRPC{mGRPC}
-	return &ResponseMetrics{Metrics: arrM}, nil
-}
-
-func (s *serverGRPS) UpdateOneMetrics(ctx context.Context, req *ResponseProperties) (*EmptyAnswer, error) {
-
-	rp := s.GetRepStore()
-	err := rp.setValueInMap(string(req.MetType), string(req.MetName), string(req.MetValue))
-	if err != nil {
-		return nil, err
-	}
-
-	return &EmptyAnswer{}, nil
-}
-
-func (s *serverGRPS) PingDataBase(ctx context.Context, req *EmptyRequest) (*EmptyAnswer, error) {
+func (s *ServerGRPS) PingDataBase(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 
 	if s.Config.Storage.ConnDB() == nil {
 		constants.Logger.ErrorLog(errors.New("соединение с базой отсутствует"))
 		return nil, errs.ErrStatusInternalServer
 	}
 
-	return &EmptyAnswer{}, nil
+	return nil, nil
 }
 
-func (s *serverGRPS) GetValue(ctx context.Context, req *ResponseProperties) (*ResponseString, error) {
+func (s *ServerGRPS) GetValue(ctx context.Context, req *pb.RequestMetricsName) (*pb.ResponseString, error) {
 
-	strMetric, err := HandlerGetValue(req.MetName, s.RepStore)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-		return nil, err
+	//strMetric, err := HandlerGetValue(req.MetName, s.RepStore)
+	s.Lock()
+	defer s.Unlock()
+
+	metName := req.MetName
+	if _, findKey := s.MutexRepo[metName]; !findKey {
+		constants.Logger.InfoLog(fmt.Sprintf("== %d", 3))
+		return nil, errs.ErrNotFound
 	}
-	return &ResponseString{Result: strMetric}, nil
+
+	strMetric := s.MutexRepo[metName].String()
+	return &pb.ResponseString{Result: strMetric}, nil
 }
 
-func (s *serverGRPS) GetValueJSON(ctx context.Context, req *RequestByte) (*ResponseHeaderMetrics, error) {
+func (s *ServerGRPS) GetValueJSON(ctx context.Context, req *pb.RequestGetMetrics) (*pb.ResponseMetrics, error) {
 
-	headerIn := FillMetadata(ctx)
-	headerOut, bodyOut, err := HandlerValueMetricaJSON(headerIn, req.Body, s.RepStore)
-	if err != nil {
-		return nil, err
+	v := encoding.Metrics{ID: req.Metrics.ID, MType: req.Metrics.MType}
+	metType := v.MType
+	metName := v.ID
+
+	s.Lock()
+	defer s.Unlock()
+
+	if _, findKey := s.MutexRepo[metName]; !findKey {
+		constants.Logger.InfoLog(fmt.Sprintf("== %d %s %d %s", 1, metName, len(s.MutexRepo), s.Config.DatabaseDsn))
+		return nil, errs.ErrNotFound
 	}
 
-	var hGRPC []*HeaderGRPC
-	for k, v := range headerOut {
-		hGRPC = append(hGRPC, &HeaderGRPC{Key: k, Value: v})
-		if k == "gzip" {
-			dataDecompress, err := compression.Decompress(bodyOut)
-			if err != nil {
-				constants.Logger.ErrorLog(err)
-				continue
-			}
-			bodyOut = dataDecompress
-		}
-	}
+	mt := s.MutexRepo[metName].GetMetrics(metType, metName, s.Config.Key)
+	metricsJSON := &pb.Metrics{ID: mt.ID, MType: mt.MType, Value: mt.Value, Delta: mt.Delta, Hash: mt.Hash}
+	return &pb.ResponseMetrics{Metrics: metricsJSON}, nil
 
-	m := encoding.Metrics{}
-	bodyJSON := bytes.NewReader(bodyOut)
-	err = json.NewDecoder(bodyJSON).Decode(&m)
-	if err != nil {
-		constants.Logger.ErrorLog(err)
-		return nil, err
-	}
-
-	var mGRPC []*MetricsGRPC
-	mGRPC = append(mGRPC, &MetricsGRPC{ID: m.ID, MType: m.MType, Value: m.Value, Delta: m.Delta, Hash: m.Hash})
-	return &ResponseHeaderMetrics{Header: hGRPC, Metrics: mGRPC}, nil
 }
 
-func (s *serverGRPS) GetListMetrics(ctx context.Context, req *EmptyRequest) (*ResponseMetrics, error) {
+func (s *ServerGRPS) GetListMetrics(ctx context.Context, req *emptypb.Empty) (*pb.ResponseListMetrics, error) {
 
-	var arrM []*MetricsGRPC
+	var arrM []*pb.Metrics
 	for key, val := range s.MutexRepo {
 		data := val.GetMetrics(val.Type(), key, s.Config.Key)
 
-		arrM = append(arrM, &MetricsGRPC{ID: data.ID,
+		arrM = append(arrM, &pb.Metrics{ID: data.ID,
 			MType: data.MType,
 			Delta: data.Delta,
 			Value: data.Value,
 			Hash:  data.Hash})
 	}
-	return &ResponseMetrics{Metrics: arrM}, nil
+	return &pb.ResponseListMetrics{Metrics: arrM}, nil
 }
 
-func (s *serverGRPS) WithServerUnaryInterceptor() grpc.ServerOption {
+func (s *ServerGRPS) WithServerUnaryInterceptor() grpc.ServerOption {
 	return grpc.UnaryInterceptor(s.ServerInterceptor)
 }
 
-func (s *serverGRPS) ServerInterceptor(ctx context.Context,
+func (s *ServerGRPS) ServerInterceptor(ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {

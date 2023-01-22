@@ -20,7 +20,6 @@ import (
 // DBDsn: строка соединения с базой данных
 type StorageDB struct {
 	DBC   postgresql.DBConnector
-	Ctx   context.Context
 	DBDsn string
 }
 
@@ -76,15 +75,13 @@ func NewStorage(databaseDsn string, storeFile string) Storage {
 // InitStoreDB инициализация хранилища БД
 func InitStoreDB(store string) (*StorageDB, error) {
 
-	ctx := context.Background()
-
 	dbc, err := postgresql.PoolDB(store)
 	if err != nil {
 		return nil, err
 	}
 
 	storageDB := &StorageDB{
-		DBC: *dbc, Ctx: ctx, DBDsn: store,
+		DBC: *dbc, DBDsn: store,
 	}
 	if err = storageDB.CreateTable(); err != nil {
 		return nil, err
@@ -120,7 +117,7 @@ func (s *StorageDB) GetMetric() ([]encoding.Metrics, error) {
 	}
 	defer conn.Release()
 
-	poolRow, err := conn.Query(s.Ctx, constants.QuerySelect)
+	poolRow, err := conn.Query(ctx, constants.QuerySelect)
 	if err != nil {
 		conn.Release()
 		constants.Logger.ErrorLog(err)
@@ -159,12 +156,13 @@ func (s *StorageDB) CreateTable() error {
 		return err
 	}
 	defer conn.Release()
-	if _, err = conn.Exec(s.Ctx, constants.QuerySchema); err != nil {
+
+	if _, err = conn.Exec(ctx, constants.QuerySchema); err != nil {
 		conn.Release()
 		constants.Logger.ErrorLog(err)
 		return err
 	}
-	if _, err = conn.Exec(s.Ctx, constants.QueryTable); err != nil {
+	if _, err = conn.Exec(ctx, constants.QueryTable); err != nil {
 		conn.Release()
 		constants.Logger.ErrorLog(err)
 		return err

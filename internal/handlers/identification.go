@@ -9,6 +9,7 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/encryption"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/networks"
+	pb "github.com/andynikk/metriccollalertsrv/internal/pb"
 	"github.com/andynikk/metriccollalertsrv/internal/repository"
 	"github.com/go-chi/chi/v5"
 	"google.golang.org/grpc"
@@ -21,8 +22,9 @@ type ServerHTTP struct {
 	chi.Router
 }
 
-type serverGRPS struct {
+type ServerGRPS struct {
 	*RepStore
+	pb.UnimplementedMetricCollectorServer
 }
 
 type Server interface {
@@ -33,7 +35,7 @@ type Server interface {
 	GetRepStore() *RepStore
 }
 
-func (s *serverGRPS) GetRepStore() *RepStore {
+func (s *ServerGRPS) GetRepStore() *RepStore {
 	return s.RepStore
 }
 
@@ -59,18 +61,23 @@ func (s *ServerHTTP) Run() {
 	}()
 }
 
-func (s *serverGRPS) Run() {
+func (s *ServerGRPS) Run() {
 
 	go s.RestoreData()
 	go s.BackupData()
 
 	go func() {
-		server := grpc.NewServer(s.WithServerUnaryInterceptor())
-		srv := &serverGRPS{
-			RepStore: s.RepStore,
+		interceptors := []grpc.UnaryServerInterceptor{
+			s.ServerInterceptor,
+		}
+		if s.Config.TrustedSubnet != nil {
+			interceptors = append(interceptors, s.ServerInterceptor)
 		}
 
-		RegisterMetricCollectorServer(server, srv)
+		//server := grpc.NewServer(s.WithServerUnaryInterceptor())
+		server := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors...))
+
+		pb.RegisterMetricCollectorServer(server, s)
 		l, err := net.Listen("tcp", constants.AddressServer)
 		if err != nil {
 			constants.Logger.ErrorLog(err)
@@ -83,13 +90,13 @@ func (s *serverGRPS) Run() {
 	}()
 }
 
-func (s *serverGRPS) RestoreData() {
+func (s *ServerGRPS) RestoreData() {
 	if s.Config.Restore {
 		s.RepStore.RestoreData()
 	}
 }
 
-func (s *serverGRPS) BackupData() {
+func (s *ServerGRPS) BackupData() {
 	s.RepStore.BackupData()
 }
 
@@ -97,7 +104,7 @@ func (s *ServerHTTP) Shutdown() {
 	s.RepStore.Shutdown()
 }
 
-func (s *serverGRPS) Shutdown() {
+func (s *ServerGRPS) Shutdown() {
 	s.RepStore.Shutdown()
 }
 
@@ -113,13 +120,14 @@ func newHTTPServer(configServer *environment.ServerConfig) *ServerHTTP {
 	return server
 }
 
-func newGRPCServer(configServer *environment.ServerConfig) *serverGRPS {
+func newGRPCServer(configServer *environment.ServerConfig) *ServerGRPS {
 
-	server := new(serverGRPS)
+	server := new(ServerGRPS)
 	server.RepStore = &RepStore{}
 	server.Config = *configServer
 	server.PK, _ = encryption.InitPrivateKey(configServer.CryptoKey)
 	server.MutexRepo = make(repository.MutexRepo)
+	server.UnimplementedMetricCollectorServer = pb.UnimplementedMetricCollectorServer{}
 
 	return server
 }

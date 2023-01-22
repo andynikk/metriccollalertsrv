@@ -2,74 +2,70 @@ syntax = "proto3";
 
 package handlers;
 
-option go_package = "./";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/andynikk/metriccollalertsrv/internal/pb";
 
 service MetricCollector {
-  rpc UpdatesAllMetricsJSON(RequestUpdateByte) returns (EmptyAnswer) {}
-  rpc UpdateOneMetricsJSON(RequestUpdateByte) returns (ResponseMetrics) {}
-  rpc UpdateOneMetrics(ResponseProperties) returns (EmptyAnswer) {}
+  rpc UpdatesAllMetricsJSON(RequestListMetrics) returns (google.protobuf.Empty) {}
+  rpc UpdateOneMetricsJSON(RequestMetrics) returns (google.protobuf.Empty) {}
+  rpc UpdateOneMetrics(RequestMetricsString) returns (google.protobuf.Empty) {}
 
-  rpc PingDataBase(EmptyRequest) returns (EmptyAnswer) {}
+  rpc PingDataBase(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
-  rpc GetValueJSON(RequestByte) returns (ResponseHeaderMetrics) {}
-  rpc GetValue(ResponseProperties) returns (ResponseString) {}
+  rpc GetValue(RequestMetricsName) returns (ResponseString) {}
+  rpc GetValueJSON(RequestGetMetrics) returns (ResponseMetrics) {}
 
-  rpc GetListMetrics(EmptyRequest) returns (ResponseMetrics) {}
+  rpc GetListMetrics(google.protobuf.Empty) returns (ResponseListMetrics) {}
 }
 
-message ResponseProperties {
-  bytes metType = 1;
-  bytes metName = 2;
-  bytes metValue = 3;
+message RequestMetricsName {
+  string metName = 1;
 }
 
-message RequestByte {
-  bytes body = 1;
+message RequestMetricsString {
+  string MetType = 1;
+  string MetName = 2;
+  string MetValue = 3;
 }
 
-message EmptyRequest {
-
+message RequestGetMetrics {
+  GetMetrics metrics = 1;
 }
 
-message RequestUpdateByte {
-  bytes body = 1;
+message RequestMetrics {
+  Metrics metrics = 1;
 }
 
-message RequestValue {
-  bytes metType = 1;
-  bytes metName = 2;
+message RequestListMetrics {
+  repeated Metrics metrics = 1;
 }
 
 /////////////////////////Response///////////////////////
-message ResponseByteErr {
-  bytes result = 1;
+
+message ResponseMetrics {
+  Metrics metrics = 1;
 }
 
-message ResponseHeaderMetrics {
-  repeated MetricsGRPC metrics = 1;
-  repeated HeaderGRPC header = 2;
+message ResponseListMetrics {
+  repeated Metrics metrics = 1;
 }
 
 message ResponseString {
   string result = 1;
 }
 
-message EmptyAnswer {
+///////////////////////////////////////////////
+
+message Metrics {
+  string ID = 1;
+  string MType = 2;
+  optional sint64 Delta = 3;
+  optional double Value = 4;
+  string Hash = 5;
 }
 
-message MetricsGRPC {
-    string ID = 1;
-    string MType = 2;
-    optional int64 Delta = 3;
-    optional double Value = 4;
-    string Hash = 5;
-}
-
-message HeaderGRPC {
-    string Key = 1;
-    string Value = 2;
-}
-
-message ResponseMetrics {
-  repeated MetricsGRPC metrics = 1;
+message GetMetrics {
+  string ID = 1;
+  string MType = 2;
 }

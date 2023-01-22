@@ -2,19 +2,18 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"net"
 	"os"
 	"testing"
 
-	"github.com/andynikk/metriccollalertsrv/internal/compression"
 	"github.com/andynikk/metriccollalertsrv/internal/constants/errs"
 	"github.com/andynikk/metriccollalertsrv/internal/cryptohash"
-	"github.com/andynikk/metriccollalertsrv/internal/encoding"
 	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/networks"
+	"github.com/andynikk/metriccollalertsrv/internal/pb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestFuncServer(t *testing.T) {
@@ -50,8 +49,8 @@ func TestFuncServer(t *testing.T) {
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	t.Run("Checking handlers PING", func(t *testing.T) {
-		req := EmptyRequest{}
-		textErr, err := server.PingDataBase(ctx, &req)
+		req := &emptypb.Empty{}
+		textErr, err := server.PingDataBase(ctx, req)
 		if errs.CodeGRPC(err) != codes.OK && server.Config.Storage == nil {
 			t.Errorf("Error checking handlers PING. %s", textErr)
 		}
@@ -60,15 +59,15 @@ func TestFuncServer(t *testing.T) {
 	t.Run("Checking handlers Update", func(t *testing.T) {
 		tests := []struct {
 			name           string
-			request        *ResponseProperties
+			request        *pb.RequestMetricsString
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения counter", request: &ResponseProperties{MetType: []byte("counter"),
-				MetName: []byte("testSetGet332"), MetValue: []byte("6")}, wantStatusCode: codes.OK},
-			{name: "Проверка на не правильный тип метрики", request: &ResponseProperties{MetType: []byte("notcounter"),
-				MetName: []byte("testSetGet332"), MetValue: []byte("6")}, wantStatusCode: codes.Unimplemented},
-			{name: "Проверка на не правильное значение метрики", request: &ResponseProperties{MetType: []byte("counter"),
-				MetName: []byte("testSetGet332"), MetValue: []byte("non")}, wantStatusCode: codes.PermissionDenied},
+			{name: "Проверка на установку значения counter", request: &pb.RequestMetricsString{MetType: "counter",
+				MetName: "testSetGet332", MetValue: "6"}, wantStatusCode: codes.OK},
+			{name: "Проверка на не правильный тип метрики", request: &pb.RequestMetricsString{MetType: "notcounter",
+				MetName: "testSetGet332", MetValue: "6"}, wantStatusCode: codes.Unimplemented},
+			{name: "Проверка на не правильное значение метрики", request: &pb.RequestMetricsString{MetType: "counter",
+				MetName: "testSetGet332", MetValue: "non"}, wantStatusCode: codes.PermissionDenied},
 		}
 
 		for _, tt := range tests {
@@ -84,7 +83,7 @@ func TestFuncServer(t *testing.T) {
 	t.Run("Checking handlers Update JSON", func(t *testing.T) {
 		tests := []struct {
 			name           string
-			request        encoding.Metrics
+			request        *pb.Metrics
 			wantStatusCode codes.Code
 		}{
 			{name: "Проверка на установку значения gauge", request: testMetricsGouge(server.Config.Key),
@@ -99,24 +98,22 @@ func TestFuncServer(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				var gziparrMetrics []byte
-				//var storedData encoding.ArrMetrics
-				//storedData = append(storedData, tt.request)
+				//var gziparrMetrics []byte
+				//
+				//t.Run("Checking gzip", func(t *testing.T) {
+				//	arrMetrics, err := json.MarshalIndent(tt.request, "", " ")
+				//	if err != nil {
+				//		t.Errorf("Error checking gzip. %s", tt.name)
+				//	}
+				//
+				//	gziparrMetrics, err = compression.Compress(arrMetrics)
+				//	if err != nil {
+				//		t.Errorf("Error checking gzip. %s", tt.name)
+				//	}
+				//
+				//})
 
-				t.Run("Checking gzip", func(t *testing.T) {
-					arrMetrics, err := json.MarshalIndent(tt.request, "", " ")
-					if err != nil {
-						t.Errorf("Error checking gzip. %s", tt.name)
-					}
-
-					gziparrMetrics, err = compression.Compress(arrMetrics)
-					if err != nil {
-						t.Errorf("Error checking gzip. %s", tt.name)
-					}
-
-				})
-
-				req := RequestUpdateByte{Body: gziparrMetrics}
+				req := pb.RequestMetrics{Metrics: tt.request}
 				key := KeyContext("content-encoding")
 				ctxValue := context.WithValue(ctx, key, "gzip")
 				_, err := server.UpdateOneMetricsJSON(ctxValue, &req)
@@ -128,23 +125,23 @@ func TestFuncServer(t *testing.T) {
 	})
 
 	t.Run("Checking handlers Updates JSON", func(t *testing.T) {
-		var storedData encoding.ArrMetrics
+		var storedData []*pb.Metrics
 		storedData = append(storedData, testMetricsGouge(server.Config.Key))
 		storedData = append(storedData, testMetricsCaunter(server.Config.Key))
 
-		arrMetrics, err := json.MarshalIndent(storedData, "", " ")
-		if err != nil {
-			t.Errorf("Error checking gzip. %s", "Updates JSON")
-		}
-		gziparrMetrics, err := compression.Compress(arrMetrics)
-		if err != nil {
-			t.Errorf("Error checking gzip. %s", "Updates JSON")
-		}
+		//arrMetrics, err := json.MarshalIndent(storedData, "", " ")
+		//if err != nil {
+		//	t.Errorf("Error checking gzip. %s", "Updates JSON")
+		//}
+		//gziparrMetrics, err := compression.Compress(arrMetrics)
+		//if err != nil {
+		//	t.Errorf("Error checking gzip. %s", "Updates JSON")
+		//}
 
-		req := RequestUpdateByte{Body: gziparrMetrics}
+		req := pb.RequestListMetrics{Metrics: storedData}
 		key := KeyContext("content-encoding")
 		ctxValue := context.WithValue(ctx, key, "gzip")
-		_, err = server.UpdatesAllMetricsJSON(ctxValue, &req)
+		_, err := server.UpdatesAllMetricsJSON(ctxValue, &req)
 		if errs.CodeGRPC(err) != codes.OK {
 			t.Errorf("Error checking handlers Update JSON.")
 		}
@@ -154,36 +151,26 @@ func TestFuncServer(t *testing.T) {
 
 		tests := []struct {
 			name           string
-			request        encoding.Metrics
+			request        *pb.GetMetrics
 			wantStatusCode codes.Code
 		}{
-			{name: "Проверка на установку значения gauge", request: testMetricsGouge(server.Config.Key),
+			{name: "Проверка на установку значения gauge", request: testGetMetricsGouge(),
 				wantStatusCode: codes.OK},
-			{name: "Проверка на установку значения counter", request: testMetricsCaunter(server.Config.Key),
+			{name: "Проверка на установку значения counter", request: testGetMetricsCaunter(),
 				wantStatusCode: codes.OK},
-			{name: "Проверка на не правильное значение метрики gauge", request: testMetricsWrongGouge(server.Config.Key),
+			{name: "Проверка на не правильное значение метрики gauge", request: testGetMetricsWrongGouge(),
 				wantStatusCode: codes.NotFound},
-			{name: "Проверка на не правильное значение метрики counter", request: testMetricsWrongCounter(server.Config.Key),
+			{name: "Проверка на не правильное значение метрики counter", request: testGetMetricsWrongCounter(),
 				wantStatusCode: codes.NotFound},
 		}
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 
-				arrMetrics, err := json.MarshalIndent(tt.request, "", " ")
-				if err != nil {
-					t.Errorf("Error checking gzip. %s", tt.name)
-				}
-
-				gziparrMetrics, err := compression.Compress(arrMetrics)
-				if err != nil {
-					t.Errorf("Error checking gzip. %s", tt.name)
-				}
-
-				req := RequestByte{Body: gziparrMetrics}
+				req := pb.RequestGetMetrics{Metrics: tt.request}
 				key := KeyContext("content-encoding")
 				ctxValue := context.WithValue(ctx, key, "gzip")
-				_, err = server.GetValueJSON(ctxValue, &req)
+				_, err := server.GetValueJSON(ctxValue, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
 					t.Errorf("Error checking handlers Value JSON. %s", tt.name)
 				}
@@ -211,7 +198,7 @@ func TestFuncServer(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 
-				req := ResponseProperties{MetName: []byte(tt.request)}
+				req := pb.RequestMetricsName{MetName: tt.request}
 				rep, err := server.GetValue(ctx, &req)
 				if errs.CodeGRPC(err) != tt.wantStatusCode {
 					t.Errorf("Error checking handlers Value (%s). %s", rep.Result, tt.name)
@@ -222,87 +209,123 @@ func TestFuncServer(t *testing.T) {
 
 	t.Run("Checking handlers ListMetrics", func(t *testing.T) {
 
-		req := EmptyRequest{}
+		req := emptypb.Empty{}
 		res, err := server.GetListMetrics(ctx, &req)
 
-		if err != nil || res == nil {
+		if err != nil || len(res.Metrics) == 0 {
 			t.Errorf("Error checking handlers ListMetrics.")
 		}
 	})
 
 }
 
-func testMetricsGouge(configKey string) encoding.Metrics {
+func testGetMetricsGouge() *pb.GetMetrics {
+
+	var mGauge pb.GetMetrics
+	mGauge.ID = "TestGauge"
+	mGauge.MType = "gauge"
+
+	return &mGauge
+}
+
+func testMetricsGouge(configKey string) *pb.Metrics {
 
 	var fValue = 0.001
 
-	var mGauge encoding.Metrics
+	var mGauge pb.Metrics
 	mGauge.ID = "TestGauge"
 	mGauge.MType = "gauge"
 	mGauge.Value = &fValue
 	mGauge.Hash = cryptohash.HashSHA256(mGauge.ID, configKey)
 
-	return mGauge
+	return &mGauge
 }
 
-func testMetricsWrongGouge(configKey string) encoding.Metrics {
+func testGetMetricsWrongGouge() *pb.GetMetrics {
+
+	var mGauge pb.GetMetrics
+	mGauge.ID = "TestGauge322"
+	mGauge.MType = "gauge"
+
+	return &mGauge
+}
+
+func testMetricsWrongGouge(configKey string) *pb.Metrics {
 
 	var fValue = 0.001
 
-	var mGauge encoding.Metrics
+	var mGauge pb.Metrics
 	mGauge.ID = "TestGauge322"
 	mGauge.MType = "gauge"
 	mGauge.Value = &fValue
 	mGauge.Hash = cryptohash.HashSHA256(mGauge.ID, configKey)
 
-	return mGauge
+	return &mGauge
 }
 
-func testMetricsNoGouge(configKey string) encoding.Metrics {
+func testMetricsNoGouge(configKey string) *pb.Metrics {
 
 	var fValue = 0.001
 
-	var mGauge encoding.Metrics
+	var mGauge pb.Metrics
 	mGauge.ID = "TestGauge"
 	mGauge.MType = "nogauge"
 	mGauge.Value = &fValue
 	mGauge.Hash = cryptohash.HashSHA256(mGauge.ID, configKey)
 
-	return mGauge
+	return &mGauge
 }
 
-func testMetricsCaunter(configKey string) encoding.Metrics {
+func testGetMetricsCaunter() *pb.GetMetrics {
+
+	var mCounter pb.GetMetrics
+	mCounter.ID = "TestCounter"
+	mCounter.MType = "counter"
+
+	return &mCounter
+}
+
+func testMetricsCaunter(configKey string) *pb.Metrics {
 	var iDelta int64 = 10
 
-	var mCounter encoding.Metrics
+	var mCounter pb.Metrics
 	mCounter.ID = "TestCounter"
 	mCounter.MType = "counter"
 	mCounter.Delta = &iDelta
 	mCounter.Hash = cryptohash.HashSHA256(mCounter.ID, configKey)
 
-	return mCounter
+	return &mCounter
 }
 
-func testMetricsNoCounter(configKey string) encoding.Metrics {
+func testMetricsNoCounter(configKey string) *pb.Metrics {
 	var iDelta int64 = 10
 
-	var mCounter encoding.Metrics
+	var mCounter pb.Metrics
 	mCounter.ID = "TestCounter"
 	mCounter.MType = "nocounter"
 	mCounter.Delta = &iDelta
 	mCounter.Hash = cryptohash.HashSHA256(mCounter.ID, configKey)
 
-	return mCounter
+	return &mCounter
 }
 
-func testMetricsWrongCounter(configKey string) encoding.Metrics {
+func testGetMetricsWrongCounter() *pb.GetMetrics {
+
+	var mCounter pb.GetMetrics
+	mCounter.ID = "TestCounter322"
+	mCounter.MType = "counter"
+
+	return &mCounter
+}
+
+func testMetricsWrongCounter(configKey string) *pb.Metrics {
 	var iDelta int64 = 10
 
-	var mCounter encoding.Metrics
+	var mCounter pb.Metrics
 	mCounter.ID = "TestCounter322"
 	mCounter.MType = "counter"
 	mCounter.Delta = &iDelta
 	mCounter.Hash = cryptohash.HashSHA256(mCounter.ID, configKey)
 
-	return mCounter
+	return &mCounter
 }
