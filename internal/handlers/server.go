@@ -499,6 +499,7 @@ func (rs *RepStore) HandlerGetAllMetrics(rw http.ResponseWriter, rq *http.Reques
 	}
 
 	rw.Header().Add("Content-Type", "text/html")
+	rw.Header().Add("Metric-Val", strMetrics)
 	if _, err = rw.Write(bodyBate); err != nil {
 		constants.Logger.ErrorLog(err)
 		return

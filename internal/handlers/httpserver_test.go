@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -31,9 +30,7 @@ func ExampleRepStore_HandlerGetAllMetrics() {
 	}
 	defer resp.Body.Close()
 
-	bodyJSON, err := io.ReadAll(resp.Body)
-
-	msg := fmt.Sprintf("Metrics: %s. HTTP-Status: %d", bodyJSON, resp.StatusCode)
+	msg := fmt.Sprintf("Metrics: %s. HTTP-Status: %d", resp.Header.Get("Metric-Val"), resp.StatusCode)
 	fmt.Println(msg)
 
 	// Output:
