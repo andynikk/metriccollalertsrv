@@ -40,9 +40,9 @@ func (g *Gauge) GetMetrics(mType string, id string, hashKey string) encoding.Met
 
 	value := float64(*g)
 	msg := fmt.Sprintf("%s:%s:%f", id, mType, value)
-	heshVal := cryptohash.HeshSHA256(msg, hashKey)
+	hashVal := cryptohash.HashSHA256(msg, hashKey)
 
-	mt := encoding.Metrics{ID: id, MType: mType, Value: &value, Hash: heshVal}
+	mt := encoding.Metrics{ID: id, MType: mType, Value: &value, Hash: hashVal}
 
 	return mt
 }
@@ -70,12 +70,10 @@ func (g *Gauge) SetFromText(metValue string) bool {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (c *Counter) Set(v encoding.Metrics) {
-
 	*c = *c + Counter(*v.Delta)
 }
 
 func (c *Counter) SetFromText(metValue string) bool {
-
 	predVal, err := strconv.ParseInt(metValue, 10, 64)
 	if err != nil {
 		constants.Logger.ErrorLog(errors.New("error convert type"))
@@ -96,11 +94,10 @@ func (c *Counter) String() string {
 func (c *Counter) GetMetrics(mType string, id string, hashKey string) encoding.Metrics {
 
 	delta := int64(*c)
-
 	msg := fmt.Sprintf("%s:%s:%d", id, mType, delta)
-	heshVal := cryptohash.HeshSHA256(msg, hashKey)
 
-	mt := encoding.Metrics{ID: id, MType: mType, Delta: &delta, Hash: heshVal}
+	hashVal := cryptohash.HashSHA256(msg, hashKey)
+	mt := encoding.Metrics{ID: id, MType: mType, Delta: &delta, Hash: hashVal}
 
 	return mt
 }

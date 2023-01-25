@@ -4,44 +4,39 @@ import (
 	"github.com/andynikk/metriccollalertsrv/internal/logger"
 )
 
-type TypeMetricsStorage int
+type StorageType int
+type TypeServer int
 
 const (
-	MetricsStorageDB TypeMetricsStorage = iota
-	MetricsStorageFile
+	TypeSrvGRPC TypeServer = iota
+	TypeSrvHTTP
+)
 
-	AddressServer       = "localhost:8080"
-	ReportInterval      = 10
-	PollInterval        = 2
-	StoreInterval       = 300000000000
-	StoreFile           = "/tmp/devops-metrics-db.json"
-	Restore             = true
-	ButchSize           = 10
-	QueryInsertTemplate = `INSERT INTO 
-						metrics.store ("ID", "MType", "Value", "Delta", "Hash") 
-					VALUES
-						($1, $2, $3, $4, $5)`
+const (
+	TimeLivingCertificateYaer   = 10
+	TimeLivingCertificateMounth = 0
+	TimeLivingCertificateDay    = 0
 
-	QueryUpdateTemplate = `UPDATE 
-						metrics.store 
-					SET 
-						"Value"=$3, "Delta"=$4, "Hash"=$5
-					WHERE 
-						"ID" = $1 
-						and "MType" = $2;`
+	AddressServer  = "localhost:8080"
+	ReportInterval = 10
+	PollInterval   = 2
+	StoreInterval  = 300000000000
+	StoreFile      = "/tmp/devops-metrics-db.json"
+	Restore        = true
+	ButchSize      = 10
 
-	QuerySelectWithWhereTemplate = `SELECT 
-						* 
-					FROM 
-						metrics.store
-					WHERE 
-						"ID" = $1 
-						and "MType" = $2;`
+	TypeEncryption = "sha512"
 
 	QuerySelect = `SELECT 
 						* 
 					FROM 
 						metrics.store`
+
+	NameDB = `yapracticum`
+
+	QueryCheckExistDB = `SELECT datname FROM pg_database WHERE datname = '%s' ORDER BY 1;`
+
+	QueryDB = `CREATE DATABASE %s`
 
 	QuerySchema = `CREATE SCHEMA IF NOT EXISTS metrics`
 
@@ -55,13 +50,20 @@ const (
 					)
 					
 					TABLESPACE pg_default;
-					
+
 					ALTER TABLE IF EXISTS metrics.store
 						OWNER to postgres;`
+
+	SepIPAddress = ";"
+	IPAddress    = "192.168.0.1"
 )
 
-func (tmc TypeMetricsStorage) String() string {
-	return [...]string{"db", "file"}[tmc]
+func (st StorageType) String() string {
+	return [...]string{"db", "file"}[st]
+}
+
+func (ts TypeServer) String() string {
+	return [...]string{"gRPC", "HTTP"}[ts]
 }
 
 var Logger logger.Logger

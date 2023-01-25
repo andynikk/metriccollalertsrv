@@ -2,54 +2,35 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/andynikk/metriccollalertsrv/internal/constants"
+	"github.com/andynikk/metriccollalertsrv/internal/environment"
 	"github.com/andynikk/metriccollalertsrv/internal/handlers"
 )
 
-type server struct {
-	storege handlers.RepStore
-}
-
-func Shutdown(rs *handlers.RepStore) {
-	rs.Lock()
-	defer rs.Unlock()
-
-	for _, val := range rs.Config.TypeMetricsStorage {
-		val.WriteMetric(rs.PrepareDataBU())
-	}
-	constants.Logger.InfoLog("server stopped")
-}
+var buildVersion = "N/A"
+var buildDate = "N/A"
+var buildCommit = "N/A"
 
 func main() {
 
-	server := new(server)
-	handlers.NewRepStore(&server.storege)
-	fmt.Println(server.storege.Config.Address)
-	if server.storege.Config.Restore {
-		go server.storege.RestoreData()
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+
+	config := environment.InitConfigServer()
+	srv, err := handlers.NewServer(config)
+	if err != nil {
+		constants.Logger.ErrorLog(err)
+		return
 	}
-
-	go server.storege.BackupData()
-
-	go func() {
-		s := &http.Server{
-			Addr:    server.storege.Config.Address,
-			Handler: server.storege.Router}
-
-		if err := s.ListenAndServe(); err != nil {
-			constants.Logger.ErrorLog(err)
-			return
-		}
-	}()
+	srv.Run()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	<-stop
-	Shutdown(&server.storege)
-
+	srv.Shutdown()
 }

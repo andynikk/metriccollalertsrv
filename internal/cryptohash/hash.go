@@ -6,10 +6,10 @@ import (
 	"fmt"
 )
 
-func HeshSHA256(data string, strKey string) (hash string) {
-	var emtyByte string
+func HashSHA256(data string, strKey string) (hash string) {
+	var emptyByte string
 	if strKey == "" {
-		return emtyByte
+		return emptyByte
 	}
 
 	key := []byte(strKey)
@@ -18,5 +18,4 @@ func HeshSHA256(data string, strKey string) (hash string) {
 	h.Write([]byte(data))
 	hash = fmt.Sprintf("%x", h.Sum(nil))
 	return
-
 }
